@@ -53,9 +53,11 @@ class Quote:
             elif isinstance(entity, types.MessageEntityCode):
                 font = Quote.FONT_MONO
                 entity_type = "mono"
-            elif isinstance(entity, types.MessageEntityUrl) or isinstance(entity, types.MessageEntityTextUrl):
-                font = Quote.FONT_REGULAR
+            elif (isinstance(entity, types.MessageEntityUrl) or
+                  isinstance(entity, types.MessageEntityTextUrl)):
                 entity_type = "url"
+            elif isinstance(entity, types.MessageEntityUnderline):
+                entity_type = "underline"
 
             offset = entity.offset
             length = entity.length
@@ -247,13 +249,13 @@ class Quote:
                 used_font = Quote.FONT_REGULAR
                 entity_type = False
             
-            if entity_type == "url":
+            if entity_type == "url" or entity_type == "underline":
                 width = used_font.getlength(char)
                 height = used_font.getbbox("m")[3] + 2
                 image_draw.line(
                     xy=(start_pos_x + width, start_pos_y + height, start_pos_x, start_pos_y + height),
                     width=1,
-                    fill="#2576de",
+                    fill="#2576de" if entity_type == "url" else "white",
                 )
 
             if char not in string.printable and not emoji:
