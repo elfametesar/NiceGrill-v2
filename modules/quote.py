@@ -16,16 +16,30 @@ import string
 string.printable += "ğşüİıçö"
 
 class Quote:
+    """
+    Turns Telegram messages into message box images. To use it, you need to have the fonts in your fonts/ folder in root
+    directory first. You can use any fonts you want as long as they're supported. Module will be looking for these names:
     
-    FONT_TITLE = ImageFont.truetype("/System/Volumes/Data/Users/elfa/NiceGrill/.tmp/Roboto-Medium.ttf", size=14, encoding="utf-16")
-    FONT_REGULAR = ImageFont.truetype("/System/Volumes/Data/Users/elfa/NiceGrill/.tmp/Roboto-Regular.ttf", size=13, encoding="utf-16")
-    FONT_MEDIUM = ImageFont.truetype("/System/Volumes/Data/Users/elfa/NiceGrill/.tmp/Roboto-Medium.ttf", size=13, encoding="utf-16")
-    FONT_BOLD = ImageFont.truetype("/Users/elfa/Downloads/roboto/Roboto-Bold.ttf", size=13, encoding="utf-16")
-    FONT_ITALIC = ImageFont.truetype("/System/Volumes/Data/Users/elfa/NiceGrill/.tmp/Roboto-Italic.ttf", size=13, encoding="utf-16")
-    FONT_MONO = ImageFont.truetype("/Users/elfa/Downloads/Roboto_Mono/RobotoMono.ttf", size=12, encoding="utf-16")
-    FONT_TIME = ImageFont.truetype("/System/Volumes/Data/Users/elfa/NiceGrill/.tmp/Roboto-Italic.ttf", size=11, encoding="utf-16")
-    FONT_EMOJI = ImageFont.truetype("/System/Library/Fonts/Apple Color Emoji.ttc", size=20)
-    FONT_FALLBACK = ImageFont.truetype("/Users/elfa/Downloads/unifont_jp-15.0.06.ttf", size=13, encoding="utf-16")
+        Roboto-Medium.ttf
+        Roboto-Regular.ttf
+        Roboto-Bold.ttf
+        Roboto-Italic.ttf
+        Roboto-Mono.ttf
+        Unicode.ttf
+        Apple Color Emoji.ttc
+
+    """
+    
+    FONT_TITLE = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=14, encoding="utf-16")
+    FONT_REGULAR = ImageFont.truetype("fonts/Roboto-Regular.ttf", size=13, encoding="utf-16")
+    FONT_MEDIUM = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=13, encoding="utf-16")
+    FONT_BOLD = ImageFont.truetype("fonts/Roboto-Bold.ttf", size=13, encoding="utf-16")
+    FONT_ITALIC = ImageFont.truetype("fonts/Roboto-Italic.ttf", size=13, encoding="utf-16")
+    FONT_BOLD_ITALIC = ImageFont.truetype("fonts/Roboto-Bold.ttf", size=13, encoding="utf-16")
+    FONT_MONO = ImageFont.truetype("fonts/Roboto-Mono.ttf", size=12, encoding="utf-16")
+    FONT_TIME = ImageFont.truetype("fonts/Roboto-Italic.ttf", size=11, encoding="utf-16")
+    FONT_EMOJI = ImageFont.truetype("fonts/Apple Color Emoji.ttc", size=20)
+    FONT_FALLBACK = ImageFont.truetype("fonts/Unicode.ttf", size=13, encoding="utf-16")
 
     HEIGHT_MULTIPLIER = 17.8
     MINIMUM_BOX_HEIGHT = 70
@@ -277,7 +291,7 @@ class Quote:
 
 
     async def to_image(
-            user_info, user_text: str, entities: list[types.TypeMessageEntity], client: TelegramClient, message_time=datetime.now()
+            user_info, user_text: str, entities: list[types.TypeMessageEntity], client: TelegramClient, message_time=datetime.now(), multimessage=False
     ):
         user_name = f"{user_info.first_name or ''} {user_info.last_name or ''}"
         
@@ -288,10 +302,17 @@ class Quote:
             title=user_name
         )
         
-        profile_image = await Quote.get_profile_photo(
-            client=client,
-            user_info=user_name
-        )
+        if not multimessage:
+            profile_image = await Quote.get_profile_photo(
+                client=client,
+                user_info=user_name
+            )
+        else:
+            profile_image = Image.new(
+                mode="RGBA",
+                size=(50,50),
+                color=(0,0,0,0)
+            )
 
         sticker_image = await Quote.draw_sticker(
             message_box=message_box,
@@ -327,6 +348,7 @@ class Quote:
                     message_list.append(message_object)
         
         image_objects = []
+        multimessage = False
         for message_object in message_list:
             image_objects.append(
                 await Quote.to_image(
@@ -334,12 +356,13 @@ class Quote:
                     user_text=message_object.message,
                     entities=message_object.entities,
                     client=client,
-                    message_time=message_object.date + (datetime.now() - datetime.utcnow())
+                    message_time=message_object.date + (datetime.now() - datetime.utcnow()),
+                    multimessage=multimessage
                 )
             )
+            multimessage = True
             
-        for obj in image_objects:
-            await message.respond(file=obj)
+        await message.respond(file=image_objects)
 
     @run(command="fquote")
     async def fake_quote(message: Message, client: TelegramClient):
