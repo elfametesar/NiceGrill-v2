@@ -7,13 +7,11 @@ from telethon.tl.patched import Message
 from utils import get_user
 from main import run
 from io import BytesIO
-from utils import parse_markdown
 
 import asyncio
 import sys
 import random
 import string
-import html
 
 string.printable += "ğşüİıçö"
 
@@ -363,8 +361,9 @@ class Quote:
         
         image_object = await Quote.to_image(
             user_info=user_info,
-            user_text=html.unescape(user_text),
+            user_text=user_text,
             client=client,
+            entities=[],
             message_time=message.date.now()
         )
         
