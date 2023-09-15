@@ -15,6 +15,18 @@ import string
 
 string.printable += "ğşüİıçö"
 
+class fake_message:
+            
+    def __init__(self, id, message: str, sender, client, entities=[]) -> None:
+        self.id = id
+        self.sender = sender
+        self.first_name = sender.first_name
+        self.last_name = sender.last_name or ""
+        self.message = message
+        self.client = client
+        self.entities = entities
+
+
 class Quote:
     """
     Turns Telegram messages into message box images. To use it, you need to have the fonts in your fonts/ folder in root
@@ -48,6 +60,8 @@ class Quote:
 
     MESSAGE_COLOR = (50,50,50,255)
     TITLE_COLOR_PALETTE = ["#F07975", "#F49F69", "#F9C84A", "#8CC56E", "#6CC7DC", "#80C1FA", "#BCB3F9", "#E181AC"]
+    
+    USER_COLORS = {}
     
     async def get_entity_data(entities: list):
         if not entities:
@@ -93,7 +107,7 @@ class Quote:
             profile_photo = Image.new(
                 mode="RGBA",
                 size=(50, 50),
-                color=random.choice(Quote.TITLE_COLOR_PALETTE)
+                color=Quote.USER_COLORS[user_info.id]
             )
             
             profile_photo_draw = ImageDraw.Draw(profile_photo, "RGBA")
@@ -128,7 +142,7 @@ class Quote:
             mode="RGBA",
             size=(
                 message_box.width + profile_image.width + 10,
-                message_box.height + profile_image.height
+                message_box.height + 10
             ),
             color=(0,0,0,0)
         )
@@ -146,16 +160,18 @@ class Quote:
         return sticker_image
 
 
-    async def draw_message_box(text_image: Image, title: str) ->Image.Image:
-
+    async def draw_message_box(text_image: Image, user_info = None) ->Image.Image:
+        
+        title_bar_extract = - 24 if not user_info else 0
+        
         message_box_width = max(
             Quote.MINIMUM_BOX_WIDTH,
             text_image.width + 50
         )
         
         message_box_height = max(
-            text_image.height + 50,
-            Quote.MINIMUM_BOX_HEIGHT
+            text_image.height + 50 if user_info else text_image.height - title_bar_extract ,
+            Quote.MINIMUM_BOX_HEIGHT + title_bar_extract
         )
 
         message_box_image = Image.new(
@@ -172,16 +188,17 @@ class Quote:
             radius=30
         )
 
-        box_drawer.text(
-            xy=(20, 14),
-            text=title,
-            fill=random.choice(Quote.TITLE_COLOR_PALETTE),
-            font=Quote.FONT_TITLE
-        )
+        if user_info:
+            box_drawer.text(
+                xy=(20, 14),
+                text=f"{user_info.first_name or ''} {user_info.last_name or ''}",
+                fill=Quote.USER_COLORS[user_info.id],
+                font=Quote.FONT_TITLE
+            )
         
         message_box_image.paste(
             im=text_image,
-            box=(20, 38)
+            box=(20, 38 + title_bar_extract)
         )
 
         return message_box_image
@@ -290,40 +307,73 @@ class Quote:
         return text_box
 
 
-    async def to_image(
-            user_info, user_text: str, entities: list[types.TypeMessageEntity], client: TelegramClient, message_time=datetime.now(), multimessage=False
-    ):
-        user_name = f"{user_info.first_name or ''} {user_info.last_name or ''}"
+    async def to_image(messages: list[Message]):
         
-        text_box_image = await Quote.draw_text(user_text, entities)
-        
-        message_box = await Quote.draw_message_box(
-            text_image=text_box_image,
-            title=user_name
-        )
-        
-        if not multimessage:
-            profile_image = await Quote.get_profile_photo(
-                client=client,
-                user_info=user_name
-            )
-        else:
-            profile_image = Image.new(
-                mode="RGBA",
-                size=(50,50),
-                color=(0,0,0,0)
-            )
+        only_first_pfp = True
+        disable_title_bar = False
+        max_width = total_height = 0
+        sticker_list = []
 
-        sticker_image = await Quote.draw_sticker(
-            message_box=message_box,
-            profile_image=profile_image
+        for message in messages:
+
+            text_box_image = await Quote.draw_text(message.message, message.entities)
+
+            message_box = await Quote.draw_message_box(
+                text_image=text_box_image,
+                user_info=message.sender if not disable_title_bar else None
+            )
+            
+            disable_title_bar = True
+            
+            if only_first_pfp:
+                profile_image = await Quote.get_profile_photo(
+                    client=message.client,
+                    user_info=message.sender
+                )
+            else:
+                profile_image = Image.new(
+                    mode="RGBA",
+                    size=(50,50),
+                    color=(0,0,0,0)
+                )
+
+            only_first_pfp = False
+
+            sticker_image = await Quote.draw_sticker(
+                message_box=message_box,
+                profile_image=profile_image
+            )
+            
+            total_height += sticker_image.height
+            max_width = max(max_width, sticker_image.width)
+
+            sticker_list.append(sticker_image)
+        
+        
+        combined_sticker = Image.new(
+            mode="RGBA",
+            size=(max_width, total_height),
+            color=(0,0,0,0)
         )
 
-        image_object = BytesIO()
-        sticker_image.save(image_object, format="webp")
-        image_object.name = "sticker.webp"
-        image_object.seek(0)
-        return image_object
+        y = 0
+        for sticker in sticker_list:
+            combined_sticker.paste(
+                im=sticker,
+                box=(
+                    max_width - sticker.width,
+                    y
+                )
+            )
+            y += sticker.height
+        
+        
+        sticker_buffer = BytesIO()
+        combined_sticker.save(sticker_buffer, format="webp")
+        sticker_buffer.name = "sticker.webp"
+        sticker_buffer.seek(0)
+
+        return sticker_buffer
     
     @run(command="quote")
     async def quote_replied_message(message: Message, client: TelegramClient):
@@ -338,31 +388,29 @@ class Quote:
             message_count = int(message.args)
         
         message_list = [message.replied]
+        
+        if message.replied.sender_id not in Quote.USER_COLORS:
+            Quote.USER_COLORS.update(
+                {message.replied.sender_id: random.choice(Quote.TITLE_COLOR_PALETTE)}
+            )
+        
         if message_count > 1:
             async for message_object in client.iter_messages(
                 entity=await message.get_chat(),
                 limit=message_count - 1,
-                max_id=message.replied.id
+                max_id=message.replied.id,
+                from_user=message.replied.sender
             ):
                 if message_object.text:
                     message_list.append(message_object)
         
-        image_objects = []
-        multimessage = False
-        for message_object in message_list:
-            image_objects.append(
-                await Quote.to_image(
-                    user_info=message_object.sender,
-                    user_text=message_object.message,
-                    entities=message_object.entities,
-                    client=client,
-                    message_time=message_object.date + (datetime.now() - datetime.utcnow()),
-                    multimessage=multimessage
-                )
-            )
-            multimessage = True
-            
-        await message.respond(file=image_objects)
+
+        message_list = reversed(message_list)
+        sticker_buffer = await Quote.to_image(
+            messages=message_list
+        )
+
+        await message.respond(file=sticker_buffer)
 
     @run(command="fquote")
     async def fake_quote(message: Message, client: TelegramClient):
@@ -381,13 +429,21 @@ class Quote:
             return
         
         await message.delete()
+
+        fake_message_object = fake_message(
+            id=user_info.id,
+            message=user_text,
+            sender=user_info,
+            client=client
+        )
+
+        if fake_message_object.id not in Quote.USER_COLORS:
+            Quote.USER_COLORS.update(
+                {fake_message_object.id: random.choice(Quote.TITLE_COLOR_PALETTE)}
+            )
         
-        image_object = await Quote.to_image(
-            user_info=user_info,
-            user_text=user_text,
-            client=client,
-            entities=[],
-            message_time=message.date.now()
+        sticker_buffer = await Quote.to_image(
+            [fake_message_object]
         )
         
-        await message.respond(file=image_object)
+        await message.respond(file=sticker_buffer)
