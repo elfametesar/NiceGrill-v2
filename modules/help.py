@@ -10,7 +10,7 @@ class Help:
             await Help.help_display_command(message, client)
             return
         
-        await message.edit(HELP_MENU)
+        await message.edit(HELP_MENU[:-2] + "</i>")
 
     async def help_display_command(message: Message, client: TelegramClient):
         if message.args in HELP_MENU_DATA:
