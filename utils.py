@@ -13,57 +13,12 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from telethon import TelegramClient, types
+from telethon import TelegramClient
 
 import asyncio
 import html
 import httpx
 import io
-import re
-
-
-# markdown_dictionary = {
-#     types.MessageEntityBold: "(<strong>)(.*?)(</strong>)",
-#     types.MessageEntityItalic: "(<em>)(.*?)(</em>)",
-#     types.MessageEntityCode: "(<code>)(.*?)(</code>)",
-#     types.MessageEntityStrike: "(<del>)(.*?)(</del>)",
-#     types.MessageEntityUnderline: "(<u>)(.*?)(</u>)",
-#     types.MessageEntityUrl: '(<a href=".*?">)(.*?)(</a>)'
-# }
-
-markdown_dictionary = {
-    "<strong>": types.MessageEntityBold,
-    "<em>": types.MessageEntityItalic,
-    "<code>": types.MessageEntityCode ,
-    "<del>": types.MessageEntityStrike,
-    "<u>": types.MessageEntityUnderline,
-    '<a href=': types.MessageEntityUrl
-}
-
-async def parse_markdown(markdown_text: str) -> list[types.TypeMessageEntity]:
-    entity_list = []
-    text_raw = ""
-
-    for markdown_match in re.finditer('(?:(.*?)(?:(<a href=|<.*?>)(?:.*?">|)(.*?)(</.*?>)|\n)|^\1)', markdown_text):
-
-        markdown_start = markdown_match.group(2)
-        text_raw += markdown_match.group(1)
-
-        if markdown_start in markdown_dictionary:
-            markdown_type = markdown_dictionary[markdown_start]
-            text_raw += markdown_match.group(3)
-            matching_markdown_value = markdown_match.group(3)
-
-            start_index = text_raw.rfind(matching_markdown_value)
-
-            entity_list.append(
-                markdown_type(
-                    start_index,
-                    len(matching_markdown_value)
-                )
-            )
-
-    return text_raw, entity_list
 
 
 async def get_full_log(url):
@@ -111,7 +66,6 @@ async def get_user(user, client: TelegramClient):
 
 async def stream(message, res, template, exit_code="", log=True):
     delim = 3900 - len(template) - len(exit_code)
-
 
     if delim < 0:
         message = await message.reply(
