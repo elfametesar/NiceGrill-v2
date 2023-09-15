@@ -6,12 +6,18 @@ from database import settingsdb
 import asyncio
 import importlib
 import glob
+import sys
 
 
 async def import_modules():
     for module in glob.glob("modules/*.py"):
         module = module.replace("/", ".")[:-3]
-        importlib.import_module(module)
+
+        try:
+            importlib.import_module(module)
+        except Exception as e:
+            print(f"\nModule not loaded: {e}\n", file=sys.stderr)
+
         print(f"Module is loaded: {module.replace('modules.', '').title()}")
 
 
