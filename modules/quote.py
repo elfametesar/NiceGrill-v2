@@ -30,9 +30,10 @@ class Quote:
     FONT_FALLBACK = ImageFont.truetype("/Users/elfa/Downloads/unifont_jp-15.0.06.ttf", size=13, encoding="utf-16")
 
     HEIGHT_MULTIPLIER = 17.8
+    MINIMUM_BOX_HEIGHT = 70
+    MINIMUM_BOX_WIDTH = 250
+    LINE_SIZE_LIMIT = 350
 
-    MAX_LINE_SIZE = 56
-    CUT_DELIMITER = 41
     MESSAGE_COLOR = (50,50,50,255)
     TITLE_COLOR_PALETTE = ["#F07975", "#F49F69", "#F9C84A", "#8CC56E", "#6CC7DC", "#80C1FA", "#BCB3F9", "#E181AC"]
     
@@ -71,66 +72,7 @@ class Quote:
         return entity_data
 
 
-    async def text_wrapper(user_text: str):
-        new_user_text = ""
-        line_index_tracker = 0
-        split_text = user_text.splitlines()
-        html_remover = re.compile("<.*?>")
-
-        for line in split_text:
-            if len(re.sub(html_remover, '', line)) > Quote.MAX_LINE_SIZE:
-                delimiter_mover = Quote.CUT_DELIMITER
-                while line[delimiter_mover] not in string.punctuation:
-                    if delimiter_mover < Quote.MAX_LINE_SIZE - 1:
-                        delimiter_mover += 1
-                    else:
-                        break
-                    await asyncio.sleep(0)
-
-                line_one = line[:delimiter_mover + 1]
-                line_two = line[delimiter_mover + 1:]
-
-                split_text.insert(line_index_tracker + 1, line_one)
-                if line_two:
-                    split_text.insert(line_index_tracker + 2 , line_two)
-                line_index_tracker += 1
-                continue
-
-            new_user_text += f"{line}\n"
-            line_index_tracker += 1
-            await asyncio.sleep(0)
-
-        return new_user_text.strip()
-
-
-    async def get_message_size(user_text: str, entities: dict={}):
-        line_width = char_index_tracker = message_text_width = 0
-        used_font = Quote.FONT_REGULAR
-        entity_end = offset = -1
-        
-        entity_data = await Quote.get_entity_data(entities)
-
-        for line in user_text.splitlines():
-            for char in line:
-                if sys.getsizeof(char) == 80:
-                    used_font = Quote.FONT_EMOJI
-                elif char_index_tracker in entity_data:
-                    entity_end, used_font, _ = entity_data.get(char_index_tracker)
-                    offset = char_index_tracker
-                elif char_index_tracker not in range(offset, entity_end + 1):
-                    used_font = Quote.FONT_REGULAR
-
-                line_width += used_font.getlength(char)
-                char_index_tracker += 1
-
-            message_text_width = max(message_text_width, line_width)
-            line_width = 0
-        
-        return message_text_width, entity_data
-
-
-    async def get_profile_photo(client: TelegramClient, user_info):
-        radius = 40
+    async def get_profile_photo(client: TelegramClient, user_info) -> Image.Image:
         
         photo_buffer = BytesIO()
         await client.download_profile_photo(user_info, photo_buffer)
@@ -167,171 +109,202 @@ class Quote:
         profile_photo_canvas.paste(profile_photo, (0, 0), profile_photo_mask)
 
         return profile_photo_canvas
-        
-            
 
-    async def message_as_image(user_info, user_text: str, client: TelegramClient, message_time=datetime.now()):
-        user_name = f"{user_info.first_name or ''} {user_info.last_name or ''}"
-
-        user_text = await Quote.text_wrapper(user_text)
-        
-        fake_message = await client.send_message(
-            entity=777000,
-            message=user_text
-        )
-        
-        await fake_message.delete()
-        
-        user_text = fake_message.message
-
-        user_name_width = Quote.FONT_TITLE.getlength(user_name)
-        message_text_width, entity_data = await Quote.get_message_size(user_text, fake_message.entities)
-        message_line_count = user_text.count("\n")
-
-        message_box_height = max(
-            (message_line_count + 1) * Quote.HEIGHT_MULTIPLIER + 50,
-            70
-        )
-
-        message_box_width = max(
-            user_name_width + 50,
-            message_text_width + 50,
-            150
-        )
-        
-        image_file = Image.new(
-            mode="RGBA", 
+    
+    async def draw_sticker(message_box: Image, profile_image: Image) ->Image.Image:
+        sticker_image = Image.new(
+            mode="RGBA",
             size=(
-                int(message_box_width),
-                int(message_box_height)
+                message_box.width + profile_image.width + 10,
+                message_box.height + profile_image.height
             ),
             color=(0,0,0,0)
         )
+        
+        sticker_image.paste(
+            im=profile_image,
+            box=(0,0)
+        )
+        
+        sticker_image.paste(
+            im=message_box,
+            box=(profile_image.width, 3)
+        )
+        
+        return sticker_image
 
-        image_draw = ImageDraw.Draw(image_file)
 
-        image_draw.rounded_rectangle(
-            xy=(
-                0,
-                0,
-                message_box_width,
-                message_box_height
-            ),
+    async def draw_message_box(text_image: Image, title: str) ->Image.Image:
+
+        message_box_width = max(
+            Quote.MINIMUM_BOX_WIDTH,
+            text_image.width + 50
+        )
+        
+        message_box_height = max(
+            text_image.height + 50,
+            Quote.MINIMUM_BOX_HEIGHT
+        )
+
+        message_box_image = Image.new(
+            mode="RGBA",
+            size=(round(message_box_width), round(message_box_height)),
+            color=(0, 0, 0, 0)
+        )
+
+        box_drawer = ImageDraw.Draw(message_box_image)
+
+        box_drawer.rounded_rectangle(
+            xy=(0, 0, message_box_width, message_box_height),
             fill=Quote.MESSAGE_COLOR,
             radius=30
         )
 
-        image_draw.text(
+        box_drawer.text(
             xy=(20, 14),
-            text=user_name,
-            font=Quote.FONT_MEDIUM,
-            align="left",
-            fill=random.choice(Quote.TITLE_COLOR_PALETTE)
+            text=title,
+            fill=random.choice(Quote.TITLE_COLOR_PALETTE),
+            font=Quote.FONT_TITLE
+        )
+        
+        message_box_image.paste(
+            im=text_image,
+            box=(20, 38)
         )
 
-        start_pos_x = 20
-        start_pos_y = 35
+        return message_box_image
 
-        entity_end = offset = -1
-        store_old_font = emoji = entity_type = False
 
-        index_tracker = 0
-        for char in user_text:
+    async def expand_text_box(image: Image, size: tuple) ->Image.Image:
+        temp = Image.new(
+            mode="RGB",
+            size=size,
+            color=Quote.MESSAGE_COLOR
+        )
+                
+        temp.paste(
+            im=image,
+            box=(0,0)
+        )
+        
+        temp_draw = ImageDraw.Draw(temp)
+
+        return temp, temp_draw
+
+
+    async def draw_text(text: str, entities: list[types.TypeMessageEntity]) ->Image.Image:
+        entity_data = await Quote.get_entity_data(entities)
+        text_box = Image.new(
+            mode="RGB",
+            size=(150, (text.count("\n") + 1) * round(Quote.HEIGHT_MULTIPLIER)),
+            color=Quote.MESSAGE_COLOR
+        )
+        
+        text_box_draw = ImageDraw.Draw(text_box)
+        
+        x = y = 0
+        offset_tracker = end_offset = 0
+        is_emoji = entity_type = is_fallback = False
+        font = Quote.FONT_REGULAR
+
+        for char in text:
             if sys.getsizeof(char) == 80:
-                used_font = Quote.FONT_EMOJI
-                emoji = True
-                index_tracker += 1
-            elif index_tracker in entity_data:
-                entity_end, used_font, entity_type = entity_data.get(index_tracker)
-                offset = index_tracker
+                offset_tracker += 1
+                is_emoji = True
 
-            if index_tracker not in range(offset, entity_end) and not emoji:
-                used_font = Quote.FONT_REGULAR
-                entity_type = False
+            if offset_tracker in entity_data:
+                end_offset, font, entity_type = entity_data[offset_tracker]                
             
+            if offset_tracker >= end_offset and not is_emoji:
+                font = Quote.FONT_REGULAR
+                entity_type = ""
+
+            if x + font.getlength(char) + 3 > Quote.LINE_SIZE_LIMIT:
+                y += Quote.HEIGHT_MULTIPLIER
+                x = 0
+
+            if x + font.getlength(char) > text_box.width and text_box.width < Quote.LINE_SIZE_LIMIT:
+                text_box, text_box_draw = await Quote.expand_text_box(
+                    image=text_box,
+                    size=(
+                        text_box.width + (Quote.LINE_SIZE_LIMIT - text_box.width) // 2,
+                        text_box.height
+                    )
+                )
+
+            if Quote.HEIGHT_MULTIPLIER + y > text_box.height:
+                text_box, text_box_draw = await Quote.expand_text_box(
+                    image=text_box,
+                    size=(text_box.width, round(text_box.height + Quote.HEIGHT_MULTIPLIER))
+                )
+
             if entity_type == "url" or entity_type == "underline":
-                width = used_font.getlength(char)
-                height = used_font.getbbox("m")[3] + 2
-                image_draw.line(
-                    xy=(start_pos_x + width, start_pos_y + height, start_pos_x, start_pos_y + height),
+                width = font.getlength(char)
+                height = font.getbbox("m")[3] + 2
+                text_box_draw.line(
+                    xy=(x + width, y + height, x, y + height),
                     width=1,
                     fill="#2576de" if entity_type == "url" else "white",
                 )
 
-            if char not in string.printable and not emoji:
-                store_old_font = used_font
-                used_font = Quote.FONT_FALLBACK
-
+            if char not in string.printable and not is_emoji:
+                is_fallback = True
+                
             if char == "\n":
-                start_pos_x = 20
-                start_pos_y += Quote.HEIGHT_MULTIPLIER
-                index_tracker += 1
-                if store_old_font:
-                    used_font = store_old_font
-                    store_old_font = False
+                offset_tracker += 1
+                x = 0
+                y += Quote.HEIGHT_MULTIPLIER
                 continue
-
-            image_draw.text(
+            
+            text_box_draw.text(
                 xy=(
-                    start_pos_x,
-                    start_pos_y if used_font is not Quote.FONT_EMOJI else start_pos_y - 1
+                    x,
+                    y if not is_emoji else y - 1
                 ),
                 text=char,
-                font=used_font,
+                font=Quote.FONT_FALLBACK if is_fallback else Quote.FONT_EMOJI if is_emoji else font,
                 embedded_color=True,
-                fill=None if entity_type != "url" else "#2576de"
+                fill="white" if entity_type != "url" else "#2576de",
             )
-
-            start_pos_x += used_font.getlength(char)
-            index_tracker += 1
-
-            if store_old_font:
-                used_font = store_old_font
-                store_old_font = None
             
-            await asyncio.sleep(0)
-            emoji = False
+            x +=  Quote.FONT_FALLBACK.getlength(char) if is_fallback \
+                    else Quote.FONT_EMOJI.getlength(char) if is_emoji \
+                    else font.getlength(char)
 
-        image_draw.text(
-            xy=(
-                image_file.size[0]-47,
-                image_file.size[1]-20
-            ),
-            text=message_time.strftime("%H:%M"),
-            font=Quote.FONT_TIME, 
-            align="right",
-            fill="gray"
-        )
-    
-        profile_image = await Quote.get_profile_photo(client, user_info)
+            is_fallback = is_emoji = False
+            offset_tracker += 1
+            await asyncio.sleep(0)
         
-        new_image_file = Image.new(
-            mode='RGBA',
-            size=(
-                profile_image.size[0] + 2 + image_file._size[0],
-                profile_image.size[1] + image_file.size[1]
-            ),
-            color=(0,0,0,0)
+        return text_box
+
+
+    async def to_image(
+            user_info, user_text: str, entities: list[types.TypeMessageEntity], client: TelegramClient, message_time=datetime.now()
+    ):
+        user_name = f"{user_info.first_name or ''} {user_info.last_name or ''}"
+        
+        text_box_image = await Quote.draw_text(user_text, entities)
+        
+        message_box = await Quote.draw_message_box(
+            text_image=text_box_image,
+            title=user_name
         )
         
-        new_image_file.paste(
-            im=profile_image,
-            box=(0,2),
+        profile_image = await Quote.get_profile_photo(
+            client=client,
+            user_info=user_name
         )
-        
-        new_image_file.paste(
-            im=image_file,
-            box=(
-                profile_image.size[0] + 2,
-                0
-            )
+
+        sticker_image = await Quote.draw_sticker(
+            message_box=message_box,
+            profile_image=profile_image
         )
 
         image_object = BytesIO()
-        new_image_file.save(image_object, format="webp")
+        sticker_image.save(image_object, format="webp")
         image_object.name = "sticker.webp"
         image_object.seek(0)
-        return image_object        
+        return image_object
     
     @run(command="quote")
     async def quote_replied_message(message: Message, client: TelegramClient):
@@ -358,9 +331,10 @@ class Quote:
         image_objects = []
         for message_object in message_list:
             image_objects.append(
-                await Quote.message_as_image(
+                await Quote.to_image(
                     user_info=message_object.sender,
-                    user_text=html.unescape(message_object.text),
+                    user_text=message_object.message,
+                    entities=message_object.entities,
                     client=client,
                     message_time=message_object.date + (datetime.now() - datetime.utcnow())
                 )
@@ -387,7 +361,7 @@ class Quote:
         
         await message.delete()
         
-        image_object = await Quote.message_as_image(
+        image_object = await Quote.to_image(
             user_info=user_info,
             user_text=html.unescape(user_text),
             client=client,
