@@ -10,6 +10,7 @@ import asyncio
 import sys
 import random
 import string
+import re
 
 string.printable += "ğşüİıçö"
 
@@ -200,11 +201,25 @@ class Quote:
         return new_text
 
 
+    async def extract_document_attribute(media_object):
+        file_name = ""
+        emoji = ""
+        for attribute in media_object.attributes:
+            if name := getattr(attribute, "file_name", None):
+                file_name = name
+            if alt := getattr(attribute, "alt", None):
+                emoji = alt 
+            
+        return file_name, emoji
+
+
     async def draw_reply_bar(name: str, text: str, message: Message=None) ->Image.Image:
         
-        width = Quote.FONT_TITLE.getlength(name) + 15
+        width = min(
+            max(Quote.FONT_TITLE.getlength(name) + 15, Quote.FONT_REGULAR.getlength(text)),
+            Quote.MAXIMUM_BOX_WIDTH
+        )
         x_pos = 10
-
 
         reply_bar = Image.new(
             mode="RGB",
@@ -215,55 +230,75 @@ class Quote:
             color=Quote.MESSAGE_COLOR
         )
         
+        symbol = ""
         if message.media:
             thumb_file = BytesIO()
             is_document = False
+
             if message.sticker:
+                text, symbol = await Quote.extract_document_attribute(message.sticker)
+                if symbol:
+                    is_document = True
+                else:
+                    await message.download_media(
+                        thumb_file,
+                        thumb=0,
+                    )
                 text = " Sticker"
-                await message.download_media(
-                    thumb_file,
-                    thumb=0,
-                )
-                thumb_file.seek(0)
             elif message.photo:
                 text = " Photo"
                 await message.download_media(
                     thumb_file,
                     thumb=0,
                 )
-                thumb_file.seek(0)
             elif message.video:
                 text = " Video"
                 await message.download_media(
                     thumb_file,
                     thumb=0,
                 )
-                thumb_file.seek(0)
-            elif message.document:
-                text = " Document"
+            elif message.audio:
+                symbol = "🎵"
+                text = " Audio"
                 is_document = True
-                
+            elif message.document:
+                text, _ = await Quote.extract_document_attribute(message.document)
+                symbol = "🔗"
+                is_document = True
+
             if not is_document:
+                thumb_file.seek(0)
                 thumb_file = Image.open(thumb_file)
                 
                 thumb_image = Image.new(
                     mode="RGBA",
-                    size=(36, 36)
+                    size=(36, 36),
+                    color=Quote.MESSAGE_COLOR
                 )
                 
-                thumb_file.thumbnail((128,128))
+                thumb_file = thumb_file.resize((36,36), Image.NEAREST)
                 thumb_image.paste(
                     im=thumb_file,
-                    box=(-16, -16)
+                    box=(0, 0)
                 )
 
                 reply_bar.paste(
                     im=thumb_image,
                     box=(5, 0)
                 )
-                
+
                 x_pos += 40
 
+        text = await Quote.break_text(
+            text=text,
+            font=Quote.FONT_REGULAR,
+            offset=x_pos + 15
+        )
+        name = await Quote.break_text(
+            text=name,
+            font=Quote.FONT_TITLE,
+            offset=x_pos + 15
+        )
         
         reply_bar_draw = ImageDraw.Draw(reply_bar)
         
@@ -272,6 +307,15 @@ class Quote:
             text=name,
             font=Quote.FONT_TITLE
         )
+        
+        if symbol:
+            reply_bar_draw.text(
+                xy=(x_pos, Quote.LINE_HEIGHT - 2),
+                text=symbol,
+                font=Quote.FONT_EMOJI,
+                embedded_color=True
+            )
+            x_pos += 24
         
         reply_bar_draw.text(
             xy=(x_pos,Quote.LINE_HEIGHT),
@@ -303,7 +347,7 @@ class Quote:
             title_image.width + 30 if title_image else 0,
             reply_image.width + 20 if reply_image else 0,
             text_image.width + 50
-        )
+        ) + 5
         
         message_box_height = max(
             text_image.height,
@@ -383,16 +427,16 @@ class Quote:
         font = Quote.FONT_REGULAR
 
         for char in text:
+            if offset_tracker >= end_offset:
+                font = Quote.FONT_REGULAR
+                entity_type = ""
+            
             if sys.getsizeof(char) == 80:
                 offset_tracker += 1
                 is_emoji = True
 
             if offset_tracker in entity_data:
                 end_offset, font, entity_type = entity_data[offset_tracker]                
-            
-            if offset_tracker >= end_offset and not is_emoji:
-                font = Quote.FONT_REGULAR
-                entity_type = ""
 
             if x + font.getlength(char) + 3 > Quote.MAXIMUM_BOX_WIDTH:
                 y += Quote.LINE_HEIGHT
@@ -429,6 +473,7 @@ class Quote:
                 offset_tracker += 1
                 x = 0
                 y += Quote.LINE_HEIGHT
+                entity_type = ""
                 continue
             
             text_box_draw.text(
@@ -455,8 +500,8 @@ class Quote:
 
     async def to_image(messages: list[Message]):
         
-        only_first_pfp = True
-        disable_title_bar = False
+        is_profile_photo = True
+        is_title_bar = False
         max_width = total_height = 0
         sticker_list = []
 
@@ -473,21 +518,12 @@ class Quote:
                 reply_message = await message.get_reply_message()
                 reply_sender_name = f"{reply_message.sender.first_name} {reply_message.sender.last_name or ''}"
 
-                reply_sender_text = await Quote.break_text(
-                    text=reply_message.message,
-                    font=Quote.FONT_TITLE,
-                    offset=20
-                )
-
-                reply_sender_name = await Quote.break_text(
-                    text=reply_sender_name,
-                    font=Quote.FONT_TITLE,
-                    offset=20
-                )
+                reply_sender_text = " ".join(reply_message.message.splitlines())
+                reply_sender_name = reply_sender_name
 
             text_box_image = await Quote.draw_text(message.message, message.entities)
 
-            if not disable_title_bar:
+            if not is_title_bar:
                 title_bar_image = await Quote.draw_title(
                     user_name=sender_name,
                     user_id=message.sender_id
@@ -506,7 +542,7 @@ class Quote:
                 reply_image=reply_bar_image
             )
                         
-            if only_first_pfp:
+            if is_profile_photo:
                 profile_image = await Quote.get_profile_photo(
                     client=message.client,
                     user_info=message.sender
@@ -518,8 +554,8 @@ class Quote:
                     color=(0,0,0,0)
                 )
 
-            only_first_pfp = False
-            disable_title_bar = True
+            is_profile_photo = False
+            is_title_bar = True
 
             sticker_image = await Quote.draw_sticker(
                 message_box=message_box,
