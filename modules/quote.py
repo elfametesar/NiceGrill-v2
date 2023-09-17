@@ -1,5 +1,3 @@
-from datetime import datetime
-import re
 from PIL import Image, ImageDraw, ImageFont
 from telethon import TelegramClient
 from telethon import types
@@ -53,10 +51,10 @@ class Quote:
     FONT_EMOJI = ImageFont.truetype("fonts/Apple Color Emoji.ttc", size=20)
     FONT_FALLBACK = ImageFont.truetype("fonts/Unicode.ttf", size=13, encoding="utf-16")
 
-    HEIGHT_MULTIPLIER = 17.8
-    MINIMUM_BOX_HEIGHT = 70
+    LINE_HEIGHT = 17.8
+    MINIMUM_BOX_HEIGHT = 45
     MINIMUM_BOX_WIDTH = 250
-    LINE_SIZE_LIMIT = 350
+    MAXIMUM_BOX_WIDTH = 350
 
     MESSAGE_COLOR = (50,50,50,255)
     TITLE_COLOR_PALETTE = ["#F07975", "#F49F69", "#F9C84A", "#8CC56E", "#6CC7DC", "#80C1FA", "#BCB3F9", "#E181AC"]
@@ -160,19 +158,157 @@ class Quote:
         return sticker_image
 
 
-    async def draw_message_box(text_image: Image, user_info = None) ->Image.Image:
+    async def draw_title(user_name: str, user_id: int) ->Image.Image:
+
+        width = Quote.FONT_TITLE.getlength(user_name)
+
+        title_bar = Image.new(
+            mode="RGB",
+            size=(
+                round(width),
+                round(Quote.LINE_HEIGHT)
+            ),
+            color=Quote.MESSAGE_COLOR
+        )
+
+        title_bar_draw = ImageDraw.Draw(title_bar)
         
-        title_bar_extract = - 24 if not user_info else 0
+        title_bar_draw.text(
+            xy=(0,0),
+            text=user_name,
+            font=Quote.FONT_TITLE,
+            fill=Quote.USER_COLORS[user_id]
+        )
         
+        return title_bar
+
+    async def break_text(text: str, font: ImageFont.ImageFont, offset: int=0) ->str:
+        if font.getlength(text) < Quote.MAXIMUM_BOX_WIDTH:
+            return text
+
+        width = 0
+        new_text = ""
+        for char in text:
+            
+            if width + 30 + offset >= Quote.MAXIMUM_BOX_WIDTH:
+                new_text += "..."
+                break
+            
+            width += Quote.FONT_TITLE.getlength(char)
+            new_text += char
+        
+        return new_text
+
+
+    async def draw_reply_bar(name: str, text: str, message: Message=None) ->Image.Image:
+        
+        width = Quote.FONT_TITLE.getlength(name) + 15
+        x_pos = 10
+
+
+        reply_bar = Image.new(
+            mode="RGB",
+            size=(
+                round(width),
+                round(Quote.LINE_HEIGHT * 2)
+            ),
+            color=Quote.MESSAGE_COLOR
+        )
+        
+        if message.media:
+            thumb_file = BytesIO()
+            is_document = False
+            if message.sticker:
+                text = " Sticker"
+                await message.download_media(
+                    thumb_file,
+                    thumb=0,
+                )
+                thumb_file.seek(0)
+            elif message.photo:
+                text = " Photo"
+                await message.download_media(
+                    thumb_file,
+                    thumb=0,
+                )
+                thumb_file.seek(0)
+            elif message.video:
+                text = " Video"
+                await message.download_media(
+                    thumb_file,
+                    thumb=0,
+                )
+                thumb_file.seek(0)
+            elif message.document:
+                text = " Document"
+                is_document = True
+                
+            if not is_document:
+                thumb_file = Image.open(thumb_file)
+                
+                thumb_image = Image.new(
+                    mode="RGBA",
+                    size=(36, 36)
+                )
+                
+                thumb_file.thumbnail((128,128))
+                thumb_image.paste(
+                    im=thumb_file,
+                    box=(-16, -16)
+                )
+
+                reply_bar.paste(
+                    im=thumb_image,
+                    box=(5, 0)
+                )
+                
+                x_pos += 40
+
+        
+        reply_bar_draw = ImageDraw.Draw(reply_bar)
+        
+        reply_bar_draw.text(
+            xy=(x_pos,0),
+            text=name,
+            font=Quote.FONT_TITLE
+        )
+        
+        reply_bar_draw.text(
+            xy=(x_pos,Quote.LINE_HEIGHT),
+            text=text,
+            font=Quote.FONT_REGULAR
+        )
+        
+        reply_bar_draw.line(
+            xy=(0, 0, 0, reply_bar.height),
+            width=2
+        )
+
+        return reply_bar
+
+
+    async def draw_message_box(text_image: Image, title_image: Image.Image=None, reply_image: Image.Image=None) ->Image.Image:
+
+        if title_image and reply_image:
+            additional_sizes = 55 + 8
+        elif title_image and not reply_image:
+            additional_sizes = 10 + 8
+        elif not title_image and reply_image:
+            additional_sizes = 25 + 8
+        else:
+            additional_sizes = -2
+
         message_box_width = max(
             Quote.MINIMUM_BOX_WIDTH,
+            title_image.width + 30 if title_image else 0,
+            reply_image.width + 20 if reply_image else 0,
             text_image.width + 50
         )
         
         message_box_height = max(
-            text_image.height + 50 if user_info else text_image.height - title_bar_extract ,
-            Quote.MINIMUM_BOX_HEIGHT + title_bar_extract
-        )
+            text_image.height,
+            Quote.MINIMUM_BOX_HEIGHT
+        ) + additional_sizes
 
         message_box_image = Image.new(
             mode="RGBA",
@@ -181,6 +317,8 @@ class Quote:
         )
 
         box_drawer = ImageDraw.Draw(message_box_image)
+        
+        y_pos = 7
 
         box_drawer.rounded_rectangle(
             xy=(0, 0, message_box_width, message_box_height),
@@ -188,32 +326,40 @@ class Quote:
             radius=30
         )
 
-        if user_info:
-            box_drawer.text(
-                xy=(20, 14),
-                text=f"{user_info.first_name or ''} {user_info.last_name or ''}",
-                fill=Quote.USER_COLORS[user_info.id],
-                font=Quote.FONT_TITLE
+        if title_image:
+            y_pos += 4
+            message_box_image.paste(
+                im=title_image,
+                box=(20, y_pos)
             )
+            y_pos += title_image.height
+
+        if reply_image:
+            y_pos += 4
+            message_box_image.paste(
+                im=reply_image,
+                box=(20, y_pos)
+            )
+            y_pos += reply_image.height
         
         message_box_image.paste(
             im=text_image,
-            box=(20, 38 + title_bar_extract)
+            box=(20, y_pos + 4)
         )
 
         return message_box_image
 
 
-    async def expand_text_box(image: Image, size: tuple) ->Image.Image:
+    async def expand_text_box(image: Image, size: tuple, pos=(0,0)) ->Image.Image:
         temp = Image.new(
             mode="RGB",
             size=size,
             color=Quote.MESSAGE_COLOR
         )
-                
+
         temp.paste(
             im=image,
-            box=(0,0)
+            box=pos
         )
         
         temp_draw = ImageDraw.Draw(temp)
@@ -225,12 +371,12 @@ class Quote:
         entity_data = await Quote.get_entity_data(entities)
         text_box = Image.new(
             mode="RGB",
-            size=(150, (text.count("\n") + 1) * round(Quote.HEIGHT_MULTIPLIER)),
+            size=(150, (text.count("\n") + 1) * round(Quote.LINE_HEIGHT)),
             color=Quote.MESSAGE_COLOR
         )
         
         text_box_draw = ImageDraw.Draw(text_box)
-        
+
         x = y = 0
         offset_tracker = end_offset = 0
         is_emoji = entity_type = is_fallback = False
@@ -248,23 +394,23 @@ class Quote:
                 font = Quote.FONT_REGULAR
                 entity_type = ""
 
-            if x + font.getlength(char) + 3 > Quote.LINE_SIZE_LIMIT:
-                y += Quote.HEIGHT_MULTIPLIER
+            if x + font.getlength(char) + 3 > Quote.MAXIMUM_BOX_WIDTH:
+                y += Quote.LINE_HEIGHT
                 x = 0
 
-            if x + font.getlength(char) > text_box.width and text_box.width < Quote.LINE_SIZE_LIMIT:
+            if x + font.getlength(char) > text_box.width and text_box.width < Quote.MAXIMUM_BOX_WIDTH:
                 text_box, text_box_draw = await Quote.expand_text_box(
                     image=text_box,
                     size=(
-                        text_box.width + (Quote.LINE_SIZE_LIMIT - text_box.width) // 2,
+                        text_box.width + (Quote.MAXIMUM_BOX_WIDTH - text_box.width) // 2,
                         text_box.height
                     )
                 )
 
-            if Quote.HEIGHT_MULTIPLIER + y > text_box.height:
+            if Quote.LINE_HEIGHT * 2 + y + 1 > text_box.height:
                 text_box, text_box_draw = await Quote.expand_text_box(
                     image=text_box,
-                    size=(text_box.width, round(text_box.height + Quote.HEIGHT_MULTIPLIER))
+                    size=(text_box.width, round(text_box.height + Quote.LINE_HEIGHT + 5))
                 )
 
             if entity_type == "url" or entity_type == "underline":
@@ -282,7 +428,7 @@ class Quote:
             if char == "\n":
                 offset_tracker += 1
                 x = 0
-                y += Quote.HEIGHT_MULTIPLIER
+                y += Quote.LINE_HEIGHT
                 continue
             
             text_box_draw.text(
@@ -316,15 +462,50 @@ class Quote:
 
         for message in messages:
 
+            title_bar_image = reply_bar_image = None
+            sender_name = await Quote.break_text(
+                f"{message.sender.first_name} {message.sender.last_name or ''}",
+                Quote.FONT_TITLE,
+            )
+
+            reply_message = ""
+            if message.is_reply:
+                reply_message = await message.get_reply_message()
+                reply_sender_name = f"{reply_message.sender.first_name} {reply_message.sender.last_name or ''}"
+
+                reply_sender_text = await Quote.break_text(
+                    text=reply_message.message,
+                    font=Quote.FONT_TITLE,
+                    offset=20
+                )
+
+                reply_sender_name = await Quote.break_text(
+                    text=reply_sender_name,
+                    font=Quote.FONT_TITLE,
+                    offset=20
+                )
+
             text_box_image = await Quote.draw_text(message.message, message.entities)
+
+            if not disable_title_bar:
+                title_bar_image = await Quote.draw_title(
+                    user_name=sender_name,
+                    user_id=message.sender_id
+                )
+
+            if message.is_reply:
+                reply_bar_image = await Quote.draw_reply_bar(
+                    name=reply_sender_name,
+                    text=reply_sender_text,
+                    message=reply_message
+                )
 
             message_box = await Quote.draw_message_box(
                 text_image=text_box_image,
-                user_info=message.sender if not disable_title_bar else None
+                title_image=title_bar_image,
+                reply_image=reply_bar_image
             )
-            
-            disable_title_bar = True
-            
+                        
             if only_first_pfp:
                 profile_image = await Quote.get_profile_photo(
                     client=message.client,
@@ -338,6 +519,7 @@ class Quote:
                 )
 
             only_first_pfp = False
+            disable_title_bar = True
 
             sticker_image = await Quote.draw_sticker(
                 message_box=message_box,
