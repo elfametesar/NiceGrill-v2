@@ -242,20 +242,14 @@ class Downloader:
             )
 
         elif message.is_reply or message.args:
-            urls = []
-            if message.args and message.entities:
-                for entity in message.message.entities:
-                    if isinstance(entity, MessageEntityUrl) and (entity := message.message.message[
-                            entity.offset: entity.offset + entity.length
-                    ]):
-                        urls.append(entity)
+            urls = message.get_entities_text(MessageEntityUrl)
 
-            if message.is_reply and message.replied.entities:
-                for entity in message.replied.entities:
-                    if isinstance(entity, MessageEntityUrl) and (entity := message.replied.message[
-                            entity.offset: entity.offset + entity.length
-                    ]):
-                        urls.append(entity)
+            if message.is_reply:
+                urls.extend(
+                    message.replied.get_entities_text(MessageEntityUrl)
+                )
+            
+            urls = [x[1] for x in urls]
 
             if not urls:
                 await message.edit("<i>There are no URLs to parse in your input</i>")
