@@ -25,6 +25,7 @@ class fake_message:
         self.client = client
         self.entities = entities
         self.is_reply = False
+        self.media = None
 
 
 class Quote:
