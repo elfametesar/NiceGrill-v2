@@ -21,6 +21,23 @@ import httpx
 import io
 
 
+async def human_readables(data=None, seconds=None):
+    if data:
+        magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb")
+        m = 0
+        while data > 1024 and m < len(magnitudes):
+            data /= 1024
+            m += 1
+        return f"{data:.2f} {magnitudes[m]}"
+    else:
+        magnitudes = ("seconds", "minutes", "hours", "days", "months", "years")
+        m = 0
+        while seconds > 60 and m < len(magnitudes):
+            seconds //= 60
+            m += 1
+        return f"{seconds} {magnitudes[m]}"
+
+
 async def get_full_log(url):
     async with httpx.AsyncClient() as session:
         content = await session.get(

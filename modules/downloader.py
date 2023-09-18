@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from database import settingsdb
 from pySmartDL import SmartDL
 from main import run, startup
-from PIL import Image
+from utils import human_readables
 
 import asyncio
 import os
@@ -20,23 +20,6 @@ class Downloader:
     DOWNLOAD_PATH = None
 
 
-    async def human_readables(data=None, seconds=None):
-        if data:
-            magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb")
-            m = 0
-            while data > 1024 and m < len(magnitudes):
-                data /= 1024
-                m += 1
-            return f"{data:.2f} {magnitudes[m]}"
-        else:
-            magnitudes = ("seconds", "minutes", "hours", "days", "months", "years")
-            m = 0
-            while seconds > 60 and m < len(magnitudes):
-                seconds //= 60
-                m += 1
-            return f"{seconds} {magnitudes[m]}"
-
-
     async def telegram_progress_bar(message, received_bytes, total_bytes, file_name, start_time):
         percentage = round((received_bytes / total_bytes) * 20, 2)
 
@@ -44,11 +27,11 @@ class Downloader:
         
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
-<b>Size:</b> <i>{await Downloader.human_readables(data=total_bytes)}</i>
-<b>Speed:</b> <i>{await Downloader.human_readables(speed)}/s</i>
-<b>Time Passed:</b> <i>{await Downloader.human_readables(seconds=received_bytes//speed)}</i>
-<b>Downloaded:</b> <i>{await Downloader.human_readables(received_bytes)}</i>
-<b>Estimated:</b> <i>{await Downloader.human_readables(seconds=total_bytes//speed)}</i>
+<b>Size:</b> <i>{await human_readables(data=total_bytes)}</i>
+<b>Speed:</b> <i>{await human_readables(speed)}/s</i>
+<b>Time Passed:</b> <i>{await human_readables(seconds=received_bytes//speed)}</i>
+<b>Downloaded:</b> <i>{await human_readables(received_bytes)}</i>
+<b>Estimated:</b> <i>{await human_readables(seconds=total_bytes//speed)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
         
