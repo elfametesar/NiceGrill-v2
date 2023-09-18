@@ -60,7 +60,7 @@ class Misc:
             await asyncio.sleep(1)
             updates = os.popen(
                 "git log --pretty=format:'%s - %an (%cr)' --abbrev-commit"
-                " --date=relative master..origin/master").readlines()
+                " --date=relative main..origin/main").readlines()
             if updates:
                 ls = "<b>Updates:</b>\n\n"
                 for i in updates:
@@ -81,23 +81,23 @@ class Misc:
             await message.edit(f"<i>{update}</i>")
 
 
-    @run(command="asset")
-    async def asset(message: Message, client: TelegramClient):
-        arg = message.args
-        if arg == "make":
-            channel = await client(
-                functions.channels.CreateChannelRequest(
-                    title='NiceGrill Storage(DO NOT DELETE)',
-                    about='Storage channel for your files',
-            ))
-            settings.set_asset(int("-100" + str(channel.updates[1].channel_id)))
-            await message.edit("<i>Added successfully</i>")
-            return
-        if not str(arg)[1:].isdigit() and arg != "make":
-            await message.edit(f"<i>Either put an ID or type .asset make</i>")
-            return
-        settings.set_asset(int(arg))
-        await message.edit("<i>Added successfully</i>")
+    # @run(command="asset")
+    # async def asset(message: Message, client: TelegramClient):
+    #     arg = message.args
+    #     if arg == "make":
+    #         channel = await client(
+    #             functions.channels.CreateChannelRequest(
+    #                 title='NiceGrill Storage(DO NOT DELETE)',
+    #                 about='Storage channel for your files',
+    #         ))
+    #         settings.set_asset(int("-100" + str(channel.updates[1].channel_id)))
+    #         await message.edit("<i>Added successfully</i>")
+    #         return
+    #     if not str(arg)[1:].isdigit() and arg != "make":
+    #         await message.edit(f"<i>Either put an ID or type .asset make</i>")
+    #         return
+    #     settings.set_asset(int(arg))
+    #     await message.edit("<i>Added successfully</i>")
 
 
     @run(command="read")
