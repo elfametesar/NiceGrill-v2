@@ -2,7 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 from telethon import TelegramClient
 from telethon import types
 from telethon.tl.patched import Message
-from utils import get_user
+from utils import get_user, human_readables
 from main import run
 from io import BytesIO
 
@@ -209,9 +209,9 @@ class Quote:
             if name := getattr(attribute, "file_name", None):
                 file_name = name
             if alt := getattr(attribute, "alt", None):
-                emoji = alt 
+                emoji = alt
             
-        return file_name, emoji
+        return file_name, emoji, media_object.size
 
 
     async def draw_reply_bar(name: str, text: str, message: Message=None) ->Image.Image:
@@ -237,7 +237,7 @@ class Quote:
             is_document = False
 
             if message.sticker:
-                text, symbol = await Quote.extract_document_attribute(message.sticker)
+                text, symbol, _ = await Quote.extract_document_attribute(message.sticker)
                 if symbol:
                     is_document = True
                 else:
@@ -263,7 +263,7 @@ class Quote:
                 text = " Audio"
                 is_document = True
             elif message.document:
-                text, _ = await Quote.extract_document_attribute(message.document)
+                text, _, _ = await Quote.extract_document_attribute(message.document)
                 symbol = "🔗"
                 is_document = True
 
@@ -413,6 +413,14 @@ class Quote:
 
 
     async def draw_text(text: str, entities: list[types.TypeMessageEntity]) ->Image.Image:
+        
+        if not text.strip():
+            return Image.new(
+                mode="RGBA",
+                size=(0,10),
+                color=(0,0,0,0)
+            )
+        
         entity_data = await Quote.get_entity_data(entities)
         text_box = Image.new(
             mode="RGB",
@@ -499,6 +507,117 @@ class Quote:
         return text_box
 
 
+    async def draw_media_document(message: Message):
+        name, _, size = await Quote.extract_document_attribute(media_object=message.document)
+        size = await human_readables(data=size)
+        
+        name = await Quote.break_text(
+            text=name,
+            font=Quote.FONT_TITLE,
+            offset=50
+        )
+
+        width = Quote.FONT_TITLE.getlength(name) + 70
+
+        document_bg = Image.new(
+            mode="RGBA",
+            size=(round(width), 45),
+            color=Quote.MESSAGE_COLOR
+        )
+
+        document_draw = ImageDraw.Draw(document_bg)
+
+        if not message.document.thumbs:
+            document_draw.ellipse(
+                xy=(0, 0, 45, 45),
+                fill="#434343"
+            )
+
+            document_draw.text(
+                xy=(18, 10),
+                text="⬇",
+                font=ImageFont.truetype(Quote.FONT_FALLBACK.path, 25),
+                embedded_color=True,
+                fill="white"
+            )
+        else:
+            thumb_buffer = BytesIO()
+            await message.download_media(thumb=-1, file=thumb_buffer)
+            thumb_buffer.seek(0)
+            thumb_buffer.name = "thumbnail.png"
+
+            thumb_temp_image = Image.open(thumb_buffer)
+            
+            thumb_temp_image = thumb_temp_image.resize((45, 45))
+            
+            thumb_mask = Image.new(
+                mode="L",
+                size=thumb_temp_image.size,
+                color=0
+            )
+            
+            thumb_mask_draw = ImageDraw.Draw(thumb_mask)
+            
+            thumb_mask_draw.rounded_rectangle(
+                xy=(0, 0, 45, 45),
+                radius=7,
+                fill=255
+            )
+
+            thumb_image = Image.new(
+                mode="RGBA",
+                size=thumb_temp_image.size,
+                color=Quote.MESSAGE_COLOR
+            )
+
+            thumb_image.paste(
+                im=thumb_temp_image,
+                box=(0,0),
+                mask=thumb_mask
+            )
+
+            document_bg.paste(
+                im=thumb_image,
+                box=(0,0)
+            )
+        
+        document_draw.text((55, 7), name, font=Quote.FONT_TITLE, fill="white")
+        document_draw.text(
+            xy=(55, 25),
+            text=str(size),
+            font=Quote.FONT_REGULAR,
+            fill="#AAAAAA"
+        )
+
+        return document_bg
+
+
+    async def draw_media(text_box_image: Image.Image, message: Message):
+        if not message.media:
+            return text_box_image
+
+        if message.photo or message.video:
+            return text_box_image
+        elif message.document:
+            media_image = await Quote.draw_media_document(message)
+        
+        text_box_image, _ = await Quote.expand_text_box(
+            image=text_box_image,
+            size=(
+                text_box_image.width + (media_image.width - text_box_image.width),
+                media_image.height + text_box_image.height + round(Quote.LINE_HEIGHT)
+            ),
+            pos=(0, media_image.height + 10)
+        )
+        
+        text_box_image.paste(
+            im=media_image,
+            box=(0,0)
+        )
+
+        return text_box_image
+
+
     async def to_image(messages: list[Message]):
         
         is_profile_photo = True
@@ -523,6 +642,11 @@ class Quote:
                 reply_sender_name = reply_sender_name
 
             text_box_image = await Quote.draw_text(message.message, message.entities)
+
+            text_box_image = await Quote.draw_media(
+                text_box_image=text_box_image,
+                message=message
+            )
 
             if not is_title_bar:
                 title_bar_image = await Quote.draw_title(
