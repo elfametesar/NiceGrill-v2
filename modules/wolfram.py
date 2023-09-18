@@ -10,25 +10,30 @@ class Wolfram:
     
     @run(command="ask")
     async def wolfram_query(message: Message, client: TelegramClient):
-        if not message.args:
-            await message.edit("<i>You need to input a query text to ask the server</i>")
+        query = message.args
+
+        if message.is_reply:
+            query = message.replied.text
+
+        if not query:
+            await message.edit("<em>You need to input a query text to ask the server</em>")
             return
         
         if not WOLFRAM_API:
             await message.edit(
-                "<i>You need to get an API id first, you can do so by visiting and registering to:\n"
-                "products.wolframalpha.com/api/</i>"
+                "<em>You need to get an API id first, you can do so by visiting and registering to:\n"
+                "</em>http://products.wolframalpha.com/api/"
             )
             return
         
-        await message.edit("<i>Thinking...</i>")
+        await message.edit("<em>Thinking...</em>")
 
         async with AsyncClient() as session:
             result = await session.get(
                 url=Wolfram.API_URL.format(
-                    WOLFRAM_API, message.args
+                    WOLFRAM_API, query
             ),
             follow_redirects=True
         )
         
-        await message.edit(f"<i>{result.text}</i>")
+        await message.edit(f"<em>{result.text}</em>")
