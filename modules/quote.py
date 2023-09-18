@@ -10,7 +10,6 @@ import asyncio
 import sys
 import random
 import string
-import re
 
 string.printable += "ğşüİıçö"
 
@@ -19,11 +18,13 @@ class fake_message:
     def __init__(self, id, message: str, sender, client, entities=[]) -> None:
         self.id = id
         self.sender = sender
+        self.sender_id = sender.id
         self.first_name = sender.first_name
         self.last_name = sender.last_name or ""
         self.message = message
         self.client = client
         self.entities = entities
+        self.is_reply = False
 
 
 class Quote:
@@ -269,7 +270,7 @@ class Quote:
             if not is_document:
                 thumb_file.seek(0)
                 thumb_file = Image.open(thumb_file)
-                
+
                 thumb_image = Image.new(
                     mode="RGBA",
                     size=(36, 36),
@@ -593,7 +594,7 @@ class Quote:
 
         return sticker_buffer
     
-    @run(command="quote")
+    @run(command="q")
     async def quote_replied_message(message: Message, client: TelegramClient):
         if not message.is_reply:
             await message.edit("<i>You need to reply to a message to quote</i>")
@@ -630,7 +631,7 @@ class Quote:
 
         await message.respond(file=sticker_buffer)
 
-    @run(command="fquote")
+    @run(command="fq")
     async def fake_quote(message: Message, client: TelegramClient):
         if not message.args:
             await message.edit("<i>You need to input a username and a message attached to it in that order</i>")
@@ -665,3 +666,40 @@ class Quote:
         )
         
         await message.respond(file=sticker_buffer)
+
+
+@run(command="setcolor")
+async def set_message_color(message: Message, client: TelegramClient):
+    if not message.args:
+        Quote.MESSAGE_COLOR = (50,50,50,255)
+        await message.edit("<i>Message box color has been set to default</i>")
+        return
+
+    arguments = message.args.split()
+    color = None
+
+    if len(arguments) > 3 and "".join(arguments).isdigit():
+        r,g,b,a = int(arguments[0]), int(arguments[1]), int(arguments[2]), int(arguments[3])
+        color = (r, g, b, a)
+    elif message.args.startswith("#"):
+        color = message.args
+    else:
+        color = message.args
+    
+    tester_image = Image.new(
+        mode="RGBA",
+        size=(50, 50)
+    )
+    
+    tester_draw = ImageDraw.Draw(tester_image)
+    
+    try:
+        tester_draw.text(
+            xy=(0,0),
+            text="a",
+            fill=color
+        )
+        Quote.MESSAGE_COLOR = color
+        await message.edit(f"<i>Message box color has been set to {color}</i>")
+    except Exception as e:
+        await message.edit(f"<i>{e}</i>")
