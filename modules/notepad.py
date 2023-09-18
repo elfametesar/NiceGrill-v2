@@ -3,6 +3,7 @@ from telethon import TelegramClient
 from telethon.tl.types import Message
 
 import os
+import html
 import asyncio
 
 class Notepad:
@@ -27,7 +28,7 @@ class Notepad:
         file_descriptor = open(message.args, "r+")
         if content := file_descriptor.read().strip():
             try:
-                await message.edit(content)
+                await message.edit(content, parse_mode="md")
             except:
                 file_descriptor.close()
                 await message.edit("<i>File is too big, therefore cannot be edited</i>")
@@ -53,7 +54,7 @@ class Notepad:
         try:
             file_descriptor.truncate(0)
             file_descriptor.seek(0)
-            file_descriptor.write(message.replied.text)
+            file_descriptor.write(html.unescape(message.replied.message))
             file_descriptor.flush()
             await message.edit(f"<i>File successfully saved, file is still open tho</i>")
         except Exception as e:
@@ -77,7 +78,7 @@ class Notepad:
             await message.edit("<i>You need to reply to a message containing a file</i>")
             return
         
-        await message.edit(f"<i>File name in the replied message: {Notepad.FILE_DESCRIPTORS[message.replied.id]}</i>")
+        await message.edit(f"<i>File name in the replied message: {Notepad.FILE_DESCRIPTORS[message.replied.id].name}</i>")
 
 
     @run(command="discard")
