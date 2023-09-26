@@ -13,16 +13,15 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from telethon import TelegramClient
-from telethon.tl.patched import Message
+from telethon import TelegramClient as Client
 from database import settingsdb as settings
-from main import run
+from main import Message, run
 
 
 class Settings:
 
     @run(command="prefix", prefix=".")
-    async def set_prefix(message: Message, client: TelegramClient):
+    async def set_prefix(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>You need it to pass in a prefix first</i>")
             return
@@ -33,5 +32,5 @@ class Settings:
         )
 
     @run(command="getprefix", prefix=".")
-    async def get_prefix(message: Message, client: TelegramClient):
+    async def get_prefix(message: Message, client: Client):
         await message.edit(f"<i>{settings.get_prefix() or '.'}</i>")

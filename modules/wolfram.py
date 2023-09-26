@@ -1,6 +1,5 @@
-from main import run
-from telethon import TelegramClient
-from telethon.tl.types import Message
+from main import Message, run
+from telethon import TelegramClient as Client
 from config import WOLFRAM_API
 from httpx import AsyncClient
 
@@ -9,11 +8,11 @@ class Wolfram:
     API_URL = "https://api.wolframalpha.com/v1/spoken?appid={}&i={}"
     
     @run(command="ask")
-    async def wolfram_query(message: Message, client: TelegramClient):
+    async def wolfram_query(message: Message, client: Client):
         query = message.args
 
         if message.is_reply:
-            query = message.replied.text
+            query = message.reply_to_text.text
 
         if not query:
             await message.edit("<em>You need to input a query text to ask the server</em>")

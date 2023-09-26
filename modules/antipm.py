@@ -14,10 +14,9 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from telethon import functions, TelegramClient
-from telethon.tl.patched import Message
+from telethon import functions, TelegramClient as Client
 
-from main import run, event_watcher, startup
+from main import Message, run, event_watcher, startup
 from database import antipmdb
 
 
@@ -42,7 +41,7 @@ class AntiPM:
 
 
     @run(command="antipm")
-    async def antipm_switch(message: Message, client: TelegramClient):
+    async def antipm_switch(message: Message, client: Client):
         antipmdb.set_antipm(not AntiPM.PM_BLOCKER)
         AntiPM.PM_BLOCKER = not AntiPM.PM_BLOCKER
 
@@ -51,14 +50,14 @@ class AntiPM:
 
 
     @run(command="approve")
-    async def approve_user(message: Message, client: TelegramClient):
+    async def approve_user(message: Message, client: Client):
         """Allows that person to PM you, you can either reply to user,
 type their username or use this in their chat"""
         if not (user := await AntiPM.get_user(message, client)):
             await message.edit("<i>You need to input a valid user id</i>")
             return
 
-        if user.id == client.ME.id:
+        if user.id == client.me.id:
             await message.edit(
                 "<i>Why would you wanna approve yourself? "
                 "Rhetorical question: Because you're an approval whore</i>"
@@ -76,14 +75,14 @@ type their username or use this in their chat"""
 
 
     @run(command="disapprove")
-    async def disapprove_user(message: Message, client: TelegramClient):
+    async def disapprove_user(message: Message, client: Client):
         """Prevents that person to PM you, you can either reply to user,
 type their username or use this in their chat"""
         if not (user := await AntiPM.get_user(message, client)):
             await message.edit("<i>You need to input a valid user id</i>")
             return
 
-        if user.id == client.ME.id:
+        if user.id == client.me.id:
             await message.edit(
                 "<i>Why would you wanna disapprove yourself? "
                 "Rhetorical question: Because you're a disappointment to everyone</i>"
@@ -101,13 +100,13 @@ type their username or use this in their chat"""
 
 
     @run(command="block")
-    async def block_user(message: Message, client: TelegramClient):
+    async def block_user(message: Message, client: Client):
         """Simply blocks the person.. duh!!"""
         if not (user := await AntiPM.get_user(message, client)):
             await message.edit("<i>No user found</i>")
             return
 
-        if user.id == client.ME.id:
+        if user.id == client.me.id:
             await message.edit(
                 "<i>Why would you wanna block yourself? "
                 "Do you really hate yourself that much?</i>"
@@ -126,13 +125,13 @@ type their username or use this in their chat"""
 
 
     @run(command="unblock")
-    async def unblock_user(message: Message, client: TelegramClient):
+    async def unblock_user(message: Message, client: Client):
         """Simply blocks the person..duh!!"""
         if not (user := await AntiPM.get_user(message, client)):
             await message.edit("<i>No user found</i>")
             return
 
-        if user.id == client.ME.id:
+        if user.id == client.me.id:
             await message.edit(
                 "<i>Why would you use unblock on yourself? "
                 "Are you having a mental spasm?</i>"
@@ -146,14 +145,14 @@ type their username or use this in their chat"""
         )
 
 
-    async def get_user(message: Message, client: TelegramClient):
+    async def get_user(message: Message, client: Client):
         user = message.args
 
         if user.isdigit():
             user = int(user)
 
         if message.is_reply:
-            user = message.replied.sender_id
+            user = message.reply_to_message.sender_id
 
         if not user:
             user = await message.get_chat()
@@ -173,7 +172,7 @@ type their username or use this in their chat"""
             return False
 
     @run(command="notif")
-    async def notifications_for_pms(message: Message, client: TelegramClient):
+    async def notifications_for_pms(message: Message, client: Client):
         """Ah this one again...It turns on/off tag notification
 sounds from unwanted PMs. It auto-sends a
 a message in your name until that user gets blocked or approved"""
@@ -187,7 +186,7 @@ a message in your name until that user gets blocked or approved"""
 
 
     @run(command="setlimit")
-    async def set_warning_limit(message: Message, client: TelegramClient):
+    async def set_warning_limit(message: Message, client: Client):
         """This one sets a max. message limit for unwanted
 PMs and when they go beyond it, bamm!"""
         if not message.args.isdigit():
@@ -200,10 +199,10 @@ PMs and when they go beyond it, bamm!"""
 
 
     @run(command="sblock")
-    async def super_block(message: Message, client: TelegramClient):
+    async def super_block(message: Message, client: Client):
         """If unwanted users spams your chat, the chat
 will be deleted when the idiot passes the message limit"""
-        antipmdb.set_super_block(not AntiPM.SUPER_BLOCK)
+        antipmdb.set_superblock(not AntiPM.SUPER_BLOCK)
         AntiPM.SUPER_BLOCK = not AntiPM.SUPER_BLOCK
 
         if AntiPM.SUPER_BLOCK:
@@ -212,11 +211,11 @@ will be deleted when the idiot passes the message limit"""
             await message.edit("<i>Chats from unapproved parties will not be removed anymore</i>")
 
 
-    from telethon import utils
     @event_watcher()
-    async def check_personal_messages(message: Message, client: TelegramClient):
-        if message.sender_id == client.ME.id:
+    async def check_personal_messages(message: Message, client: Client):
+        if message.sender_id == client.me.id:
             return
+
         if message.is_private and AntiPM.PM_BLOCKER:
             user = await message.get_chat()
 
@@ -234,7 +233,7 @@ will be deleted when the idiot passes the message limit"""
                 AntiPM.WARNS[user.id] += 1
                 async for message in client.iter_messages(
                     entity=user,
-                    from_user=client.ME,
+                    from_user=client.me,
                     search="have not allowed you to PM, please ask or say whatever it is in a group chat",
                     limit=1
                 ):

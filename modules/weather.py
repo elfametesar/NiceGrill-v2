@@ -15,14 +15,15 @@
 
 from weather import Weather as wtr
 from database import weatherdb
-from main import run, startup, logger
+from telethon import TelegramClient as Client
+from main import Message, run, startup, logger
 
 class Weather:
 
     CITY = None
 
     @run(command="weather", incoming=True)
-    async def weather(message, client):
+    async def weather(message: Message, client: Client):
         """Shows the weather of specified city"""
         city = message.args.strip()
 
@@ -30,7 +31,7 @@ class Weather:
             await message.edit("<i>Enter a city name first</i>")
             return
         
-        if message.sender_id != client.ME.id:
+        if message.sender_id != client.me.id:
             message.edit = message.reply
 
         city = city if city else Weather.CITY
@@ -65,7 +66,7 @@ class Weather:
 
 
     @run(command="setcity")
-    async def set_city(message, client):
+    async def set_city(message: Message, client: Client):
         """Sets a default city so that you don't have to type it everytime"""
         if not message.args:
             weatherdb.set_city_name("")

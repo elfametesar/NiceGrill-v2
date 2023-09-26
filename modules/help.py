@@ -1,18 +1,17 @@
-from main import run, HELP_MENU, HELP_MENU_DATA, HELP_MENU_CAPTION
-from telethon import TelegramClient
-from telethon.tl.patched import Message
+from main import Message, run, HELP_MENU, HELP_MENU_DATA, HELP_MENU_CAPTION
+from telethon import TelegramClient as Client
 
 class Help:
 
     @run(command="help")
-    async def display_help_menu(message: Message, client: TelegramClient):
+    async def display_help_menu(message: Message, client: Client):
         if message.args:
             await Help.help_display_command(message, client)
             return
         
         await message.edit(HELP_MENU[:-2] + "</i>")
 
-    async def help_display_command(message: Message, client: TelegramClient):
+    async def help_display_command(message: Message, client: Client):
         if message.args in HELP_MENU_DATA:
             if help_info := HELP_MENU_DATA[message.args]:
                 await message.edit(

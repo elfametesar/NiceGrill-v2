@@ -1,6 +1,5 @@
-from main import run
-from telethon import TelegramClient
-from telethon.tl.types import Message
+from main import Message, run
+from telethon import TelegramClient as Client
 
 import os
 import html
@@ -11,7 +10,7 @@ class Notepad:
     FILE_DESCRIPTORS = {}
     
     @run(command="edit")
-    async def edit_text(message: Message, client: TelegramClient):
+    async def edit_text(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>You need to specify a file in your filesystem</i>")
             return
@@ -28,7 +27,7 @@ class Notepad:
         file_descriptor = open(message.args, "r+")
         if content := file_descriptor.read().strip():
             try:
-                await message.edit(content, parse_mode="md")
+                await message.edit(content, parse_mode=None)
             except:
                 file_descriptor.close()
                 await message.edit("<i>File is too big, therefore cannot be edited</i>")
@@ -41,20 +40,20 @@ class Notepad:
         )
 
     @run(command="save")
-    async def save_file(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.is_reply and message.replied.id not in Notepad.FILE_DESCRIPTORS):
+    async def save_file(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and message.reply_to_text.id not in Notepad.FILE_DESCRIPTORS):
             await message.edit("<i>You need to reply to a message containing a file</i>")
             return
         
-        file_descriptor = Notepad.FILE_DESCRIPTORS[message.replied.id]
+        file_descriptor = Notepad.FILE_DESCRIPTORS[message.reply_to_text.id]
         
         if not os.path.exists(file_descriptor.name):
-            file_descriptor = Notepad.FILE_DESCRIPTORS[message.replied.id] = open(file_descriptor.name, "w+")
+            file_descriptor = Notepad.FILE_DESCRIPTORS[message.reply_to_text.id] = open(file_descriptor.name, "w+")
 
         try:
             file_descriptor.truncate(0)
             file_descriptor.seek(0)
-            file_descriptor.write(html.unescape(message.replied.message))
+            file_descriptor.write(html.unescape(message.reply_to_text.message))
             file_descriptor.flush()
             await message.edit(f"<i>File successfully saved, file is still open tho</i>")
         except Exception as e:
@@ -62,32 +61,32 @@ class Notepad:
 
 
     @run(command="close")
-    async def close_file(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.is_reply and message.replied.id not in Notepad.FILE_DESCRIPTORS):
+    async def close_file(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and message.reply_to_text.id not in Notepad.FILE_DESCRIPTORS):
             await message.edit("<i>You need to reply to a message containing a file</i>")
             return
         
-        Notepad.FILE_DESCRIPTORS[message.replied.id].close()
-        del Notepad.FILE_DESCRIPTORS[message.replied.id]
+        Notepad.FILE_DESCRIPTORS[message.reply_to_text.id].close()
+        del Notepad.FILE_DESCRIPTORS[message.reply_to_text.id]
         await message.edit("<i>File closed, no more edits for you</i>")
     
     
     @run(command="filename")
-    async def get_file_name(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.is_reply and message.replied.id not in Notepad.FILE_DESCRIPTORS):
+    async def get_file_name(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and message.reply_to_text.id not in Notepad.FILE_DESCRIPTORS):
             await message.edit("<i>You need to reply to a message containing a file</i>")
             return
         
-        await message.edit(f"<i>File name in the replied message: {Notepad.FILE_DESCRIPTORS[message.replied.id].name}</i>")
+        await message.edit(f"<i>File name in the replied message: {Notepad.FILE_DESCRIPTORS[message.reply_to_text.id].name}</i>")
 
 
     @run(command="discard")
-    async def discard_file(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.is_reply and message.replied.id not in Notepad.FILE_DESCRIPTORS):
+    async def discard_file(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and message.reply_to_text.id not in Notepad.FILE_DESCRIPTORS):
             await message.edit("<i>You need to reply to a message containing a file</i>")
             return
         
-        file_descriptor = Notepad.FILE_DESCRIPTORS[message.replied.id]
+        file_descriptor = Notepad.FILE_DESCRIPTORS[message.reply_to_text.id]
         
         if not os.path.isfile(file_descriptor.name):
             await message.edit("<i>File does not exist in your filesystem</i>")

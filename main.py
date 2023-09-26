@@ -1,12 +1,11 @@
-from telethon.sync import TelegramClient, events
 from database import blacklistdb, settingsdb
-from init import client
+from utils import get_messages_recursively, Message
+from telethon.sync import events
 from exrex import generate
+from init import client
 
-import utils
 import logging
 import re
-import asyncio
 
 HELP_MENU_DATA = {}
 HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(40)
@@ -25,8 +24,10 @@ formatter = logging.Formatter(
     '%(asctime)s  %(name)s  %(levelname)s: %(message)s'
 )
 
+bad_chat_list = blacklistdb.get_all_blacklisted() or []
+prefix = settingsdb.get_prefix() or "."
 
-async def error_handler(message):
+async def error_handler(message: Message):
     logger.exception("")
     await message.edit("<b>Loading..</b>")
     await message.respond(
@@ -41,28 +42,15 @@ async def error_handler(message):
         pass
 
 
-bad_chat_list = blacklistdb.get_all_blacklisted() or []
-prefix = settingsdb.get_prefix() or "."
-
-
 def return_func(func, command="", prefix=prefix):
-    async def wrapper(message, command=command):
-        message.replied = await message.get_reply_message()
-
-        if command:
-            message.args = utils.get_arg(message)
-        else:
-            message.args = message.message.message
-        if prefix:
-            get_cmd = re.search(command + r"($| |\n)", message.message.message)
-            if get_cmd:
-                command = get_cmd.group(0).strip()
+    async def wrapper(message: Message, command=command):
+        message = await get_messages_recursively(
+            message=message.message,
+            command=command,
+            prefix=prefix
+        )
 
         try:
-
-            message.cmd = command
-            message.prefix = prefix
-
             if command == "blacklist" or command == "whitelist":
                 await func(message, client)
                 return
@@ -71,10 +59,8 @@ def return_func(func, command="", prefix=prefix):
                 await func(message, client)
 
         except:
-            if message.sender_id == client.ME.id:
+            if message.sender_id == client.me.id:
                 await error_handler(message)
-            else:
-                pass
 
     return wrapper
 
@@ -121,7 +107,7 @@ def run(
     def inner(func, command=command):
         global HELP_MENU_DATA, HELP_MENU
         wrapper = return_func(func, command, prefix)
-        
+
         if not command:
             command = func.__name__
 
@@ -156,7 +142,7 @@ def run(
         client.add_event_handler(
             callback=wrapper,
             event=events.MessageEdited(
-                pattern=escaped_prefix + command + r"($| .*|\n)",
+                pattern=escaped_prefix + command + r"($| |\n)",
                 incoming=incoming,
                 outgoing=outgoing,
                 forwards=forwards,

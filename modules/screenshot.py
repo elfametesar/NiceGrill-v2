@@ -1,6 +1,5 @@
-from telethon import TelegramClient
-from telethon.tl.types import Message
-from main import run
+from telethon import TelegramClient as Client
+from main import Message, run
 from config import SCREENSHOT_API
 from httpx import AsyncClient
 from io import BytesIO
@@ -12,7 +11,7 @@ class Screenshot:
     API_URL = "https://api.screenshotlayer.com/api/capture?access_key={}&url={}&fullpage={}&format={}&viewport={}"
     
     @run(command="ss")
-    async def screenshot_taker(message: Message, client: TelegramClient):
+    async def screenshot_taker(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>You need to input a URL to be taken screenshot of</i>")
             return

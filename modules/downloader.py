@@ -1,16 +1,14 @@
 from datetime import datetime
-from telethon.tl.patched import Message
 from telethon.tl.types import MessageEntityUrl
-from telethon import TelegramClient
+from telethon import TelegramClient as Client
 from database import settingsdb
 from pySmartDL import SmartDL
-from main import run, startup
+from main import Message, run, startup
 from utils import human_readables
 
 import asyncio
 import os
 import glob
-import re
 
 class Downloader:
 
@@ -20,7 +18,7 @@ class Downloader:
     DOWNLOAD_PATH = None
 
 
-    async def telegram_progress_bar(message, received_bytes, total_bytes, file_name, start_time):
+    async def telegram_progress_bar(message: Message, received_bytes, total_bytes, file_name, start_time):
         percentage = round((received_bytes / total_bytes) * 20, 2)
 
         speed = ((received_bytes) // max((datetime.now() - start_time).seconds, 1))
@@ -95,7 +93,7 @@ class Downloader:
 
 
     @run(command="(up|upload)")
-    async def upload_file(message: Message, client: TelegramClient):
+    async def upload_file(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>Point to files in your file system</i>")
             return
@@ -119,7 +117,7 @@ class Downloader:
                 files.append(file_match)
 
         if not files:
-            await message.edit("<i>Inputted files are not valid</i>")
+            await message.edit("<i>Specified files are not valid</i>")
             return
 
         try:
@@ -133,7 +131,7 @@ class Downloader:
         await message.delete()
 
 
-    async def telegram_download_file(message: Message, client: TelegramClient, file_name):
+    async def telegram_download_file(message: Message, client: Client, file_name):
         await message.edit("<i>Download is starting...</i>")
         
         if not os.path.exists(Downloader.DOWNLOAD_PATH):
@@ -142,7 +140,7 @@ class Downloader:
         start_time = datetime.now()
 
         return await client.download_media(
-            message=message.replied,
+            message=message.reply_to_text,
             progress_callback=lambda received_bytes, total_bytes:
                 asyncio.create_task(
                     Downloader.telegram_progress_bar(
@@ -156,7 +154,7 @@ class Downloader:
             file=Downloader.DOWNLOAD_PATH
         )
 
-    async def regular_download_file(message: Message, client: TelegramClient, urls):
+    async def regular_download_file(message: Message, client: Client, urls):
         await message.edit("<i>Download is starting...</i>")
         try:
             if not os.path.exists(Downloader.DOWNLOAD_PATH):
@@ -187,20 +185,18 @@ class Downloader:
 
 
     @run(command="(dl|download)")
-    async def download_file(message: Message, client: TelegramClient):
-        if message.is_reply and message.replied.media:
+    async def download_file(message: Message, client: Client):
+        if message.is_reply and message.reply_to_text.media:
             file_name = "unknown"
-            if message.replied.document:
-                if file_name := re.search("file_name='(.*?)'", str(message.replied.document)):
-                    file_name = file_name.group(1)
-                else:
+            if message.reply_to_text.pdocument:
+                if not (file_name := message.reply_to_text.pdocument.file_name):
                     file_name = "unknown"
             
             task = asyncio.create_task(
                 Downloader.telegram_download_file(
-                    message,
-                    client,
-                    file_name
+                    message=message,
+                    client=client,
+                    file_name=file_name
                 )
             )
             task.stop = task.cancel
@@ -225,14 +221,12 @@ class Downloader:
             )
 
         elif message.is_reply or message.args:
-            urls = message.get_entities_text(MessageEntityUrl)
+            urls = [link for _, link in message.get_entities_text(MessageEntityUrl)]
 
             if message.is_reply:
                 urls.extend(
-                    message.replied.get_entities_text(MessageEntityUrl)
+                    [link for _, link in message.reply_to_text.get_entities_text(MessageEntityUrl)]
                 )
-            
-            urls = [x[1] for x in urls]
 
             if not urls:
                 await message.edit("<i>There are no URLs to parse in your input</i>")
@@ -245,13 +239,13 @@ class Downloader:
             return
 
     @run(command="clear")
-    async def clear_downloads(message: Message, client: TelegramClient):
+    async def clear_downloads(message: Message, client: Client):
         os.system(f"rm -rf {Downloader.DOWNLOAD_PATH}/* 2>&-")
         await message.edit("<i>Download folder has been cleared out</i>")
 
 
     @run(command="setpath")
-    async def set_download_path(message: Message, client: TelegramClient):
+    async def set_download_path(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>Input a valid path for your downloads to go in</i>")
             return
@@ -279,21 +273,21 @@ class Downloader:
 
 
     @run(command="(stop|pause|resume)")
-    async def control_download(message: Message, client: TelegramClient):
+    async def control_download(message: Message, client: Client):
         if not message.is_reply:
             await message.edit("<i>You need to reply to a message running a download action first</i>")
             return
         
-        if message.replied.id not in Downloader.DOWNLOAD_QUEUE:
+        if message.reply_to_text.id not in Downloader.DOWNLOAD_QUEUE:
             await message.edit("<i>No download action on this message</i>")
             return
         
-        task = Downloader.DOWNLOAD_QUEUE[message.replied.id]
+        task: asyncio.Task|SmartDL = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
         
         try:
             if message.cmd == "stop":
-                Downloader.DOWNLOAD_QUEUE[message.replied.id].stop()
-                del Downloader.DOWNLOAD_QUEUE[message.replied.id]
+                Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id].stop()
+                del Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
                 result = "<i>Download action successfully stopped</i>"
             elif message.cmd == "pause":
                 task.pause()

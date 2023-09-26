@@ -13,12 +13,127 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from telethon import TelegramClient
+from telethon import TelegramClient as Client
+from telethon.types import User
+from telethon.tl.patched import Message as MainMessage
 
 import asyncio
 import html
 import httpx
-import io
+import re
+
+
+class Message(MainMessage):
+    
+    def init(self):
+        self.reply_to_text: Message|None
+        self.from_user: User = None
+        self.args: str
+        self.cmd: str
+        self.prefix: str
+        self.pdocument: MessageMediaDocument
+        
+
+class fake_user:
+    
+    def __init__(self, first_name="") -> None:
+        self.first_name = first_name
+        self.last_name = ""
+        self.id = 0
+        self.photo = None
+    
+    def __repr__(self) -> str:
+        return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
+
+
+class MessageMediaDocument():
+    
+    @classmethod
+    def __instancecheck__(cls, instance):
+        return True
+    
+    def __init__(self) -> None:
+        self.file_name: str
+        self.size: int
+        self.alt: str
+    
+    def __repr__(self) -> str:
+        repr_data = "Document("
+        for key, val in self.__dict__.items():
+            repr_data += f"{key}={repr(val)}, "
+        return f"{repr_data[:-1]})"
+
+
+async def parse_document(document: MainMessage.document):
+    if not document:
+        return None
+    
+    new_document = MessageMediaDocument()
+    for key, val in document.__dict__.items():
+        setattr(new_document, key, val)
+    
+    for attribute in document.attributes:
+        for key, val in attribute.__dict__.items():
+            setattr(new_document, key, val)
+    
+    return new_document
+
+
+message_counter = 0
+async def get_messages_recursively(message: Message, command=None, prefix=None):
+    global message_counter
+    message_counter += 1
+
+    if message.document:
+        message.pdocument = await parse_document(message.document)
+
+    message.from_user = message.sender
+    
+    if command:
+        message.args = get_arg(message)
+    else:
+        message.args = message.message
+
+    if prefix:
+        get_cmd = re.search(command + r"($| |\n)", message.message)
+        if get_cmd:
+            message.cmd = get_cmd.group(0).strip()
+
+    message.from_user = message.sender
+    if not message.sender and not message.fwd_from:
+        try:
+            message.from_user = await message.client.get_entity(message.sender_id)
+        except:
+            message.from_user = None
+    
+    if message.fwd_from:
+        user = fake_user()
+
+        if message.fwd_from.from_name:
+            user.first_name = message.fwd_from.from_name
+        else:
+
+            user = await message.client.get_entity(
+                entity=message.fwd_from.from_id.channel_id
+            )
+            
+            user.first_name = user.title
+            user.last_name = ""
+
+        message._sender = user
+        message.from_user = message.sender
+
+    
+    message.reply_to_text = await message.get_reply_message()
+
+    if message_counter > 4:
+        message_counter = 0
+        return message
+
+    if message.is_reply:
+        await get_messages_recursively(message.reply_to_text)
+    
+    return message
 
 
 async def human_readables(data=None, seconds=None):
@@ -49,11 +164,12 @@ async def get_full_log(url):
 async def full_log(log):
     async with httpx.AsyncClient() as session:
         url = await session.post(
-            url="https://0x0.st",
-            files={"file": (
-                "log.txt",
-                io.BytesIO(bytes(html.unescape(log), "utf-8"))
-            )}
+            url="https://nekobin.com/api/documents",
+            json={
+                "content": html.unescape(log),
+                "title": "None",
+                "Author": "Anon"
+            }
         )
         return url
 
@@ -65,7 +181,7 @@ def strip_prefix(string: str, delimiter:str="/"):
         return index
 
 
-async def get_user(user, client: TelegramClient):
+async def get_user(user, client: Client):
     if user.isdigit():
         user = int(user)
 
@@ -94,7 +210,7 @@ async def stream(message, res, template, exit_code="", log=True):
     if log and len(res) > delim:
         log_url = f"""
 
-<b>For full log:</b> {(await full_log(res)).text}
+<b>For full log:</b> https://nekobin.com/{(await full_log(res)).json()['result'].get('key')}
         """
     else:
         log_url = ""
@@ -124,7 +240,7 @@ async def replace_message(message):
 
 
 def get_arg(message):
-    msg = message.message.message
+    msg = message.message
     msg = msg.replace(" ", "", 1) if msg[1] == " " else msg
     split = msg[1:].replace("\n", " \n").split(" ")
     if " ".join(split[1:]).strip() == "":

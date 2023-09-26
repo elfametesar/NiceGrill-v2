@@ -14,9 +14,8 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from io import BytesIO
-from telethon import TelegramClient
-from telethon.tl.patched import Message
-from main import run
+from telethon import TelegramClient as Client
+from main import Message, run
 
 import os
 import httpx
@@ -24,8 +23,8 @@ import httpx
 class Renamer:
 
     @run(command="(rn|rename)")
-    async def rename_from_telegram(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.replied and not message.replied.media):
+    async def rename_from_telegram(message: Message, client: Client):
+        if not message.is_reply or (message.reply_to_text and not message.reply_to_text.media):
             await message.edit("<i>Reply to a message with media</i>")
             return
 
@@ -38,12 +37,12 @@ class Renamer:
         file = BytesIO()
         file.name = message.args
 
-        await message.replied.download_media(file=file)
+        await message.reply_to_text.download_media(file=file)
         file.seek(0)
 
         await message.edit("<i>Renaming..</i>")
         
-        await message.replied.reply(
+        await message.reply_to_text.reply(
             file=file,
             force_document=True
         )
@@ -52,7 +51,7 @@ class Renamer:
 
 
     @run(command="rndl")
-    async def rename_from_url(message: Message, client: TelegramClient):
+    async def rename_from_url(message: Message, client: Client):
         arguments = message.args.split(" ", 2)
 
         if len(arguments) < 2:
@@ -88,7 +87,7 @@ class Renamer:
             file=file,
             force_document=True,
             support_streaming=True,
-            reply_to=message.replied
+            reply_to=message.reply_to_text
         )
 
         await message.delete()

@@ -1,9 +1,11 @@
 from PIL import Image, ImageDraw, ImageFont
-from telethon import TelegramClient
+from PIL.Image import Image as ImageType
+from PIL.ImageFont import ImageFont as FontType
+from telethon import TelegramClient as Client
 from telethon import types
-from telethon.tl.patched import Message
-from utils import get_user, human_readables
-from main import run
+from database import quotedb
+from utils import get_user, human_readables, get_messages_recursively
+from main import Message, run, startup
 from io import BytesIO
 
 import asyncio
@@ -22,11 +24,11 @@ class fake_message:
         self.first_name = sender.first_name
         self.last_name = sender.last_name or ""
         self.message = message
+        self.document = None
         self.client = client
         self.entities = entities
         self.is_reply = False
         self.media = None
-
 
 class Quote:
     """
@@ -82,6 +84,9 @@ class Quote:
                 font = Quote.FONT_MONO
                 entity_type = "mono"
             elif (isinstance(entity, types.MessageEntityUrl) or
+                  isinstance(entity, types.MessageEntityMention) or
+                  isinstance(entity, types.MessageEntityMentionName) or
+                  isinstance(entity, types.InputMessageEntityMentionName) or
                   isinstance(entity, types.MessageEntityTextUrl)):
                 entity_type = "url"
             elif isinstance(entity, types.MessageEntityUnderline):
@@ -99,12 +104,13 @@ class Quote:
         return entity_data
 
 
-    async def get_profile_photo(client: TelegramClient, user_info) -> Image.Image:
+    async def get_profile_photo(client: Client, user_info) -> ImageType:
         
         photo_buffer = BytesIO()
-        await client.download_profile_photo(user_info, photo_buffer)
-        
-        if not photo_buffer.getbuffer():
+        try:
+            if not await client.download_profile_photo(user_info, photo_buffer):
+                raise Exception
+        except:
             profile_photo = Image.new(
                 mode="RGBA",
                 size=(50, 50),
@@ -122,9 +128,9 @@ class Quote:
                 fill="white"
             )
 
-            photo_buffer.name = "pfp.png"
-            profile_photo.save(photo_buffer)
+            profile_photo.save(photo_buffer, format="png")
 
+        photo_buffer.seek(0)
         profile_photo = Image.open(photo_buffer)
         profile_photo = profile_photo.resize((50, 50))
         profile_photo_canvas = Image.new("RGBA", (50, 50), (0, 0, 0, 0))
@@ -138,11 +144,11 @@ class Quote:
         return profile_photo_canvas
 
     
-    async def draw_sticker(message_box: Image, profile_image: Image) ->Image.Image:
+    async def draw_sticker(message_box: Image, profile_image: Image) ->ImageType:
         sticker_image = Image.new(
             mode="RGBA",
             size=(
-                message_box.width + profile_image.width + 10,
+                message_box.width + profile_image.width + 5,
                 message_box.height + 10
             ),
             color=(0,0,0,0)
@@ -155,18 +161,18 @@ class Quote:
         
         sticker_image.paste(
             im=message_box,
-            box=(profile_image.width, 3)
+            box=(profile_image.width + 5, 3)
         )
         
         return sticker_image
 
 
-    async def draw_title(user_name: str, user_id: int) ->Image.Image:
+    async def draw_title(user_name: str, user_id: int) ->ImageType:
 
         width = Quote.FONT_TITLE.getlength(user_name)
 
         title_bar = Image.new(
-            mode="RGB",
+            mode="RGBA",
             size=(
                 round(width),
                 round(Quote.LINE_HEIGHT)
@@ -185,7 +191,7 @@ class Quote:
         
         return title_bar
 
-    async def break_text(text: str, font: ImageFont.ImageFont, offset: int=0) ->str:
+    async def break_text(text: str, font: FontType, offset: int=0) ->str:
         if font.getlength(text) < Quote.MAXIMUM_BOX_WIDTH:
             return text
 
@@ -203,19 +209,7 @@ class Quote:
         return new_text
 
 
-    async def extract_document_attribute(media_object):
-        file_name = ""
-        emoji = ""
-        for attribute in media_object.attributes:
-            if name := getattr(attribute, "file_name", None):
-                file_name = name
-            if alt := getattr(attribute, "alt", None):
-                emoji = alt
-            
-        return file_name, emoji, media_object.size
-
-
-    async def draw_reply_bar(name: str, text: str, message: Message=None) ->Image.Image:
+    async def draw_reply_bar(name: str, text: str, message: Message=None) ->ImageType:
         
         width = min(
             max(Quote.FONT_TITLE.getlength(name) + 15, Quote.FONT_REGULAR.getlength(text)),
@@ -224,7 +218,7 @@ class Quote:
         x_pos = 10
 
         reply_bar = Image.new(
-            mode="RGB",
+            mode="RGBA",
             size=(
                 round(width),
                 round(Quote.LINE_HEIGHT * 2)
@@ -238,7 +232,7 @@ class Quote:
             is_document = False
 
             if message.sticker:
-                text, symbol, _ = await Quote.extract_document_attribute(message.sticker)
+                text, symbol = message.pdocument.file_name, message.pdocument.alt
                 if symbol:
                     is_document = True
                 else:
@@ -263,8 +257,8 @@ class Quote:
                 symbol = "🎵"
                 text = " Audio"
                 is_document = True
-            elif message.document:
-                text, _, _ = await Quote.extract_document_attribute(message.document)
+            elif message.pdocument:
+                text = message.pdocument.file_name
                 symbol = "🔗"
                 is_document = True
 
@@ -333,7 +327,7 @@ class Quote:
         return reply_bar
 
 
-    async def draw_message_box(text_image: Image, title_image: Image.Image=None, reply_image: Image.Image=None) ->Image.Image:
+    async def draw_message_box(text_image: ImageType, message_box_width: int, title_image: ImageType=None, reply_image: ImageType=None, is_frame=True) ->ImageType:
 
         if title_image and reply_image:
             additional_sizes = 55 + 8
@@ -344,15 +338,10 @@ class Quote:
         else:
             additional_sizes = -2
 
-        message_box_width = max(
-            Quote.MINIMUM_BOX_WIDTH,
-            title_image.width + 30 if title_image else 0,
-            reply_image.width + 20 if reply_image else 0,
-            text_image.width + 50
-        ) + 5
+        message_box_width += 40
         
         message_box_height = max(
-            text_image.height,
+            text_image.height + 5,
             Quote.MINIMUM_BOX_HEIGHT
         ) + additional_sizes
 
@@ -365,6 +354,13 @@ class Quote:
         box_drawer = ImageDraw.Draw(message_box_image)
         
         y_pos = 7
+        
+        if not is_frame:
+            message_box_image.paste(
+                im=text_image,
+                box=(0, y_pos)
+            )
+            return message_box_image
 
         box_drawer.rounded_rectangle(
             xy=(0, 0, message_box_width, message_box_height),
@@ -396,9 +392,10 @@ class Quote:
         return message_box_image
 
 
-    async def expand_text_box(image: Image, size: tuple, pos=(0,0)) ->Image.Image:
+
+    async def expand_text_box(image: ImageType, size: tuple, pos=(0,0)) ->ImageType:
         temp = Image.new(
-            mode="RGB",
+            mode="RGBA",
             size=size,
             color=Quote.MESSAGE_COLOR
         )
@@ -424,7 +421,7 @@ class Quote:
         
         entity_data = await Quote.get_entity_data(entities)
         text_box = Image.new(
-            mode="RGB",
+            mode="RGBA",
             size=(150, (text.count("\n") + 1) * round(Quote.LINE_HEIGHT)),
             color=Quote.MESSAGE_COLOR
         )
@@ -509,7 +506,7 @@ class Quote:
 
 
     async def draw_media_document(message: Message):
-        name, _, size = await Quote.extract_document_attribute(media_object=message.document)
+        name, size = message.pdocument.file_name, message.pdocument.size
         size = await human_readables(data=size)
         
         name = await Quote.break_text(
@@ -528,7 +525,7 @@ class Quote:
 
         document_draw = ImageDraw.Draw(document_bg)
 
-        if not message.document.thumbs:
+        if not message.pdocument.thumbs:
             document_draw.ellipse(
                 xy=(0, 0, 45, 45),
                 fill="#434343"
@@ -542,8 +539,7 @@ class Quote:
                 fill="white"
             )
         else:
-            thumb_buffer = BytesIO()
-            await message.download_media(thumb=-1, file=thumb_buffer)
+            thumb_buffer = await message.download_media(thumb=-1, file=BytesIO())
             thumb_buffer.seek(0)
             thumb_buffer.name = "thumbnail.png"
 
@@ -593,30 +589,105 @@ class Quote:
         return document_bg
 
 
-    async def draw_media(text_box_image: Image.Image, message: Message):
+    async def draw_media_mix(thumb_buffer: BytesIO, text_box_image: ImageType, is_captioned: bool):
+        
+            media_image = Image.open(thumb_buffer)
+            
+            message_box_image_temp = Image.new(
+                mode="RGBA",
+                size=(
+                    media_image.width,
+                    media_image.height + (text_box_image.height if is_captioned else 0)
+                ),
+                color=Quote.MESSAGE_COLOR
+            )
+            
+            message_box_image_temp.paste(
+                im=media_image,
+                box=(0,0)
+            )
+            
+            if is_captioned:
+                message_box_image_temp.paste(
+                    im=text_box_image,
+                    box=(10, media_image.height + 10)
+                )
+            
+            message_box_mask = Image.new(
+                mode="L",
+                size=message_box_image_temp.size,
+                color=0
+            )
+            
+            mask_draw = ImageDraw.Draw(message_box_mask)
+            
+            mask_draw.rounded_rectangle(
+                xy=(0, 0, *message_box_image_temp.size),
+                radius=20,
+                fill=255
+            )
+            
+            message_box_image = Image.new(
+                mode="RGBA",
+                size=message_box_image_temp.size,
+                color=0
+            )
+            
+            message_box_image.paste(
+                im=message_box_image_temp,
+                box=(0,0),
+                mask=message_box_mask
+            )
+            
+            return message_box_image
+
+
+    async def draw_media(text_box_image: ImageType, message: Message):
         if not message.media:
             return text_box_image
 
-        if message.photo or message.video:
-            return text_box_image
-        elif message.document:
+        if message.document and not message.sticker:
             media_image = await Quote.draw_media_document(message)
-        
-        text_box_image, _ = await Quote.expand_text_box(
-            image=text_box_image,
-            size=(
-                text_box_image.width + (media_image.width - text_box_image.width),
-                media_image.height + text_box_image.height + round(Quote.LINE_HEIGHT)
-            ),
-            pos=(0, media_image.height + 10)
-        )
-        
-        text_box_image.paste(
-            im=media_image,
-            box=(0,0)
-        )
+            
+            text_box_image, _ = await Quote.expand_text_box(
+                image=text_box_image,
+                size=(
+                    max(text_box_image.width, media_image.width),
+                    media_image.height + text_box_image.height + round(Quote.LINE_HEIGHT)
+                ),
+                pos=(0, media_image.height + 10)
+            )
+            
+            text_box_image.paste(
+                im=media_image,
+                box=(0,0)
+            )
 
-        return text_box_image
+            return text_box_image
+        else:
+            
+            thumb_buffer = BytesIO()
+
+            try:
+                await message.download_media(
+                    file=thumb_buffer,
+                    thumb=1
+                )
+            except:
+                await message.download_media(
+                    file=thumb_buffer,
+                    thumb=0
+                )
+            finally:
+                pass
+            
+            thumb_buffer.seek(0)
+            
+            return await Quote.draw_media_mix(
+                thumb_buffer=thumb_buffer,
+                text_box_image=text_box_image,
+                is_captioned=bool(message.message)
+            )
 
 
     async def to_image(messages: list[Message]):
@@ -629,20 +700,18 @@ class Quote:
         for message in messages:
 
             title_bar_image = reply_bar_image = None
+
+            is_frame = True if (message.document and not message.sticker) or (message.message and not message.media) or message.audio or message.voice else False
+
             sender_name = await Quote.break_text(
                 f"{message.sender.first_name} {message.sender.last_name or ''}",
                 Quote.FONT_TITLE,
             )
 
-            reply_message = ""
-            if message.is_reply:
-                reply_message = await message.get_reply_message()
-                reply_sender_name = f"{reply_message.sender.first_name} {reply_message.sender.last_name or ''}"
-
-                reply_sender_text = " ".join(reply_message.message.splitlines())
-                reply_sender_name = reply_sender_name
-
-            text_box_image = await Quote.draw_text(message.message, message.entities)
+            text_box_image = await Quote.draw_text(
+                text=message.message,
+                entities=message.entities
+            )
 
             text_box_image = await Quote.draw_media(
                 text_box_image=text_box_image,
@@ -652,22 +721,32 @@ class Quote:
             if not is_title_bar:
                 title_bar_image = await Quote.draw_title(
                     user_name=sender_name,
-                    user_id=message.sender_id
+                    user_id=message.sender.id
                 )
 
             if message.is_reply:
                 reply_bar_image = await Quote.draw_reply_bar(
-                    name=reply_sender_name,
-                    text=reply_sender_text,
-                    message=reply_message
+                    name=f"{message.reply_to_text.from_user.first_name} {message.reply_to_text.from_user.last_name or ''}",
+                    text=message.reply_to_text.message,
+                    message=message.reply_to_text
                 )
+
+            message_box_width = max(
+                Quote.FONT_TITLE.getlength(sender_name), 
+                Quote.FONT_REGULAR.getlength(message.reply_to_text.message) if message.is_reply else 0,
+                text_box_image.width
+            )
+
+            message_box_width = min(message_box_width, Quote.MAXIMUM_BOX_WIDTH)
 
             message_box = await Quote.draw_message_box(
                 text_image=text_box_image,
                 title_image=title_bar_image,
-                reply_image=reply_bar_image
+                reply_image=reply_bar_image,
+                message_box_width=message_box_width,
+                is_frame=is_frame
             )
-                        
+
             if is_profile_photo:
                 profile_image = await Quote.get_profile_photo(
                     client=message.client,
@@ -720,7 +799,7 @@ class Quote:
         return sticker_buffer
     
     @run(command="q")
-    async def quote_replied_message(message: Message, client: TelegramClient):
+    async def quote_replied_message(message: Message, client: Client):
         if not message.is_reply:
             await message.edit("<i>You need to reply to a message to quote</i>")
             return
@@ -731,24 +810,22 @@ class Quote:
         if message.args and message.args.isdigit():
             message_count = int(message.args)
         
-        message_list = [message.replied]
+        message_list = []
         
-        if message.replied.sender_id not in Quote.USER_COLORS:
-            Quote.USER_COLORS.update(
-                {message.replied.sender_id: random.choice(Quote.TITLE_COLOR_PALETTE)}
-            )
-        
-        if message_count > 1:
-            async for message_object in client.iter_messages(
-                entity=await message.get_chat(),
-                limit=message_count - 1,
-                max_id=message.replied.id,
-                from_user=message.replied.sender
-            ):
-                if message_object.text:
-                    message_list.append(message_object)
-        
+        async for message_object in client.iter_messages(
+            entity=await message.get_chat(),
+            limit=message_count,
+            max_id=message.reply_to_text.id + 1,
+            from_user=message.reply_to_text.sender_id
+        ):
+            message_object = await get_messages_recursively(message_object)
+            if message_object.sender.id not in Quote.USER_COLORS:
+                Quote.USER_COLORS.update(
+                    {message_object.sender.id: random.choice(Quote.TITLE_COLOR_PALETTE)}
+                )
 
+            message_list.append(message_object)
+    
         message_list = reversed(message_list)
         sticker_buffer = await Quote.to_image(
             messages=message_list
@@ -757,7 +834,7 @@ class Quote:
         await message.respond(file=sticker_buffer)
 
     @run(command="fq")
-    async def fake_quote(message: Message, client: TelegramClient):
+    async def fake_quote(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>You need to input a username and a message attached to it in that order</i>")
             return
@@ -793,38 +870,44 @@ class Quote:
         await message.respond(file=sticker_buffer)
 
 
-@run(command="setcolor")
-async def set_message_color(message: Message, client: TelegramClient):
-    if not message.args:
-        Quote.MESSAGE_COLOR = (50,50,50,255)
-        await message.edit("<i>Message box color has been set to default</i>")
-        return
+    @run(command="setcolor")
+    async def set_message_color(message: Message, client: Client):
+        if not message.args:
+            Quote.MESSAGE_COLOR = (50,50,50,255)
+            await message.edit("<i>Message box color has been set to default</i>")
+            return
 
-    arguments = message.args.split()
-    color = None
+        arguments = message.args.split()
+        color = None
 
-    if len(arguments) > 3 and "".join(arguments).isdigit():
-        r,g,b,a = int(arguments[0]), int(arguments[1]), int(arguments[2]), int(arguments[3])
-        color = (r, g, b, a)
-    elif message.args.startswith("#"):
-        color = message.args
-    else:
-        color = message.args
-    
-    tester_image = Image.new(
-        mode="RGBA",
-        size=(50, 50)
-    )
-    
-    tester_draw = ImageDraw.Draw(tester_image)
-    
-    try:
-        tester_draw.text(
-            xy=(0,0),
-            text="a",
-            fill=color
+        if len(arguments) > 3 and "".join(arguments).isdigit():
+            r,g,b,a = int(arguments[0]), int(arguments[1]), int(arguments[2]), int(arguments[3])
+            color = (r, g, b, a)
+        elif message.args.startswith("#"):
+            color = message.args
+        else:
+            color = message.args
+        
+        tester_image = Image.new(
+            mode="RGBA",
+            size=(50, 50)
         )
-        Quote.MESSAGE_COLOR = color
-        await message.edit(f"<i>Message box color has been set to {color}</i>")
-    except Exception as e:
-        await message.edit(f"<i>{e}</i>")
+        
+        tester_draw = ImageDraw.Draw(tester_image)
+        
+        try:
+            tester_draw.text(
+                xy=(0,0),
+                text="a",
+                fill=color
+            )
+
+            quotedb.set_message_color(color)
+            Quote.MESSAGE_COLOR = color
+            await message.edit(f"<i>Message box color has been set to {color}</i>")
+        except Exception as e:
+            await message.edit(f"<i>{e}</i>")
+
+@startup
+def load_from_database():
+    Quote.MESSAGE_COLOR = quotedb.get_message_color()

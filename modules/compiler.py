@@ -11,13 +11,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-import time
 from database import settingsdb as settings
-from telethon.tl.patched import Message
-from main import run, event_watcher
+from main import Message, run, event_watcher
+from telethon import TelegramClient as Client
 from meval import meval
 
-import logging
 import utils
 import io
 import os
@@ -27,13 +25,10 @@ import asyncio
 import traceback
 
 class Compiler:
-    processes = {}
-    shell_mode = None
-    terminal_executable = None
-    shell_mode_executable = None
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.ERROR)
+    PROCESSES = {}
+    SHELL_MODE = None
+    TERMINAL_EXEC = None
+    SHELL_MODE_EXEC = None
 
     async def process_done(message, res, template, exit_code):
         if not (res := res.strip()):
@@ -54,18 +49,18 @@ class Compiler:
             )
 
     @run(command="term")
-    async def terminal(message: Message, client):
+    async def terminal(message: Message, client: Client):
         cmd = message.args.strip()
 
-        if not Compiler.terminal_executable:
-            Compiler.terminal_executable = await Compiler.find_shell()
+        if not Compiler.TERMINAL_EXEC:
+            Compiler.TERMINAL_EXEC = await Compiler.find_shell()
 
         proc = await asyncio.create_subprocess_shell(
             cmd=cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             stdin=asyncio.subprocess.PIPE,
-            executable=Compiler.terminal_executable
+            executable=Compiler.TERMINAL_EXEC
         )
 
         res = ""
@@ -89,7 +84,7 @@ class Compiler:
 
         await asyncio.sleep(.1)
 
-        Compiler.processes.update({message.id: proc})
+        Compiler.PROCESSES.update({message.id: proc})
 
         flood_control = 0
         while line := (await proc.stdout.readline()).decode():
@@ -106,8 +101,8 @@ class Compiler:
 
                 exit_code = exit_code.format(proc.returncode)
 
-                if message.id in Compiler.processes:
-                    del Compiler.processes[message.id]
+                if message.id in Compiler.PROCESSES:
+                    del Compiler.PROCESSES[message.id]
 
                 await Compiler.process_done(
                     message,
@@ -143,11 +138,11 @@ class Compiler:
 <b>For full log:</b> {(await utils.full_log(res)).text}
 """ if len(res) > 4000 else ""
 
-        if message.id in Compiler.processes:
+        if message.id in Compiler.PROCESSES:
             exit_code = exit_code.format(
                 proc.returncode if proc.returncode is not None else 0
             )
-            del Compiler.processes[message.id]
+            del Compiler.PROCESSES[message.id]
         else:
             exit_code = exit_code.format(-9)
 
@@ -167,7 +162,7 @@ class Compiler:
         code = message.args
 
         if not (code := code.strip()):
-            if (reply := message.replied) is None:
+            if (reply := message.reply_to_text) is None:
                 await message.edit("<i>No c++ code provided</i>")
                 return
             else:
@@ -215,7 +210,7 @@ int main(int argc, char** argv) {{
 
         await message.edit(template)
 
-        Compiler.processes.update({message.id: proc})
+        Compiler.PROCESSES.update({message.id: proc})
         
         res = ""
         while line := (await proc.stdout.readline()).decode():
@@ -239,16 +234,16 @@ int main(int argc, char** argv) {{
 
 
     @run(command="py")
-    async def python(message, client):
+    async def python(message: Message, client: Client):
         """A nice tool (like you 🥰) to test python codes"""
         args = message.args
 
         if not (args := args.strip()):
-            if (reply := message.replied) is None:
+            if message.reply_to_text is None:
                 await message.edit("<i>No python code provided</i>")
                 return
             else:
-                args = html.escape(reply.message.strip())
+                args = html.escape(message.reply_to_text.message.strip())
 
         caption = """<b>⬤ {}:</b>
 
@@ -283,8 +278,8 @@ int main(int argc, char** argv) {{
         locals().update(
             {
                 "input": custom_input,
-                "replied": message.replied,
-                "getme": client.ME.id
+                "replied": message.reply_to_text,
+                "getme": client.me.id
             }
         )
 
@@ -300,7 +295,7 @@ int main(int argc, char** argv) {{
             task.kill = task.cancel
             task.stdin = sys.stdin
 
-            Compiler.processes.update({message.id: task})
+            Compiler.PROCESSES.update({message.id: task})
 
             if not task.done():
                 try:
@@ -346,7 +341,7 @@ int main(int argc, char** argv) {{
             )
             return
 
-        if not message.is_reply or message.replied.id not in Compiler.processes:
+        if not message.is_reply or message.reply_to_text.id not in Compiler.PROCESSES:
             await message.edit(
                 "<i>Make sure to reply to a running terminal process</i>"
             )
@@ -356,24 +351,24 @@ int main(int argc, char** argv) {{
             "<i>Input has been sent to the terminal</i>"
         )
 
-        Compiler.processes[message.replied.id].stdin.write(bytes(args + "\n", 'utf-8'))
+        Compiler.PROCESSES[message.reply_to_text.id].stdin.write(bytes(args + "\n", 'utf-8'))
 
     @run(command="kill")
     async def kill(message, client):
-        process = message.replied
+        process = message.reply_to_text
 
         if not process:
             await message.edit("<i>You have to reply to a message with a process</i>")
             return
 
-        if process.id not in Compiler.processes:
+        if process.id not in Compiler.PROCESSES:
             await message.edit("<i>No process running in that message</i>")
         else:
             try:
-                Compiler.processes[process.id].kill()
+                Compiler.PROCESSES[process.id].kill()
             except:
                 pass
-            del Compiler.processes[process.id]
+            del Compiler.PROCESSES[process.id]
             await message.edit("<i>Successfully killed</i>")
 
     async def find_shell(*args):
@@ -381,34 +376,34 @@ int main(int argc, char** argv) {{
 
     @run(command="shell")
     async def set_shell_mode(message, client):
-        if Compiler.shell_mode is None:
-            Compiler.shell_mode = settings.is_shell()
+        if Compiler.SHELL_MODE is None:
+            Compiler.SHELL_MODE = settings.is_shell()
 
         if message.args == "python":
-            Compiler.shell_mode_executable = sys.executable
+            Compiler.SHELL_MODE_EXEC = sys.executable
             await message.edit("<i>Shell is set to Python executable</i>")
             return
 
         elif message.args == "shell":
-            Compiler.shell_mode_executable = await Compiler.find_shell()
+            Compiler.SHELL_MODE_EXEC = await Compiler.find_shell()
             await message.edit("<i>Shell is set to default executable</i>")
             return
 
-        Compiler.shell_mode = not Compiler.shell_mode
-        settings.set_shell_mode(Compiler.shell_mode)
-        await message.edit(f"<i>Shell mode is set to {Compiler.shell_mode}</i>")
+        Compiler.SHELL_MODE = not Compiler.SHELL_MODE
+        settings.set_shell_mode(Compiler.SHELL_MODE)
+        await message.edit(f"<i>Shell mode is set to {Compiler.SHELL_MODE}</i>")
 
     @event_watcher(pattern=r"(\.+$|^[^.].*)+")
     async def telegram_to_shell(message: Message, client):
-        if Compiler.shell_mode is None or Compiler.shell_mode_executable is None:
-            Compiler.shell_mode = settings.is_shell()
-            Compiler.shell_mode_executable = await Compiler.find_shell()
+        if Compiler.SHELL_MODE is None or Compiler.SHELL_MODE_EXEC is None:
+            Compiler.SHELL_MODE = settings.is_shell()
+            Compiler.SHELL_MODE_EXEC = await Compiler.find_shell()
 
-        if not Compiler.shell_mode or message.sender_id != client.ME.id:
+        if not Compiler.SHELL_MODE or message.sender_id != client.me.id:
             return
 
         try:
-            if Compiler.shell_mode_executable == sys.executable:
+            if Compiler.SHELL_MODE_EXEC == sys.executable:
                 await Compiler.python(message, client)
             else:
                 await Compiler.terminal(message, client)

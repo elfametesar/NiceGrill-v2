@@ -16,7 +16,8 @@
 from database import alivedb
 from datetime import datetime
 from telethon.version import __version__
-from main import run, startup
+from telethon import TelegramClient as Client
+from main import Message, run, startup
 
 import platform
 
@@ -27,7 +28,7 @@ class Alive:
     MESSAGE = None
 
     @run(command="ping")
-    async def ping(message, client):
+    async def ping(message: Message, client: Client):
         """Shows you the response speed of the bot"""
         a = message.date.now()
         b = datetime.now()
@@ -36,7 +37,7 @@ class Alive:
                            .format(((b - a).microseconds / 1000), 2))
 
     @run(command="alive")
-    async def alive(message, client):
+    async def alive(message: Message, client: Client):
         """Show off to people with my bot using this command"""
         if not Alive.NAME:
             Alive.NAME = "NiceGrill Bot"
@@ -55,7 +56,7 @@ class Alive:
         await message.edit(tot)
 
     @run(command="setmessage")
-    async def setalive(message, client):
+    async def setalive(message: Message, client: Client):
         """Sets your alive message"""
         if not message.args:
             alivedb.set_alive_message("Hold on, Whaa.. I'm alive 🤥🤥")
@@ -70,7 +71,7 @@ class Alive:
 
 
     @run(command="setname")
-    async def setname(message, client):
+    async def setname(message: Message, client: Client):
         """Sets your alive name"""
         name = message.args
         if not name:

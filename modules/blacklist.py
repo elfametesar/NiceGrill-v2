@@ -14,13 +14,12 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from database import blacklistdb as blacklist
-from telethon import TelegramClient
-from telethon.tl.patched import Message
-from main import run, bad_chat_list
+from telethon import TelegramClient as Client
+from main import Message, run, bad_chat_list
 
 class Blacklist:
 
-    async def get_chat_id(client, chat):
+    async def get_chat_id(client: Client, chat):
         try:
             return await client.get_peer_id(chat)
         except:
@@ -28,7 +27,7 @@ class Blacklist:
 
 
     @run("blacklist")
-    async def blacklist_chat(message, client):
+    async def blacklist_chat(message: Message, client: Client):
 
         if message.args == "chats":
             await Blacklist.list_blacklist_chats(message, client)
@@ -50,7 +49,7 @@ class Blacklist:
         await message.edit("<i>This chat is now blacklisted</i>")
 
 
-    async def list_blacklist_chats(message: Message, client: TelegramClient):
+    async def list_blacklist_chats(message: Message, client: Client):
         chats = "<b>⬤ Blacklisted chats:</b>\n\n"
         for chat in bad_chat_list:
             try:
@@ -71,7 +70,7 @@ class Blacklist:
 
 
     @run(command="whitelist")
-    async def whitelist_chat(message: Message, client: TelegramClient):
+    async def whitelist_chat(message: Message, client: Client):
         chat = message.chat_id if not message.args else message.args
         chat = await Blacklist.get_chat_id(client, chat)
 

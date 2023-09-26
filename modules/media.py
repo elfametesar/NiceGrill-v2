@@ -1,21 +1,20 @@
-from main import run, startup, logger
+from main import Message, run, startup, logger
 from config import GOOGLE_DEV_API, GOOGLE_CX_ID
-from telethon import TelegramClient
-from telethon.tl.patched import Message
+from telethon import TelegramClient as Client
 from google_images_search import GoogleImagesSearch
 from pytube import YouTube
 from googlesearch import search
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
 from utils import get_full_log, strip_prefix
-from utils import strip_prefix
 from io import BytesIO
 from bs4 import BeautifulSoup
-from gtts import gTTS
+from yt_dlp import YoutubeDL
 
 import asyncio
 import html
 import json
+import os
 
 class Media:
     
@@ -26,7 +25,9 @@ class Media:
     URL = "https://www.bing.com/images/search?q="
 
 
-    async def simple_progress_tracker(url, progress):
+    async def simple_progress_tracker(received_bytes=None, total_bytes=None, url=None, progress=None):
+        if received_bytes:
+            progress = round((received_bytes/total_bytes) * 100, 2)
         try:
             if int(progress) % 7 == 0:
                 await Media.CURRENT_MESSAGE.edit(f"<b>URL:</b> <i>{url}</i>\n<b>Progress:</b> <i>{progress}%</i>")
@@ -35,7 +36,14 @@ class Media:
             pass
 
     @run(command="yt")
-    async def youtube_search(message: Message, client: TelegramClient):
+    async def youtube_search(message: Message, client: Client, only_url=False):
+
+        if only_url:
+            return YoutubeSearch(
+                search_terms=message.args,
+                max_results=1
+        ).to_dict()
+
         if not message.args:
             await message.edit("<i>You need to type in a keyword first</i>")
             return
@@ -58,19 +66,60 @@ class Media:
         await message.edit(result_page, link_preview=False)
 
 
-    @run(command="yt(v|s)")
-    async def youtube_downloader(message: Message, client: TelegramClient):
+    @run(command="song")
+    async def song_downloader(message: Message, client: Client):
+        
+        if not message.args:
+            await message.edit("<i>You need to tell me what to search for</i>")
+            return
+        
+        await message.edit("<i>Searching for songs</i>")
+        
+        opts = {
+            "outtmpl": f"{message.args}.m4a",
+            'format': 'm4a/bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'm4a',
+            }]
+        }
+
+        yt_client = YoutubeDL(opts)
+        result = await Media.youtube_search(
+            message=message,
+            client=client,
+            only_url=True
+        )
+        
+        if result:
+            song_url = "https://youtube.com" + result[0].get("url_suffix")
+        else:
+            await message.edit(f"No song found with keyword {message.args}</i>")
+            return        
+        
+        await message.edit("<i>Song found, downloading it rn</i>")
+        yt_client.download(song_url)
+        
+        await message.edit("<i>Uploading the song to Telegram</i>")
+        await client.send_file(
+            entity=message.chat,
+            file=message.args + ".m4a",
+            voice_note=True
+        )
+
+        os.remove(message.args + ".m4a")
+        await message.delete()
+
+
+    @run(command="ytv")
+    async def youtube_downloader(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>Enter in a valid URL first</i>")
             return
-        
-        audio_filter = False
-        if message.cmd == "yts":
-            audio_filter = True
 
         try:
             await message.edit("<i>Searching in YouTube for a downloadable media in the link</i>")
-            youtube_search = YouTube(message.args).streams.filter(only_audio=audio_filter)
+            youtube_search = YouTube(message.args).streams.filter()
         except Exception as e:
             logger.error(e)
             await message.edit("<i>Video is unavailable</i>")
@@ -88,34 +137,29 @@ class Media:
         video_buffer = BytesIO()
         result.stream_to_buffer(video_buffer)
         video_buffer.seek(0)
+        video_buffer.name = result.default_filename
         Media.CURRENT_MESSAGE = message
 
         await message.edit("<i>Uploading the video into telegram</i>")
 
-        video_handle = await client.upload_file(
+        video_handle = await message.respond(
             file=video_buffer,
-            file_name=result.default_filename,
-            file_size=result.filesize,
             progress_callback=lambda received_bytes, total_bytes: 
                 asyncio.get_event_loop().create_task(
                     Media.simple_progress_tracker(
                         url=message.args,
-                        progress=round((received_bytes/total_bytes) * 100, 2)
+                        progress=round((received_bytes/total_bytes) * 100, 2),
+                        message=f"<i>Here's the downloaded video for the input link {message.args}</i>",
+                        supports_streaming=True
                     )
                 )
-        )
-
-        await message.respond(
-            file=video_handle,
-            message=f"<i>Here's the downloaded video for the input link {message.args}</i>",
-            supports_streaming=True
         )
 
         await message.delete()
         
 
     @run(command="google")
-    async def google_regular_search(message: Message, client: TelegramClient):
+    async def google_regular_search(message: Message, client: Client):
         await message.edit("<i>Searching..</i>")
 
         google_search = search(
@@ -148,7 +192,7 @@ class Media:
 
 
     @run(command="bimg")
-    async def bing_image_scrape_search(message: Message, client: TelegramClient):
+    async def bing_image_scrape_search(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>Give me a keyword to look for in Bing images</i>")
             return
@@ -229,7 +273,7 @@ class Media:
 
 
     @run(command="gimg")
-    async def google_image_search(message: Message, client: TelegramClient):
+    async def google_image_search(message: Message, client: Client):
         
         if not message.args:
             await message.edit("<i>Input a search keyword first</i>")
@@ -283,57 +327,9 @@ class Media:
             )
             return
 
-    @run(command="tts")
-    async def text_to_speech(message: Message, client: TelegramClient):
-        if not message.args and not message.is_reply:
-            await message.edit("<i>You need to pass in or reply to a text to convert to speech</i>")
-            return
-        
-        arguments = message.args.split()
-        
-        language = ""
-        text=""
-        
-        if len(arguments) > 1:
-            language, text = arguments[0], " ".join(arguments[1:])
-        elif len(arguments) == 1:
-            language = arguments[0]
-
-        if message.is_reply:
-            text = message.replied.message
-            
-        await message.edit("<i>Converting your text to speech</i>")
-        
-        try:
-            tts_result = await asyncio.to_thread(
-                gTTS, text=text, tld="com", lang=language
-            )
-        except ValueError:
-            tts_result = await asyncio.to_thread(
-                gTTS, text=language + text, tld="com"
-            )
-        except Exception as e:
-            await message.edit(f"<i>{html.escape(str(e))}</i>")
-            return
-        
-        audio_buffer = BytesIO()
-        audio_buffer.name = "tts.mp3"
-        tts_result.write_to_fp(audio_buffer)
-        
-        audio_buffer.seek(0)
-        
-        try:
-            await message.respond(
-                file=audio_buffer,
-                supports_streaming=True
-            )
-            await message.delete()
-        except Exception as e:
-            await message.edit(f"<i>{html.escape(str(e))}</i>")
-
 
     @run(command="reupload")
-    async def retry_sending_images(message: Message, client: TelegramClient):
+    async def retry_sending_images(message: Message, client: Client):
         if not Media.UPLOADED_IMAGES:
             await message.edit("<i>No photos stored in memory right now</i>")
             return
@@ -358,7 +354,7 @@ class Media:
         await message.delete()
         
     @run(command="limit")
-    async def set_photo_count(message: Message, client: TelegramClient):
+    async def set_photo_count(message: Message, client: Client):
         if not message.args or not message.args.isdigit():
             await message.edit("<i>Please input a valid photo count</i>")
             return

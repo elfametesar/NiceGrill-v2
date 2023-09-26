@@ -14,20 +14,19 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-from main import run
-from telethon import TelegramClient
-from telethon.tl.patched import Message
+from main import Message, run
+from telethon import TelegramClient as Client
 from urbandictionary_python import UrbanDictionary, exceptions
 
 class Urban:
 
     @run(command="(ud|urban)")
-    async def urban_search(message: Message, client: TelegramClient):
+    async def urban_search(message: Message, client: Client):
         """Searches through urban dictionary"""
         word = message.args
         
-        if message.replied:
-            word = message.replied.message
+        if message.reply_to_text:
+            word = message.reply_to_text.message
 
         await message.edit(f"<i>Searching for a definition for <u>{word}</u></i>")
 

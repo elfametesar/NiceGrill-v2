@@ -12,11 +12,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from main import run, event_watcher
+from main import Message, run, event_watcher
 from database import settingsdb as settings
 from datetime import datetime
-from telethon import functions, TelegramClient
-from telethon.tl.patched import Message
+from telethon import TelegramClient as Client
 from io import BytesIO
 
 import os
@@ -27,20 +26,20 @@ import html
 class Misc:
 
     @run(command="restart")
-    async def restart(message: Message, client: TelegramClient):
+    async def restart(message: Message, client: Client):
         msg = await message.edit("<i>Restarting...</i>")
         settings.set_restart_details(msg.chat_id, msg.id)
         os.execl(sys.executable, sys.executable, "main.py")
 
 
     @run(command="shutdown")
-    async def shutdown(message: Message, client: TelegramClient):
+    async def shutdown(message: Message, client: Client):
         await message.edit("<i>Shutting down...</i>")
         await client.disconnect()
 
 
     @run(command="logs")
-    async def logs(message: Message, client: TelegramClient):
+    async def logs(message: Message, client: Client):
         try:
             await client.send_file(entity=message.chat_id, file="error.txt",
                                         caption="<b>Here's logs in ERROR level.</b>")
@@ -53,7 +52,7 @@ class Misc:
 
 
     @run(command="update")
-    async def update(message: Message, client: TelegramClient):
+    async def update(message: Message, client: Client):
         if not message.args:
             os.popen("git fetch")
             await message.edit("<i>Checking...</i>")
@@ -76,13 +75,13 @@ class Misc:
         if "up to date" not in update:
             await message.edit(f"<i>Succesfully Updated</i>")
             await asyncio.sleep(1.5)
-            await Misc.restart(message)
+            await Misc.restart(message, client)
         else:
             await message.edit(f"<i>{update}</i>")
 
 
     # @run(command="asset")
-    # async def asset(message: Message, client: TelegramClient):
+    # async def asset(message: Message, client: Client):
     #     arg = message.args
     #     if arg == "make":
     #         channel = await client(
@@ -101,7 +100,7 @@ class Misc:
 
 
     @run(command="read")
-    async def read(message: Message, client: TelegramClient):
+    async def read(message: Message, client: Client):
         
         if not message.is_reply:
             await message.edit("<i>You need to reply to a document</i>")
@@ -122,7 +121,7 @@ class Misc:
             head = True
             line_count = msg[-1] if msg[-1].isdigit() else 10
 
-        file = await client.download_media(message.replied, BytesIO())
+        file = await client.download_media(message.reply_to_text, BytesIO())
 
         try:
             contents = file.getvalue().decode()
@@ -143,7 +142,7 @@ class Misc:
 
 
     @run(command="style")
-    async def style(message: Message, client: TelegramClient):
+    async def style(message: Message, client: Client):
         style = message.args.lower()
 
         if not message.is_reply:
@@ -151,17 +150,17 @@ class Misc:
             return
         try:
             if style == "n":
-                await message.replied.edit(message.replied.message)
+                await message.reply_to_text.edit(message.reply_to_text.message)
             elif style == "c":
-                await message.replied.edit(f"<code>{message.replied.message}</code>")
+                await message.reply_to_text.edit(f"<code>{message.reply_to_text.message}</code>")
             elif style == "b":
-                await message.replied.edit(f"<b>{message.replied.message}</b>")
+                await message.reply_to_text.edit(f"<b>{message.reply_to_text.message}</b>")
             elif style == "i":
-                await message.replied.edit(f"<i>{message.replied.message}</i>")
+                await message.reply_to_text.edit(f"<i>{message.reply_to_text.message}</i>")
             elif style == "u":
-                await message.replied.edit(f"<u>{message.replied.message}</u>")
+                await message.reply_to_text.edit(f"<u>{message.reply_to_text.message}</u>")
             elif style == "s":
-                await message.replied.edit(f"<del>{message.replied.message}</del>")
+                await message.reply_to_text.edit(f"<del>{message.reply_to_text.message}</del>")
             else:
                 pass
         except:
@@ -170,7 +169,7 @@ class Misc:
 
 
     @run(command="time")
-    async def time(message: Message, client: TelegramClient):
+    async def time(message: Message, client: Client):
         await message.edit(f"<i>{datetime.now().strftime('%D %T')}</i>")
 
 
@@ -182,8 +181,8 @@ class Misc:
             pass
 
     @run(command="dump")
-    async def dump_sticker(message: Message, client: TelegramClient):
-        if not message.is_reply or (message.is_reply and not message.replied.sticker):
+    async def dump_sticker(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and not message.reply_to_text.sticker):
             await message.edit("<i>Reply to a sticker file first</i>")
             return
 
@@ -191,25 +190,25 @@ class Misc:
         
         sticker_data = BytesIO()
         
-        await message.replied.download_media(sticker_data)
+        await message.reply_to_text.download_media(sticker_data)
         
         sticker_data.seek(0)
-        if "video" in message.replied.sticker.mime_type:
+        if "video" in message.reply_to_text.sticker.mime_type:
             sticker_data.name = "sticker.mp4"
         else:
             sticker_data.name = "sticker.png"
         
         await message.delete()
-        await message.replied.reply(file=sticker_data, supports_streaming=True)
+        await message.reply_to_text.reply(file=sticker_data, supports_streaming=True)
 
     @event_watcher(pattern=r"^s(\S|[0-9]|[^a-z]).*\1.*\1.*|/.*/(,|{|}|\w|;)", incoming=False)
-    async def sed_pattern_reader(message: Message, client: TelegramClient):
-        if not message.replied:
+    async def sed_pattern_reader(message: Message, client: Client):
+        if not message.reply_to_text:
             return
 
-        sedArgs = message.args
+        sed_args = message.args
         proc = await asyncio.create_subprocess_shell(
-            cmd="gsed '{}'".format(sedArgs.replace("'", r"'\''")),
+            cmd="sed '{}'".format(sed_args.replace("'", r"'\''")),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE
@@ -218,10 +217,10 @@ class Misc:
         asyncio.create_task(Misc.sed_killer(proc))
 
         res, _ = await proc.communicate(
-            input=bytes(message.replied.message, "utf-8")
+            input=bytes(message.reply_to_text.message, "utf-8")
         )
 
         if proc.returncode == 0:
-            await message.replied.reply(
+            await message.reply_to_text.reply(
                 "<b>SED Bot:</b> " +
                 html.escape(res.decode()))

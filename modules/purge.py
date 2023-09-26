@@ -13,16 +13,15 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from main import run
-from telethon import TelegramClient
-from telethon.tl.patched import Message
+from main import Message, run
+from telethon import TelegramClient as Client
 
 import asyncio
 
 class Purge:
 
     @run(command="(purge|purgeme)")
-    async def purge_messages(message: Message, client: TelegramClient):
+    async def purge_messages(message: Message, client: Client):
         """Perfect tool(like you 🥰) for a spring cleaning\n
     Purges the chat with a given message delete_count or until the replied message"""
 
@@ -36,34 +35,35 @@ class Purge:
             await message.edit("<i>Enter a number and reply to a message</i>")
             return
         elif not delete_count and message.is_reply:
-            delete_count = message.replied.id - 1
+            delete_count = message.reply_to_text.id - 1
 
         await message.edit("<i>Collecting messages for batch deletion</i>")
-        async for chat_message in client.iter_messages(
-                entity=chat,
-                from_user='me' if message.cmd == "purgeme" else None,
-                limit=delete_count,
-                min_id=delete_count
-            ):
-                messages.append(chat_message.id)
+
+        messages = await client.get_messages(
+            entity=chat,
+            from_user='me' if message.cmd == "purgeme" else None,
+            limit=delete_count,
+            min_id=delete_count
+        )
 
         await message.edit("<i>Purging</i>")
         await client.delete_messages(chat, messages)
 
-        success = (
+        success_message = (
             await message.respond(
                 "<i>Purge has been successful. This message will disappear in 3 seconds.</i>"
             )
         )
+
         await asyncio.sleep(3)
-        await success.delete()
+        await success_message.delete()
 
     @run(command="del")
-    async def delete(message: Message, client: TelegramClient):
+    async def delete(message: Message, client: Client):
         await message.delete()
 
         if message.is_reply:
             try:
-                await message.replied.delete()
+                await message.reply_to_text.delete()
             except:
                 pass
