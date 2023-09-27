@@ -470,7 +470,7 @@ class Quote:
                 text_box_draw.line(
                     xy=(x + width, y + height, x, y + height),
                     width=1,
-                    fill="#2576de" if entity_type == "url" else "white",
+                    fill="#a6d8f5" if entity_type == "url" else "white",
                 )
 
             if char not in string.printable and not is_emoji:
@@ -491,7 +491,7 @@ class Quote:
                 text=char,
                 font=Quote.FONT_FALLBACK if is_fallback else Quote.FONT_EMOJI if is_emoji else font,
                 embedded_color=True,
-                fill="white" if entity_type != "url" else "#2576de",
+                fill="white" if entity_type != "url" else "#a6d8f5",
             )
             
             x +=  Quote.FONT_FALLBACK.getlength(char) if is_fallback \

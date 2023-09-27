@@ -8,7 +8,7 @@ import logging
 import re
 
 HELP_MENU_DATA = {}
-HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(40)
+HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(47)
 HELP_MENU = HELP_MENU_CAPTION
 
 logging.basicConfig(
@@ -42,13 +42,44 @@ async def error_handler(message: Message):
         pass
 
 
+def update_help_data(function, command: str, prefix: str):
+    global HELP_MENU_DATA, HELP_MENU
+    
+    if not command:
+        command = function.__name__
+
+    try:
+        class_name = function.__qualname__.split(".")[-2]
+    except:
+        class_name = "No Name"
+    
+    if class_name not in HELP_MENU:
+        HELP_MENU = f"{HELP_MENU[:-2]}</i>\n\n<b>⬤ {class_name}:</b>\n"
+
+    try:
+        regex_parse = generate(command, command)
+        for result in regex_parse:
+            HELP_MENU += f"<i>{result}, "
+            HELP_MENU_DATA.update({result: function.__doc__})
+    except:
+        pass
+
+
 def return_func(func, command="", prefix=prefix):
     async def wrapper(message: Message, command=command):
-        message = await get_messages_recursively(
-            message=message.message,
-            command=command,
-            prefix=prefix
-        )
+        try:
+            message = await get_messages_recursively(
+                message=message.message,
+                command=command,
+                prefix=prefix
+            )
+        except AttributeError:
+            # because sometimes telethon can't get the entity the first time, cache issues
+            message = await get_messages_recursively(
+                message=message.message,
+                command=command,
+                prefix=prefix
+            )
 
         try:
             if command == "blacklist" or command == "whitelist":
@@ -105,27 +136,13 @@ def run(
         forwards=False, blacklist=None, users=None, chats=None):
     escaped_prefix = re.escape(prefix)
     def inner(func, command=command):
-        global HELP_MENU_DATA, HELP_MENU
         wrapper = return_func(func, command, prefix)
-
-        if not command:
-            command = func.__name__
-
-        try:
-            class_name = func.__qualname__.split(".")[-2]
-        except:
-            class_name = "No Name"
         
-        if class_name not in HELP_MENU:
-            HELP_MENU = f"{HELP_MENU[:-2]}</i>\n\n<b>⬤ {class_name}:</b>\n"
-
-        try:
-            regex_parse = generate(command, command)
-            for result in regex_parse:
-                HELP_MENU += f"<i>{result}, "
-                HELP_MENU_DATA.update({result: func.__doc__})
-        except:
-            pass
+        update_help_data(
+            function=func,
+            command=command,
+            prefix=prefix
+        )
 
         client.add_event_handler(
             callback=wrapper,

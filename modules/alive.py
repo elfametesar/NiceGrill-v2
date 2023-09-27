@@ -56,7 +56,7 @@ class Alive:
         await message.edit(tot)
 
     @run(command="setmessage")
-    async def setalive(message: Message, client: Client):
+    async def set_alive_message(message: Message, client: Client):
         """Sets your alive message"""
         if not message.args:
             alivedb.set_alive_message("Hold on, Whaa.. I'm alive 🤥🤥")
@@ -71,7 +71,7 @@ class Alive:
 
 
     @run(command="setname")
-    async def setname(message: Message, client: Client):
+    async def set_alive_name(message: Message, client: Client):
         """Sets your alive name"""
         name = message.args
         if not name:
