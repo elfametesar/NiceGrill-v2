@@ -69,7 +69,7 @@ class Downloader:
             except:
                 pass
 
-            if DownloadAction.status == "Downloaded" or DownloadAction.status == "Stopped":
+            if DownloadAction.status == "Downloaded":
                 return
 
             await asyncio.sleep(2)
@@ -153,6 +153,9 @@ class Downloader:
                 await DownloadAction.start()
 
                 Downloader.DOWNLOAD_QUEUE[message.id] = DownloadAction
+
+                while not DownloadAction.speed:
+                    await asyncio.sleep(0)
 
                 await Downloader.regular_progress_bar(
                     DownloadAction=DownloadAction,
