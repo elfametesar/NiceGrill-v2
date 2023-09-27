@@ -2,13 +2,14 @@ from datetime import datetime
 from telethon.tl.types import MessageEntityUrl
 from telethon import TelegramClient as Client
 from database import settingsdb
-from pySmartDL import SmartDL
+from pyFunloader import Funload, humanize
 from main import Message, run, startup
 from utils import human_readables
 
 import asyncio
 import os
 import glob
+import html
 
 class Downloader:
 
@@ -45,50 +46,32 @@ class Downloader:
             await asyncio.sleep(1)
 
 
-    async def regular_progress_bar(DownloadAction, message: Message, start_time):
-        file_name = file_size = ""
+    async def regular_progress_bar(DownloadAction: Funload, message: Message):
         while True:
-            status = DownloadAction.get_status().capitalize()
-                
-            if message.id not in Downloader.DOWNLOAD_QUEUE:
-                status = "Stopped"
-
-            if not file_name:
-                file_name = await asyncio.to_thread(DownloadAction.get_dest)
-            if not file_size:
-                file_size = await asyncio.to_thread(DownloadAction.get_final_filesize, human=True)
-
-            download_speed, time_passed, received_data, estimated_time, progress_bar = \
-                await asyncio.gather(
-                    asyncio.to_thread(DownloadAction.get_speed, human=True),
-                    asyncio.to_thread(datetime.now),
-                    asyncio.to_thread(DownloadAction.get_dl_size, human=True),
-                    asyncio.to_thread(DownloadAction.get_eta, human=True),
-                    asyncio.to_thread(DownloadAction.get_progress_bar)
-                )
-            progress_bar = progress_bar.replace('-', '⚆')\
-                                       .replace('#', '⚈')\
-                                       .replace('[', '')\
-                                       .replace(']', '')
-
-            time_passed = str(time_passed - start_time)[0:-7]
+            try:
+                custom_percentage = round((DownloadAction.downloaded / DownloadAction.file_size) * 20, 2)
+            except:
+                custom_percentage = DownloadAction.percentage
             
-            await message.edit(
+            try:
+                await message.edit(
                 f"""
-<b>File Name: </b> <i>{file_name}</i>
-<b>Size: </b> <i>{file_size}</i>
-<b>Speed: </b> <i>{download_speed}</i>
-<b>Time Passed: </b> <i>{time_passed}</i>
-<b>Downloaded: </b> <i>{received_data}</i>
-<b>Estimated: </b> <i>{estimated_time}</i>
-<b>Status: </b> <i>{status}</i>
-{progress_bar}
+<b>File Name: </b> <i>{DownloadAction.file_name}</i>
+<b>Size: </b> <i>{humanize(DownloadAction.file_size)}</i>
+<b>Speed: </b> <i>{humanize(DownloadAction.speed)}</i>
+<b>Time Passed: </b> <i>{DownloadAction.elapsed_time}</i>
+<b>Downloaded: </b> <i>{humanize(DownloadAction.downloaded)}</i>
+<b>Estimated: </b> <i>{DownloadAction.estimate}</i>
+<b>Status: </b> <i>{DownloadAction.status}</i>
+<i>{'⚈' * int(custom_percentage)}{Downloader.PROGRESS_BAR[int(custom_percentage):]}</i>
 """
-            )
-            
-            if status == "Stopped" or status == "Finished":
-                break
-            
+                )
+            except:
+                pass
+
+            if DownloadAction.status == "Downloaded" or DownloadAction.status == "Stopped":
+                return
+
             await asyncio.sleep(2)
 
 
@@ -161,27 +144,26 @@ class Downloader:
                 os.makedirs(Downloader.DOWNLOAD_PATH)
 
             for url in urls:
-                DownloadAction = SmartDL(
-                    urls=url, 
-                    dest=Downloader.DOWNLOAD_PATH,
-                    progress_bar=False,
-                    threads=os.cpu_count()
+                DownloadAction = Funload(
+                    destination=Downloader.DOWNLOAD_PATH,
+                    url=url,
+                    progress_bar=True,
+                    block=False
                 )
-                DownloadAction.start(blocking=False)
+                await DownloadAction.start()
 
                 Downloader.DOWNLOAD_QUEUE[message.id] = DownloadAction
 
                 await Downloader.regular_progress_bar(
                     DownloadAction=DownloadAction,
-                    message=message,
-                    start_time=datetime.now()
+                    message=message
                 )
 
                 if message.id in Downloader.DOWNLOAD_QUEUE:
                     del Downloader.DOWNLOAD_QUEUE[message.id]
             
         except Exception as e:
-            await message.edit(f"<i>Error: {e}</i>")
+            await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
 
 
     @run(command="(dl|download)")
@@ -272,7 +254,7 @@ class Downloader:
         await message.edit(f"<i>New directory for your downloads is set to {message.args}</i>")
 
 
-    @run(command="(stop|pause|resume)")
+    @run(command="(stop|pause|resume|retry)")
     async def control_download(message: Message, client: Client):
         if not message.is_reply:
             await message.edit("<i>You need to reply to a message running a download action first</i>")
@@ -282,19 +264,21 @@ class Downloader:
             await message.edit("<i>No download action on this message</i>")
             return
         
-        task: asyncio.Task|SmartDL = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
+        task: asyncio.Task|Funload = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
         
         try:
             if message.cmd == "stop":
                 Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id].stop()
-                del Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
                 result = "<i>Download action successfully stopped</i>"
             elif message.cmd == "pause":
                 task.pause()
                 result = "<i>Download action paused</i>"
             elif message.cmd == "resume":
-                task.unpause()
+                task.resume()
                 result = "<i>Download resumes where it was left off</i>"
+            elif message.cmd == "retry":
+                result = "<i>Download action restarting</i>"
+                asyncio.create_task(task.retry())
 
             await message.edit(result)
         except Exception as e:
