@@ -27,7 +27,7 @@ class Message(MainMessage):
     
     def init(self):
         self.reply_to_text: Message|None
-        self.from_user: User = None
+        self.from_user: User
         self.args: str
         self.cmd: str
         self.prefix: str
@@ -39,6 +39,7 @@ class fake_user:
     def __init__(self, first_name="") -> None:
         self.first_name = first_name
         self.last_name = ""
+        self.name: str = first_name
         self.id = 0
         self.photo = None
     
@@ -61,7 +62,7 @@ class MessageMediaDocument():
         repr_data = "Document("
         for key, val in self.__dict__.items():
             repr_data += f"{key}={repr(val)}, "
-        return f"{repr_data[:-1]})"
+        return f"{repr_data[:-2]})"
 
 
 async def parse_document(document: MainMessage.document):
@@ -112,18 +113,27 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         if message.fwd_from.from_name:
             user.first_name = message.fwd_from.from_name
         else:
+            if hasattr(message.fwd_from.from_id, "user_id"):
+                fwd_id = message.fwd_from.from_id.user_id
+            elif hasattr(message.fwd_from.from_id, "channel_id"):
+                fwd_id = message.fwd_from.from_id.channel_id
+                user.first_name = user.title
+                user.last_name = ""
+            else:
+                fwd_id = message.fwd_from.from_id.chat_id
+                user.first_name = user.title
+                user.last_name = ""
 
             user = await message.client.get_entity(
-                entity=message.fwd_from.from_id.channel_id
+                entity=fwd_id
             )
             
-            user.first_name = user.title
-            user.last_name = ""
 
         message._sender = user
         message.from_user = message.sender
 
     
+    message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
     message.reply_to_text = await message.get_reply_message()
 
     if message_counter > 4:

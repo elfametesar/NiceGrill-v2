@@ -21,8 +21,7 @@ class fake_message:
         self.id = id
         self.sender = sender
         self.sender_id = sender.id
-        self.first_name = sender.first_name
-        self.last_name = sender.last_name or ""
+        self.from_user = sender
         self.message = message
         self.document = None
         self.client = client
@@ -704,7 +703,7 @@ class Quote:
             is_frame = True if (message.document and not message.sticker) or (message.message and not message.media) or message.audio or message.voice else False
 
             sender_name = await Quote.break_text(
-                f"{message.sender.first_name} {message.sender.last_name or ''}",
+                message.from_user.name,
                 Quote.FONT_TITLE,
             )
 
@@ -726,7 +725,7 @@ class Quote:
 
             if message.is_reply:
                 reply_bar_image = await Quote.draw_reply_bar(
-                    name=f"{message.reply_to_text.from_user.first_name} {message.reply_to_text.from_user.last_name or ''}",
+                    name=message.reply_to_text.from_user.name,
                     text=message.reply_to_text.message,
                     message=message.reply_to_text
                 )
@@ -850,6 +849,8 @@ class Quote:
             return
         
         await message.delete()
+        
+        user_info.name = f"{user_info.first_name} {user_info.last_name or ''}"
 
         fake_message_object = fake_message(
             id=user_info.id,
