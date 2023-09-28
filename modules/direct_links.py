@@ -9,7 +9,7 @@ from os import popen
 from random import choice
 from bs4 import BeautifulSoup
 from main import run, Message
-from utils import human_readables
+from utils import humanize
 from telethon import TelegramClient as Client
 
 import re
@@ -179,7 +179,7 @@ class DirectGen:
             return reply
         dl_url = data['url']
         name = data['file_name']
-        size = human_readables(data=int(data['file_size']))
+        size = humanize(data=int(data['file_size']))
         reply += f'[{name} ({size})]({dl_url})\n'
         return reply
 
@@ -203,7 +203,7 @@ class DirectGen:
             return reply
         dl_url = data['download']
         name = data['file_name']
-        size = human_readables(data=int(data['file_size']))
+        size = humanize(data=int(data['file_size']))
         reply += f'[{name} ({size})]({dl_url})\n'
         return reply
 

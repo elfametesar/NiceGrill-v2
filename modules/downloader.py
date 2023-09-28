@@ -2,9 +2,9 @@ from datetime import datetime
 from telethon.tl.types import MessageEntityUrl
 from telethon import TelegramClient as Client
 from database import settingsdb
-from pyFunloader import Funload, humanize
+from pyFunloader import Funload
 from main import Message, run, startup
-from utils import human_readables
+from utils import humanize
 
 import asyncio
 import os
@@ -26,11 +26,11 @@ class Downloader:
         
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
-<b>Size:</b> <i>{await human_readables(data=total_bytes)}</i>
-<b>Speed:</b> <i>{await human_readables(speed)}/s</i>
-<b>Time Passed:</b> <i>{await human_readables(seconds=received_bytes//speed)}</i>
-<b>Downloaded:</b> <i>{await human_readables(received_bytes)}</i>
-<b>Estimated:</b> <i>{await human_readables(seconds=total_bytes//speed)}</i>
+<b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
+<b>Speed:</b> <i>{await humanize(speed)}/s</i>
+<b>Time Passed:</b> <i>{await humanize(seconds=received_bytes//speed)}</i>
+<b>Downloaded:</b> <i>{await humanize(received_bytes)}</i>
+<b>Estimated:</b> <i>{await humanize(seconds=total_bytes//speed)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
         

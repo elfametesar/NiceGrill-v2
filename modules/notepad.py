@@ -2,7 +2,6 @@ from main import Message, run
 from telethon import TelegramClient as Client
 
 import os
-import html
 import asyncio
 
 class Notepad:
@@ -53,7 +52,7 @@ class Notepad:
         try:
             file_descriptor.truncate(0)
             file_descriptor.seek(0)
-            file_descriptor.write(html.unescape(message.reply_to_text.message))
+            file_descriptor.write(message.reply_to_text.message)
             file_descriptor.flush()
             await message.edit(f"<i>File successfully saved, file is still open tho</i>")
         except Exception as e:

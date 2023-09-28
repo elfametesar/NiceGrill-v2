@@ -4,7 +4,7 @@ from PIL.ImageFont import ImageFont as FontType
 from telethon import TelegramClient as Client
 from telethon import types
 from database import quotedb
-from utils import get_user, human_readables, get_messages_recursively
+from utils import get_user, humanize, get_messages_recursively
 from main import Message, run, startup
 from io import BytesIO
 
@@ -506,7 +506,7 @@ class Quote:
 
     async def draw_media_document(message: Message):
         name, size = message.pdocument.file_name, message.pdocument.size
-        size = await human_readables(data=size)
+        size = await humanize(data=size)
         
         name = await Quote.break_text(
             text=name,
