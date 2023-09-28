@@ -47,11 +47,7 @@ class Downloader:
 
 
     async def regular_progress_bar(DownloadAction: Funload, message: Message):
-        while True:
-            try:
-                custom_percentage = round((DownloadAction.downloaded / DownloadAction.file_size) * 20, 2)
-            except:
-                custom_percentage = DownloadAction.percentage
+            custom_percentage = round((DownloadAction.downloaded / DownloadAction.file_size) * 20, 2)
             
             try:
                 await message.edit(
@@ -154,7 +150,7 @@ class Downloader:
 
                 Downloader.DOWNLOAD_QUEUE[message.id] = DownloadAction
 
-                while not DownloadAction.speed:
+                while not DownloadAction.downloaded:
                     await asyncio.sleep(0)
 
                 await Downloader.regular_progress_bar(
