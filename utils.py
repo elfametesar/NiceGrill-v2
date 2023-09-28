@@ -37,10 +37,11 @@ class Message(MainMessage):
 class fake_user:
     
     def __init__(self, first_name="") -> None:
-        self.first_name = first_name
-        self.last_name = ""
+        self.first_name :str = first_name
+        self.last_name: str = ""
+        self.title: str = ""
         self.name: str = first_name
-        self.id = 0
+        self.id: int = 0
         self.photo = None
     
     def __repr__(self) -> str:
@@ -48,10 +49,6 @@ class fake_user:
 
 
 class MessageMediaDocument():
-    
-    @classmethod
-    def __instancecheck__(cls, instance):
-        return True
     
     def __init__(self) -> None:
         self.file_name: str
@@ -117,17 +114,14 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
                 fwd_id = message.fwd_from.from_id.user_id
             elif hasattr(message.fwd_from.from_id, "channel_id"):
                 fwd_id = message.fwd_from.from_id.channel_id
-                user.first_name = user.title
-                user.last_name = ""
             else:
                 fwd_id = message.fwd_from.from_id.chat_id
-                user.first_name = user.title
-                user.last_name = ""
 
             user = await message.client.get_entity(
                 entity=fwd_id
             )
-            
+        
+        user.name = user.title if hasattr(user, "title") else user.first_name
 
         message._sender = user
         message.from_user = message.sender
@@ -146,21 +140,17 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
     return message
 
 
-async def human_readables(data=None, seconds=None):
-    if data:
-        magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb")
-        m = 0
-        while data > 1024 and m < len(magnitudes):
-            data /= 1024
-            m += 1
-        return f"{data:.2f} {magnitudes[m]}"
-    else:
-        magnitudes = ("seconds", "minutes", "hours", "days", "months", "years")
-        m = 0
-        while seconds > 60 and m < len(magnitudes):
-            seconds //= 60
-            m += 1
-        return f"{seconds} {magnitudes[m]}"
+async def humanize(data, time=False):
+    hit_limit = 1024 if not time else 60
+    magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb") if not time \
+        else ("seconds", "minutes", "hours", "days", "months", "years")
+
+    m = 0
+    while data > hit_limit and m < len(magnitudes):
+        data /= hit_limit
+        m += 1
+
+    return f"{data:.2f} {magnitudes[m]}" if not time else f"{int(data)} {magnitudes[m]}"
 
 
 async def get_full_log(url):
@@ -207,7 +197,7 @@ async def get_user(user, client: Client):
         return False
 
 
-async def stream(message, res, template, exit_code="", log=True):
+async def stream(message: Message, res, template, exit_code="", log=True):
     delim = 3900 - len(template) - len(exit_code)
 
     if delim < 0:
@@ -245,11 +235,11 @@ async def stream(message, res, template, exit_code="", log=True):
         log_url
     )
 
-async def replace_message(message):
+async def replace_message(message: Message):
     return await message.reply(message.message.message)
 
 
-def get_arg(message):
+def get_arg(message: Message):
     msg = message.message
     msg = msg.replace(" ", "", 1) if msg[1] == " " else msg
     split = msg[1:].replace("\n", " \n").split(" ")

@@ -122,7 +122,7 @@ class Quote:
             
             profile_photo_draw.text(
                 xy=(16, 12),
-                text=user_info.first_name[0],
+                text=user_info.name[0],
                 font=temp_font,
                 fill="white"
             )
@@ -850,7 +850,11 @@ class Quote:
         
         await message.delete()
         
-        user_info.name = f"{user_info.first_name} {user_info.last_name or ''}"
+        if hasattr(user_info, "title"):
+            await message.delete()
+            return
+        
+        user_info.name = f"{user_info.first_name} {user_info.last_name or ''}".strip()
 
         fake_message_object = fake_message(
             id=user_info.id,
