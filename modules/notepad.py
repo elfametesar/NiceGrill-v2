@@ -6,10 +6,10 @@ import os
 import asyncio
 
 class Notepad:
-    
+
     FILE_DESCRIPTORS = {}
     LENGTH_DELIMITER = 3000
-    
+
     @run(command="edit")
     async def edit_text(message: Message, client: Client):
         if not message.args:

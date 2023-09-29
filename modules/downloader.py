@@ -23,7 +23,7 @@ class Downloader:
         percentage = round((received_bytes / total_bytes) * 20, 2)
 
         speed = ((received_bytes) // max((datetime.now() - start_time).seconds, 1))
-        
+
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
 <b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
@@ -33,7 +33,7 @@ class Downloader:
 <b>Estimated:</b> <i>{await humanize(seconds=total_bytes//speed)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
-        
+
         if percentage < 99:
             if Downloader.FLOOD_CONTROL > 12:
                 Downloader.FLOOD_CONTROL = 0
@@ -47,22 +47,24 @@ class Downloader:
 
 
     async def regular_progress_bar(DownloadAction: Funload, message: Message):
-            custom_percentage = round((DownloadAction.downloaded / DownloadAction.file_size) * 20, 2)
+        while True:
+            custom_percentage = round((DownloadAction.downloaded/ (DownloadAction.file_size or 1)) * 20, 2)
+            custom_percentage = min(custom_percentage, 20)
             
             try:
                 await message.edit(
                 f"""
 <b>File Name: </b> <i>{DownloadAction.file_name}</i>
-<b>Size: </b> <i>{humanize(DownloadAction.file_size)}</i>
-<b>Speed: </b> <i>{humanize(DownloadAction.speed)}</i>
+<b>Size: </b> <i>{await humanize(DownloadAction.file_size)}</i>
+<b>Speed: </b> <i>{DownloadAction.speed}</i>
 <b>Time Passed: </b> <i>{DownloadAction.elapsed_time}</i>
-<b>Downloaded: </b> <i>{humanize(DownloadAction.downloaded)}</i>
+<b>Downloaded: </b> <i>{await humanize(DownloadAction.downloaded)}</i>
 <b>Estimated: </b> <i>{DownloadAction.estimate}</i>
 <b>Status: </b> <i>{DownloadAction.status}</i>
 <i>{'⚈' * int(custom_percentage)}{Downloader.PROGRESS_BAR[int(custom_percentage):]}</i>
 """
                 )
-            except:
+            except Exception:
                 pass
 
             if DownloadAction.status == "Downloaded":
@@ -149,9 +151,6 @@ class Downloader:
                 await DownloadAction.start()
 
                 Downloader.DOWNLOAD_QUEUE[message.id] = DownloadAction
-
-                while not DownloadAction.downloaded:
-                    await asyncio.sleep(0)
 
                 await Downloader.regular_progress_bar(
                     DownloadAction=DownloadAction,

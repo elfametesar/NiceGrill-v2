@@ -45,7 +45,7 @@ async def redirect_pipes():
         mode="w",
         buffering=True
     )
-    
+
     stdin_read.write = stdin_write.write
     stdin_read.writelines = stdin_write.writelines
 
@@ -81,15 +81,16 @@ async def initialize_bot(client: TelegramClient):
 
     client.parse_mode = 'html'
     client.me = await client.get_me()
+    client._loop = asyncio.get_event_loop()
 
     await asyncio.gather(
         import_modules(),
         restart_handler()
     )
 
-    await redirect_pipes()
-
     print(f"\nLogged in as {client.me.first_name}\n")
+
+    await redirect_pipes()
     await client.run_until_disconnected()
 
 if not API_ID or not API_HASH or not SESSION or not MONGO_URI:

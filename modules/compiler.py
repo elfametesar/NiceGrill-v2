@@ -157,7 +157,7 @@ class Compiler:
         )
 
     @run(command="cpp")
-    async def cpp_compiler(message, client):
+    async def cpp_compiler(message: Message, client: Client):
         """Compiles a given C++ code"""
         code = message.args
 
@@ -255,63 +255,58 @@ int main(int argc, char** argv) {{
         if message.cmd:
             await message.edit(caption.format("Evaluating expression", args))
 
-        out = sys.stdout
-        err = sys.stderr
-
-        sys.stdout = io.StringIO()
-        sys.stderr = sys.stdout
-        sys.stdin = io.BytesIO()
-        
-        async def stdin_read():
-            while not (full_data := sys.stdin.getvalue()):
+        async def run_in_main_loop(coro):
+            task = asyncio.ensure_future(
+                coro_or_future=coro,
+                loop=client._loop
+            )
+            
+            while not task.done():
                 await asyncio.sleep(0)
-
-            sys.stdin.truncate(0)
-            sys.stdin.seek(0)
-            return full_data.decode().strip()
-
-        async def custom_input(input_message=""):
-            return f"{input_message}{(await stdin_read())}"
-
-        sys.stdin.read = stdin_read
+            
+            return task.result()
 
         locals().update(
             {
-                "input": custom_input,
                 "replied": message.reply_to_text,
-                "getme": client.me.id
+                "getme": client.me.id,
+                "safe": run_in_main_loop
             }
         )
 
         try:
-            task = asyncio.create_task(
-                meval(
-                    args,
-                    globals(),
-                    **locals()
+            task: asyncio.Task = asyncio.create_task(
+                asyncio.to_thread(
+                    asyncio.run,
+                    meval(
+                        code=args,
+                        globs=globals(),
+                        **locals()
+                    )
                 )
             )
 
             task.kill = task.cancel
-            task.stdin = sys.stdin
 
             Compiler.PROCESSES.update({message.id: task})
 
-            if not task.done():
-                try:
-                    task = await task
-                except asyncio.CancelledError:
-                    return
+            while not task.done():
+                await asyncio.sleep(0)
 
-            res = html.escape(str(task))
+            if task.cancelled():
+                res = "None"
+            else:
+                res = task.result()
+
             caption = caption.format("Evaluated expression", html.escape(args))
         except Exception as e:
             caption = caption.format("Evaluation failed", html.escape(args))
             etype, val, _ = sys.exc_info()
-            res = html.escape(''.join(traceback.format_exception(etype, val, None, 0)))
+            res = ''.join(traceback.format_exception(etype, val, None, 0))
 
+        res = html.escape(str(res))
         try:
-            val = html.escape(sys.stdout.getvalue())
+            val = html.escape(sys.stdout.read())
         except AttributeError:
             val = ""
 
@@ -327,12 +322,9 @@ int main(int argc, char** argv) {{
         else:
             await utils.stream(message, res, caption)
 
-        sys.stdout = out
-        sys.stderr = err
-
 
     @run(command="input")
-    async def input(message, client):
+    async def input(message: Message, client: Client):
         args = message.args.strip()
 
         if not args:
@@ -347,14 +339,14 @@ int main(int argc, char** argv) {{
             )
             return
 
+        sys.stdin.write(args + "\n")
+
         await message.edit(
             "<i>Input has been sent to the terminal</i>"
         )
 
-        Compiler.PROCESSES[message.reply_to_text.id].stdin.write(bytes(args + "\n", 'utf-8'))
-
     @run(command="kill")
-    async def kill(message, client):
+    async def kill(message: Message, client: Client):
         process = message.reply_to_text
 
         if not process:
@@ -375,7 +367,7 @@ int main(int argc, char** argv) {{
         return os.popen("which zsh || which bash || which sh").read().strip()
 
     @run(command="shell")
-    async def set_shell_mode(message, client):
+    async def set_shell_mode(message: Message, client: Client):
         if Compiler.SHELL_MODE is None:
             Compiler.SHELL_MODE = settings.is_shell()
 
@@ -394,7 +386,7 @@ int main(int argc, char** argv) {{
         await message.edit(f"<i>Shell mode is set to {Compiler.SHELL_MODE}</i>")
 
     @event_watcher(pattern=r"(\.+$|^[^.].*)+")
-    async def telegram_to_shell(message: Message, client):
+    async def telegram_to_shell(message: Message, client: Client):
         if Compiler.SHELL_MODE is None or Compiler.SHELL_MODE_EXEC is None:
             Compiler.SHELL_MODE = settings.is_shell()
             Compiler.SHELL_MODE_EXEC = await Compiler.find_shell()

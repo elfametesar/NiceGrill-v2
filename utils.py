@@ -126,9 +126,9 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         message._sender = user
         message.from_user = message.sender
 
-    
-    message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
-    message.reply_to_text = await message.get_reply_message()
+    if message.from_user:
+        message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
+        message.reply_to_text = await message.get_reply_message()
 
     if message_counter > 4:
         message_counter = 0
