@@ -18,7 +18,7 @@ from types import AsyncGeneratorType
 from meval import meval
 
 import utils
-import io
+import re
 import os
 import sys
 import html
@@ -271,18 +271,19 @@ int main(int argc, char** argv) {{
             for item in item_list:
                 yield item
 
-
         async def run_thread_safe(coro_or_future):
             is_iterable = False
-            if isinstance(coro_or_future, AsyncGeneratorType):
-                future = asyncio.ensure_future(
-                    coro_or_future=run_in_main_loop(coro_or_future),
-                    loop=client._loop
-                )
-            else:
+            # i have to resort to my cursed ways here because i don't know how to check for a
+            # generator/iterator object in a more legitimate way
+            if "iter" in repr(coro_or_future).lower() or "generat" in repr(coro_or_future).lower():
                 is_iterable = True
                 future = asyncio.ensure_future(
                     coro_or_future=iter_in_main_loop(coro_or_future),
+                    loop=client._loop
+                )
+            else:
+                future = asyncio.ensure_future(
+                    coro_or_future=run_in_main_loop(coro_or_future),
                     loop=client._loop
                 )
 
