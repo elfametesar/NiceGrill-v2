@@ -322,12 +322,13 @@ int main(int argc, char** argv) {{
             res = await task
             caption = caption.format("Evaluated expression", html.escape(args))
         except RuntimeError:
-            print(
-                task.exception(),
-                "\n\nTry wrapping your telethon calls inside await safe() wrapper. " +\
+            print(task.exception())
+            if "see the FAQ" in str(task.exception()):
+                print(
+                    "\nTry wrapping your telethon calls inside await safe() wrapper. " +\
                     "For example: \n\n" +\
                     "await safe(\n\tmessage.edit('what the hell')\n)".expandtabs(4)
-            )
+                )
         except asyncio.CancelledError:
             pass
         except BaseException:
