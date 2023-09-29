@@ -51,15 +51,20 @@ class Misc:
             return
 
 
-    @run(command="update")
+    @run(command="(update|update now)")
     async def update(message: Message, client: Client):
-        if not message.args:
-            os.popen("git fetch")
+        if message.cmd == "update now":
+            current_branch = os.popen("git rev-parse --abbrev-ref HEAD")
+
             await message.edit("<i>Checking...</i>")
+            os.popen("git fetch")
+
             await asyncio.sleep(1)
+
             updates = os.popen(
                 "git log --pretty=format:'%s - %an (%cr)' --abbrev-commit"
-                " --date=relative main..origin/main").readlines()
+                f" --date=relative {current_branch}..origin/{current_branch}").readlines()
+
             if updates:
                 ls = "<b>Updates:</b>\n\n"
                 for i in updates:
@@ -71,13 +76,14 @@ class Misc:
             return
 
         await message.edit("<i>Updating</i>")
-        update = os.popen("git pull").read()
-        if "up to date" not in update:
+        result = os.popen("git pull").read()
+
+        if "up to date" not in result:
             await message.edit(f"<i>Succesfully Updated</i>")
             await asyncio.sleep(1.5)
             await Misc.restart(message, client)
         else:
-            await message.edit(f"<i>{update}</i>")
+            await message.edit(f"<i>{result}</i>")
 
 
     # @run(command="asset")
