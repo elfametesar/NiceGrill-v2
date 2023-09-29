@@ -63,7 +63,7 @@ class Misc:
             return
 
         if message.cmd == "update":
-            current_branch = os.popen("git rev-parse --abbrev-ref HEAD").read()
+            current_branch = os.popen("git rev-parse --abbrev-ref HEAD").read().strip()
 
             await message.edit("<i>Checking...</i>")
             os.popen("git fetch")
