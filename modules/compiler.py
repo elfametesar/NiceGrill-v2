@@ -14,6 +14,7 @@
 from database import settingsdb as settings
 from main import Message, run, event_watcher
 from telethon import TelegramClient as Client
+from types import AsyncGeneratorType
 from meval import meval
 
 import utils
@@ -256,21 +257,46 @@ int main(int argc, char** argv) {{
             await message.edit(caption.format("Evaluating expression", args))
 
         async def run_in_main_loop(coro):
-            task = asyncio.ensure_future(
-                coro_or_future=coro,
-                loop=client._loop
-            )
+            return await coro
+
+        async def iter_in_main_loop(future):
+            item_list = []
+
+            async for item in future:
+                item_list.append(item)
             
-            while not task.done():
+            return item_list
+
+        async def future_iterator(item_list: list):
+            for item in item_list:
+                yield item
+
+
+        async def run_thread_safe(coro_or_future):
+            is_iterable = False
+            if isinstance(coro_or_future, AsyncGeneratorType):
+                future = asyncio.ensure_future(
+                    coro_or_future=run_in_main_loop(coro_or_future),
+                    loop=client._loop
+                )
+            else:
+                is_iterable = True
+                future = asyncio.ensure_future(
+                    coro_or_future=iter_in_main_loop(coro_or_future),
+                    loop=client._loop
+                )
+
+            while not future.done():
                 await asyncio.sleep(0)
-            
-            return task.result()
+
+            return future.result() if not is_iterable else future_iterator(future.result())
+        
 
         locals().update(
             {
                 "replied": message.reply_to_text,
                 "getme": client.me.id,
-                "safe": run_in_main_loop
+                "safe": run_thread_safe
             }
         )
 
