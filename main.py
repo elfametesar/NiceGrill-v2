@@ -42,7 +42,7 @@ async def error_handler(message: Message):
         pass
 
 
-def update_help_data(function, command: str, prefix: str):
+def update_help_data(function, command: str):
     global HELP_MENU_DATA, HELP_MENU
     
     if not command:
@@ -140,8 +140,7 @@ def run(
         
         update_help_data(
             function=func,
-            command=command,
-            prefix=prefix
+            command=command
         )
 
         client.add_event_handler(
