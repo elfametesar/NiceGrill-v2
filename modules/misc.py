@@ -53,7 +53,10 @@ class Misc:
 
     @run(command="(update|update now)")
     async def update(message: Message, client: Client):
-        if message.cmd == "update now":
+        if message.args:
+            return
+
+        if message.cmd == "update":
             current_branch = os.popen("git rev-parse --abbrev-ref HEAD")
 
             await message.edit("<i>Checking...</i>")
