@@ -234,7 +234,7 @@ int main(int argc, char** argv) {{
             await utils.stream(message, res, template, exit_code)
 
 
-    @run(command="py")
+    @run(command="(py|pyr)")
     async def python(message: Message, client: Client):
         """A nice tool (like you 🥰) to test python codes"""
         args = message.args
@@ -297,6 +297,10 @@ int main(int argc, char** argv) {{
                 "safe": run_thread_safe
             }
         )
+        
+        #clear buffer
+        if message.cmd != "pyr":
+            sys.stdout.read()
 
         task: asyncio.Task = asyncio.create_task(
             asyncio.to_thread(
