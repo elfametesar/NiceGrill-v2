@@ -30,12 +30,12 @@ class AntiPM:
     WARNS = {}
     WARNING_MESSAGE = "" \
                       "<b>I have not allowed you to PM, please ask or say whatever" \
-                      " it is in a group chat or at least ask for my permission to PM\n\n" \
+                      " it is in a group chat.\n\n" \
                       "I'm letting you off the hook for this time but be warned that " \
-                      "you will be blocked & reported spam if you continue.</b>"
+                      "you will be blocked & reported spam if you continue sending messages.</b>"
 
     BLOCK_MESSAGE = \
-        "<b>I have warned you several times now. However, you did not stop " \
+        "<b>I have warned you, however, you did not stop " \
         "spamming my chat. Therefore, you have been blocked and reported " \
         "as spam. Good luck!</b>"
 
