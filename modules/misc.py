@@ -41,9 +41,15 @@ class Misc:
     @run(command="logs")
     async def logs(message: Message, client: Client):
         try:
-            await client.send_file(entity=message.chat_id, file="error.txt",
-                                        caption="<b>Here's logs in ERROR level.</b>")
+            await client.send_file(
+                entity=message.chat_id,
+                file="error.txt",
+                caption="<b>Here's logs in ERROR level.</b>"
+
+            )
+
             await message.delete()
+
             with open('error.txt', 'w'):
                 pass
         except:
