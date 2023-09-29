@@ -273,9 +273,7 @@ int main(int argc, char** argv) {{
 
         async def run_thread_safe(coro_or_future):
             is_iterable = False
-            # i have to resort to my cursed ways here because i don't know how to check for a
-            # generator/iterator object in a more legitimate way
-            if "iter" in repr(coro_or_future).lower() or "generat" in repr(coro_or_future).lower():
+            if hasattr(coro_or_future, "__aiter__"):
                 is_iterable = True
                 future = asyncio.ensure_future(
                     coro_or_future=iter_in_main_loop(coro_or_future),
