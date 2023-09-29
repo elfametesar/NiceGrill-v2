@@ -56,10 +56,11 @@ class MessageMediaDocument():
         self.alt: str
     
     def __repr__(self) -> str:
-        repr_data = "Document("
+        repr_data = "Document:\n\n"
         for key, val in self.__dict__.items():
-            repr_data += f"{key}={repr(val)}, "
-        return f"{repr_data[:-2]})"
+            repr_data += f"\t{key}={str(val)}\n".expandtabs(4)
+
+        return repr_data
 
 
 async def parse_document(document: MainMessage.document):
@@ -68,6 +69,8 @@ async def parse_document(document: MainMessage.document):
     
     new_document = MessageMediaDocument()
     for key, val in document.__dict__.items():
+        if key == "attributes":
+            continue
         setattr(new_document, key, val)
     
     for attribute in document.attributes:
@@ -126,9 +129,11 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         message._sender = user
         message.from_user = message.sender
 
-    if message.from_user:
+    try:
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
         message.reply_to_text = await message.get_reply_message()
+    except Exception:
+        pass
 
     if message_counter > 4:
         message_counter = 0
