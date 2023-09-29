@@ -51,7 +51,7 @@ class Misc:
             return
 
 
-    @run(command="(update|update now)")
+    @run(command="(update|update-now)")
     async def update(message: Message, client: Client):
         if message.args:
             return
