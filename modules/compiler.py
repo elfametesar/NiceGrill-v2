@@ -261,7 +261,6 @@ int main(int argc, char** argv) {{
 
         async def iter_in_main_loop(future):
             item_list = []
-
             async for item in future:
                 item_list.append(item)
             
@@ -275,13 +274,13 @@ int main(int argc, char** argv) {{
             is_iterable = False
             if hasattr(coro_or_future, "__aiter__"):
                 is_iterable = True
-                future = asyncio.ensure_future(
-                    coro_or_future=iter_in_main_loop(coro_or_future),
+                future = asyncio.run_coroutine_threadsafe(
+                    coro=iter_in_main_loop(coro_or_future),
                     loop=client._loop
                 )
             else:
-                future = asyncio.ensure_future(
-                    coro_or_future=run_in_main_loop(coro_or_future),
+                future = asyncio.run_coroutine_threadsafe(
+                    coro=run_in_main_loop(coro_or_future),
                     loop=client._loop
                 )
 
@@ -299,37 +298,41 @@ int main(int argc, char** argv) {{
             }
         )
 
-        try:
-            task: asyncio.Task = asyncio.create_task(
-                asyncio.to_thread(
-                    asyncio.run,
-                    meval(
-                        code=args,
-                        globs=globals(),
-                        **locals()
-                    )
+        task: asyncio.Task = asyncio.create_task(
+            asyncio.to_thread(
+                asyncio.run,
+                meval(
+                    code=args,
+                    globs=globals(),
+                    **locals()
                 )
             )
+        )
 
-            task.kill = task.cancel
+        task.kill = task.cancel
 
-            Compiler.PROCESSES.update({message.id: task})
+        Compiler.PROCESSES.update({message.id: task})
+        res = ""
 
-            while not task.done():
-                await asyncio.sleep(0)
-
-            if task.cancelled():
-                res = "None"
-            else:
-                res = task.result()
-
+        try:
+            res = await task
             caption = caption.format("Evaluated expression", html.escape(args))
-        except Exception as e:
+        except RuntimeError:
+            print(
+                task.exception(),
+                "\n\nTry wrapping your telethon calls inside await safe() wrapper. " +\
+                    "For example: \n\n" +\
+                    "await safe(\n\tmessage.edit('what the hell')\n)".expandtabs(4)
+            )
+        except asyncio.CancelledError:
+            pass
+        except BaseException:
+            traceback.print_exc(limit=0)
+        finally:
             caption = caption.format("Evaluation failed", html.escape(args))
-            etype, val, _ = sys.exc_info()
-            res = ''.join(traceback.format_exception(etype, val, None, 0))
 
         res = html.escape(str(res))
+
         try:
             val = html.escape(sys.stdout.read())
         except AttributeError:
