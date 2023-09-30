@@ -17,12 +17,20 @@ class Currency:
         
         await message.edit("<i>Converting specified currency</i>")
         
-        html_data = get(Currency.SEARCH_URL.format(query=message.args), follow_redirects=True, headers=Currency.HEADERS).text
+        html_data = get(
+            url=Currency.SEARCH_URL.format(query=message.args),
+            follow_redirects=True,
+            headers=Currency.HEADERS
+        ).text
+
         html_parser = BeautifulSoup(html_data, "lxml")
         
-        result = html_parser.find("div", class_="b_focusTextSmall curr_totxt")
+        source_currency = html_parser.find("div", class_="b_focusTextExtraSmall curr_fl curr_frtxt")
+        converted_currency = html_parser.find("div", class_="b_focusTextSmall curr_totxt")
         
-        if result and result.text:
-            await message.edit(f"<b>{message.args}:</b> <i>{result.text}</i>")
-        else:
+        result = f"{str(source_currency).replace(' =', ' is ', -1)}{converted_currency}"
+        
+        if not source_currency or not converted_currency:
             await message.edit("<i>There is no result for your currency query</i>")
+        else:
+            await message.edit(f"<i>{result}</i>")

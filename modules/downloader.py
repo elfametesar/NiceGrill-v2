@@ -54,7 +54,7 @@ class Downloader:
             try:
                 await message.edit(
                 f"""
-<b>File Name: </b> <i>{DownloadAction.file_name}</i>
+<b>File Name: </b> <i>{DownloadAction.destination}</i>
 <b>Size: </b> <i>{await humanize(DownloadAction.file_size)}</i>
 <b>Speed: </b> <i>{DownloadAction.speed}</i>
 <b>Time Passed: </b> <i>{DownloadAction.elapsed_time}</i>
@@ -230,9 +230,9 @@ class Downloader:
             await message.edit("<i>Input a valid path for your downloads to go in</i>")
             return
         
-        absolute_path = os.path.abspath(message.args)
+        download_path = message.args.rstrip("/") + "/"
         
-        if os.path.exists(absolute_path):
+        if os.path.exists(download_path):
             if not os.access(message.args, os.W_OK):
                 await message.edit("<i>This path is not suitable for your downloads</i>")
                 return
@@ -246,8 +246,8 @@ class Downloader:
                 await message.edit(f"<i>Error: {e}</i>")
                 return
         
-        settingsdb.set_download_path(message.args)
-        Downloader.DOWNLOAD_PATH = message.args
+        settingsdb.set_download_path(download_path)
+        Downloader.DOWNLOAD_PATH = download_path
 
         await message.edit(f"<i>New directory for your downloads is set to {message.args}</i>")
 

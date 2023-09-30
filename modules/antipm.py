@@ -21,6 +21,7 @@ from database import antipmdb
 
 
 class AntiPM:
+
     PM_BLOCKER = False
     WARNING_LIMIT = 3
     NOTIFICATIONS = True
