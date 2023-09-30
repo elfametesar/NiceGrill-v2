@@ -25,13 +25,17 @@ class Screenshot:
         
         await message.edit("<i>Taking a screenshot...</i>")
         
-        async with AsyncClient() as session:
-            result = await session.get(
-                url=Screenshot.API_URL.format(
-                    SCREENSHOT_API, message.args, "1", "PNG", "2560x1440"
-            ),
-            follow_redirects=True
-        )
+        try:
+            async with AsyncClient() as session:
+                result = await session.get(
+                    url=Screenshot.API_URL.format(
+                        SCREENSHOT_API, message.args, "1", "PNG", "2560x1440"
+                ),
+                follow_redirects=True
+            )
+        except Exception as e:
+            await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
+            return
         
         content_type = result.headers["content-type"]
         
