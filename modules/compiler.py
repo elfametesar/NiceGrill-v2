@@ -372,7 +372,11 @@ int main(int argc, char** argv) {{
             )
             return
 
-        sys.stdin.write(args + "\n")
+        proc = Compiler.PROCESSES[message.reply_to_msg_id]
+        if isinstance(proc, asyncio.Task):
+            sys.stdin.write(args + "\n")
+        else:
+            proc.stdin.write(bytes(args + "\n", encoding="utf-8"))
 
         await message.edit(
             "<i>Input has been sent to the terminal</i>"
