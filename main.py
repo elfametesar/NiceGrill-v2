@@ -29,6 +29,7 @@ prefix = settingsdb.get_prefix() or "."
 
 async def error_handler(message: Message):
     logger.exception("")
+
     await message.edit("<b>Loading..</b>")
     await message.respond(
         file="error.txt",

@@ -82,11 +82,14 @@ async def parse_document(document: MainMessage.document):
 
 message_counter = 0
 async def get_messages_recursively(message: Message, command=None, prefix=None):
+
+    if not message:
+        return
+
     global message_counter
     message_counter += 1
 
-    if message.document:
-        message.pdocument = await parse_document(message.document)
+    message.pdocument = await parse_document(message.document)
 
     message.from_user = message.sender
     

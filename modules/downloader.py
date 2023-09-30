@@ -159,7 +159,7 @@ class Downloader:
 
                 if message.id in Downloader.DOWNLOAD_QUEUE:
                     del Downloader.DOWNLOAD_QUEUE[message.id]
-            
+
         except Exception as e:
             await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
 
