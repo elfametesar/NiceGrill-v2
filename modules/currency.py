@@ -7,6 +7,7 @@ from httpx import get
 class Currency:
     
     SEARCH_URL = "https://www.bing.com/search?q={query}&setlang=en"
+    HEADERS = {"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
     
     @run(command="cur")
     async def convert_currency(message: Message, client: Client):
@@ -16,7 +17,7 @@ class Currency:
         
         await message.edit("<i>Converting specified currency</i>")
         
-        html_data = get(Currency.SEARCH_URL.format(query=message.args), follow_redirects=True).text
+        html_data = get(Currency.SEARCH_URL.format(query=message.args), follow_redirects=True, headers=Currency.HEADERS).text
         html_parser = BeautifulSoup(html_data, "lxml")
         
         result = html_parser.find("div", class_="b_focusTextSmall curr_totxt")
