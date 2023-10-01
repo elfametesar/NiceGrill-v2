@@ -10,8 +10,6 @@ import glob
 import sys
 import os
 
-preserved_stdout = sys.stdout
-
 def read_stdout():
     output = sys.stdout.getvalue()
     sys.stdout.seek(os.SEEK_END)
@@ -21,7 +19,7 @@ def read_stdout():
 
 def write_stdout(func):
     def inner(args):
-        print(args, end="", file=preserved_stdout)
+        print(args, end="", file=sys.__stdout__)
         func(args)
     return inner
 

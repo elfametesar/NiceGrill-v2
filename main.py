@@ -4,33 +4,16 @@ from telethon.sync import events
 from exrex import generate
 from init import client
 
-import logging
 import re
 
 HELP_MENU_DATA = {}
 HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(47)
 HELP_MENU = HELP_MENU_CAPTION
 
-logging.basicConfig(
-    filename="error.txt",
-    level=logging.ERROR,
-    format='%(asctime)s  %(name)s  %(levelname)s: %(message)s'
-)
-
-logger = logging.getLogger(__name__)
-
-file_handler = logging.FileHandler("error.txt")
-file_handler.setLevel(logging.ERROR)
-
-formatter = logging.Formatter(
-    '%(asctime)s  %(name)s  %(levelname)s:\n\n %(message)s'
-)
-
 bad_chat_list = blacklistdb.get_all_blacklisted() or []
 prefix = settingsdb.get_prefix() or "."
 
 async def error_handler(message: Message):
-    logger.exception("")
 
     await message.edit("<b>Loading..</b>")
     await message.respond(
