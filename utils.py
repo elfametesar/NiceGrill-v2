@@ -16,6 +16,8 @@
 from telethon import TelegramClient as Client
 from telethon.types import User
 from telethon.tl.patched import Message as MainMessage
+from pprint import pformat
+
 
 import asyncio
 import html
@@ -30,7 +32,12 @@ class Message(MainMessage):
         self.args: str
         self.cmd: str
         self.prefix: str
-        self.pdocument: MessageMediaDocument
+    
+    def __repr__(self) -> str:
+        return pformat(self.to_dict(), indent=4, sort_dicts=True)
+    
+    def __str__(self) -> str:
+        return self.__repr__()
 
 class fake_user:
     
@@ -45,20 +52,6 @@ class fake_user:
     def __repr__(self) -> str:
         return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
 
-class MessageMediaDocument():
-    
-    def __init__(self) -> None:
-        self.file_name: str
-        self.size: int
-        self.alt: str
-    
-    def __repr__(self) -> str:
-        repr_data = "Document:\n\n"
-        for key, val in self.__dict__.items():
-            repr_data += f"\t{key}={str(val)}\n".expandtabs(4)
-
-        return repr_data
-
 message_counter = 0
 async def get_messages_recursively(message: Message, command=None, prefix=None):
 
@@ -68,6 +61,8 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
     global message_counter
     message_counter += 1
     
+    message.__class__.__str__ = lambda _: pformat(message.to_dict(), indent=4, sort_dicts=False)
+
     if command:
         message.args = get_arg(message)
     else:
@@ -78,7 +73,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         if get_cmd:
             message.cmd = get_cmd.group(0).strip()
 
-    message.from_user = message.sender
+    message.from_user = message._sender
     if not message.sender and not message.fwd_from:
         try:
             message.from_user = await message.client.get_entity(message.sender_id)
