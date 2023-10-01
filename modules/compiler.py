@@ -332,7 +332,7 @@ int main(int argc, char** argv) {{
         except asyncio.CancelledError:
             pass
         except BaseException:
-            traceback.print_exc(limit=0)
+            traceback.print_exc(limit=0, file=sys.stdout)
         finally:
             caption = caption.format("Evaluation failed", html.escape(args))
 
