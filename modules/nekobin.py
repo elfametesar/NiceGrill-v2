@@ -16,8 +16,8 @@ from main import run, Message
 from telethon import TelegramClient as Client
 from telethon.tl.types import MessageEntityUrl
 from telethon.errors.rpcerrorlist import MessageTooLongError
+from io import BytesIO
 
-import os
 import utils
 
 class FileBin:
@@ -27,18 +27,16 @@ class FileBin:
 
     @run(command="paste")
     async def write_to_url(message: Message, client: Client):
-        """Hell"""
         context = message.args
 
-        if (message.reply_to_text and message.reply_to_text.pdocument
-                and message.reply_to_text.pdocument.mime_type.startswith("text")):
-            doc = await message.reply_to_text.download_media()
-            with open(doc, "r") as file:
-                context = file.read()
-            os.remove(doc)
-
-        elif message.reply_to_text and message.reply_to_text.text:
-            context = message.reply_to_text.text
+        if message.is_reply:
+            
+            if message.reply_to_text.document:
+                document = await message.reply_to_text.download_media(file=BytesIO())
+                if document.readable():
+                    context = document.getvalue().decode()
+            else:
+                context = message.reply_to_text.message
 
         if not context:
             await message.edit("<i>Type in or reply to some text to paste</i>")

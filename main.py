@@ -18,10 +18,12 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
 file_handler = logging.FileHandler("error.txt")
 file_handler.setLevel(logging.ERROR)
+
 formatter = logging.Formatter(
-    '%(asctime)s  %(name)s  %(levelname)s: %(message)s'
+    '%(asctime)s  %(name)s  %(levelname)s:\n\n %(message)s'
 )
 
 bad_chat_list = blacklistdb.get_all_blacklisted() or []
@@ -98,7 +100,7 @@ def return_func(func, command="", prefix=prefix):
 
 
 def event_watcher(
-        incoming=True, outgoing=True, forwards=False, custom_event: callable=None,
+        incoming=True, outgoing=True, forwards=False, custom_event=None,
         pattern=".*", blacklist=None, users=None, chats=None,):
     
     def inner(func):
@@ -136,8 +138,10 @@ def event_watcher(
 
 def run(
         command=None, prefix=prefix, incoming=False, outgoing=True,
-        forwards=False, blacklist=None, users=None, chats=None, custom_event: callable=None):
+        forwards=False, blacklist=None, users=None, chats=None, custom_event=None):
+
     escaped_prefix = re.escape(prefix)
+
     def inner(func, command=command):
         wrapper = return_func(func, command, prefix)
         

@@ -24,8 +24,8 @@ class Renamer:
 
     @run(command="(rn|rename)")
     async def rename_from_telegram(message: Message, client: Client):
-        if not message.is_reply or (message.reply_to_text and not message.reply_to_text.media):
-            await message.edit("<i>Reply to a message with media</i>")
+        if not message.is_reply or (message.reply_to_text and not message.reply_to_text.file):
+            await message.edit("<i>Reply to a message with file</i>")
             return
 
         if not message.args:
@@ -33,11 +33,10 @@ class Renamer:
             return
 
         await message.edit("<i>Downloading..</i>")
-        
-        file = BytesIO()
-        file.name = message.args
 
-        await message.reply_to_text.download_media(file=file)
+        file = await message.reply_to_text.download_media(file=BytesIO())
+
+        file.name = message.args
         file.seek(0)
 
         await message.edit("<i>Renaming..</i>")

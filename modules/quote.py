@@ -220,7 +220,7 @@ class Quote:
             mode="RGBA",
             size=(
                 round(width),
-                round(Quote.LINE_HEIGHT * 2)
+                round(Quote.LINE_HEIGHT * 2) + 3
             ),
             color=Quote.MESSAGE_COLOR
         )
@@ -231,7 +231,7 @@ class Quote:
             is_document = False
 
             if message.sticker:
-                text, symbol = message.pdocument.file_name, message.pdocument.alt
+                text, symbol = message.file.name, message.file.emoji
                 if symbol:
                     is_document = True
                 else:
@@ -256,8 +256,8 @@ class Quote:
                 symbol = "🎵"
                 text = " Audio"
                 is_document = True
-            elif message.pdocument:
-                text = message.pdocument.file_name
+            elif message.document:
+                text = message.file.name
                 symbol = "🔗"
                 is_document = True
 
@@ -505,7 +505,7 @@ class Quote:
 
 
     async def draw_media_document(message: Message):
-        name, size = message.pdocument.file_name, message.pdocument.size
+        name, size = message.file.name, message.file.size
         size = await humanize(data=size)
         
         name = await Quote.break_text(
@@ -524,7 +524,7 @@ class Quote:
 
         document_draw = ImageDraw.Draw(document_bg)
 
-        if not message.pdocument.thumbs:
+        if not message.document.thumbs:
             document_draw.ellipse(
                 xy=(0, 0, 45, 45),
                 fill="#434343"
@@ -659,7 +659,7 @@ class Quote:
             
             text_box_image.paste(
                 im=media_image,
-                box=(0,0)
+                box=(0,3)
             )
 
             return text_box_image

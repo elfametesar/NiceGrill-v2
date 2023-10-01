@@ -166,11 +166,8 @@ class Downloader:
 
     @run(command="(dl|download)")
     async def download_file(message: Message, client: Client):
-        if message.is_reply and message.reply_to_text.media:
-            file_name = "unknown"
-            if message.reply_to_text.pdocument:
-                if not (file_name := message.reply_to_text.pdocument.file_name):
-                    file_name = "unknown"
+        if message.is_reply and message.reply_to_text.file:
+            file_name = message.reply_to_text.file.name or "Unknown"
             
             task = asyncio.create_task(
                 Downloader.telegram_download_file(
@@ -179,6 +176,7 @@ class Downloader:
                     file_name=file_name
                 )
             )
+
             task.stop = task.cancel
             Downloader.DOWNLOAD_QUEUE[message.id] = task
             
@@ -229,9 +227,9 @@ class Downloader:
         if not message.args:
             await message.edit("<i>Input a valid path for your downloads to go in</i>")
             return
-        
+
         download_path = message.args.rstrip("/") + "/"
-        
+
         if os.path.exists(download_path):
             if not os.access(message.args, os.W_OK):
                 await message.edit("<i>This path is not suitable for your downloads</i>")

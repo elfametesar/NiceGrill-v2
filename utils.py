@@ -22,7 +22,6 @@ import html
 import httpx
 import re
 
-
 class Message(MainMessage):
     
     def init(self):
@@ -32,7 +31,6 @@ class Message(MainMessage):
         self.cmd: str
         self.prefix: str
         self.pdocument: MessageMediaDocument
-        
 
 class fake_user:
     
@@ -46,7 +44,6 @@ class fake_user:
     
     def __repr__(self) -> str:
         return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
-
 
 class MessageMediaDocument():
     
@@ -62,24 +59,6 @@ class MessageMediaDocument():
 
         return repr_data
 
-
-async def parse_document(document: MainMessage.document):
-    if not document:
-        return None
-    
-    new_document = MessageMediaDocument()
-    for key, val in document.__dict__.items():
-        if key == "attributes":
-            continue
-        setattr(new_document, key, val)
-    
-    for attribute in document.attributes:
-        for key, val in attribute.__dict__.items():
-            setattr(new_document, key, val)
-    
-    return new_document
-
-
 message_counter = 0
 async def get_messages_recursively(message: Message, command=None, prefix=None):
 
@@ -88,10 +67,6 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     global message_counter
     message_counter += 1
-
-    message.pdocument = await parse_document(message.document)
-
-    message.from_user = message.sender
     
     if command:
         message.args = get_arg(message)
@@ -109,7 +84,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
             message.from_user = await message.client.get_entity(message.sender_id)
         except:
             message.from_user = None
-    
+
     if message.fwd_from:
         user = fake_user()
 
@@ -126,7 +101,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
             user = await message.client.get_entity(
                 entity=fwd_id
             )
-        
+
         user.name = user.title if hasattr(user, "title") else user.first_name
 
         message._sender = user
@@ -134,6 +109,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     try:
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
+        message._sender.name = message.from_user.name
         message.reply_to_text = await message.get_reply_message()
     except Exception:
         pass

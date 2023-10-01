@@ -15,6 +15,7 @@
 
 
 from telethon import functions, TelegramClient as Client
+from events import AndEvent, UserChatEvent, RealUserEvent
 
 from main import Message, run, event_watcher, startup
 from database import antipmdb
@@ -212,23 +213,16 @@ will be deleted when the idiot passes the message limit"""
             await message.edit("<i>Chats from unapproved parties will not be removed anymore</i>")
 
 
-    @event_watcher()
+    @event_watcher(custom_event=AndEvent(UserChatEvent, RealUserEvent))
     async def check_personal_messages(message: Message, client: Client):
-        if message.sender_id == client.me.id:
-            return
-
-        if message.is_private and AntiPM.PM_BLOCKER:
+        if AntiPM.PM_BLOCKER:
             user = await message.get_chat()
 
             if user.id in AntiPM.APPROVED_USERS:
                 return
 
-            if user.bot:
-                return
-
             if not AntiPM.NOTIFICATIONS:
-                await client.send_read_acknowledge(user)
-
+                await message.mark_read()
             
             if user.id in AntiPM.WARNS:
                 AntiPM.WARNS[user.id] += 1

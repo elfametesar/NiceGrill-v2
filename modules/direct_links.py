@@ -43,14 +43,10 @@ class DirectGen:
         for link in links:
             if 'drive.google.com' in link:
                 reply += DirectGen.gdrive(link)
-            elif 'zippyshare.com' in link:
-                reply += DirectGen.zippy_share(link)
             elif 'mega.' in link:
                 reply += DirectGen.mega_dl(link)
             elif 'yadi.sk' in link:
                 reply += DirectGen.yandex_disk(link)
-            elif 'cloud.mail.ru' in link:
-                reply += DirectGen.cm_ru(link)
             elif 'mediafire.com' in link:
                 reply += DirectGen.mediafire(link)
             elif 'sourceforge.net' in link:
@@ -111,35 +107,6 @@ class DirectGen:
         return reply
 
 
-    def zippy_share(url: str) -> str:
-        """ ZippyShare direct links generator
-        Based on https://github.com/LameLemon/ziggy"""
-        reply = ''
-        dl_url = ''
-        try:
-            link = re.findall(r'\bhttps?://.*zippyshare\.com\S+', url)[0]
-        except IndexError:
-            reply = "<code>No ZippyShare links found</code>\n"
-            return reply
-        session = requests.Session()
-        base_url = re.search('http.+.com', link).group()
-        response = session.get(link)
-        page_soup = BeautifulSoup(response.content, "lxml")
-        scripts = page_soup.find_all("script", {"type": "text/javascript"})
-        for script in scripts:
-            if "getElementById('dlbutton')" in script.text:
-                url_raw = re.search(r'= (?P<url>\".+\" \+ (?P<math>\(.+\)) .+);',
-                                    script.text).group('url')
-                math = re.search(r'= (?P<url>\".+\" \+ (?P<math>\(.+\)) .+);',
-                                 script.text).group('math')
-                dl_url = url_raw.replace(math, '"' + str(eval(math)) + '"')
-                break
-        dl_url = base_url + eval(dl_url)
-        name = urllib.parse.unquote(dl_url.split('/')[-1])
-        reply += f'<a href="{dl_url}">{name}</a>\n'
-        return reply
-
-
     def yandex_disk(url: str) -> str:
         """ Yandex.Disk direct links generator
         Based on https://github.com/wldhx/yadisk-direct"""
@@ -178,30 +145,6 @@ class DirectGen:
             reply += "<code>Error: Can't extract the link</code>\n"
             return reply
         dl_url = data['url']
-        name = data['file_name']
-        size = humanize(data=int(data['file_size']))
-        reply += f'[{name} ({size})]({dl_url})\n'
-        return reply
-
-
-    def cm_ru(url: str) -> str:
-        """ cloud.mail.ru direct links generator
-        Using https://github.com/JrMasterModelBuilder/cmrudl.py"""
-        reply = ''
-        try:
-            link = re.findall(r'\bhttps?://.*cloud\.mail\.ru\S+', url)[0]
-        except IndexError:
-            reply = "<code>No cloud.mail.ru links found</code>\n"
-            return reply
-        command = f'bin/cmrudl -s {link}'
-        result = popen(command).read()
-        result = result.splitlines()[-1]
-        try:
-            data = json.loads(result)
-        except json.decoder.JSONDecodeError:
-            reply += "<code>Error: Can't extract the link</code>\n"
-            return reply
-        dl_url = data['download']
         name = data['file_name']
         size = humanize(data=int(data['file_size']))
         reply += f'[{name} ({size})]({dl_url})\n'
