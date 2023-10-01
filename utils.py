@@ -32,12 +32,6 @@ class Message(MainMessage):
         self.args: str
         self.cmd: str
         self.prefix: str
-    
-    def __repr__(self) -> str:
-        return pformat(self.to_dict(), indent=4, sort_dicts=True)
-    
-    def __str__(self) -> str:
-        return self.__repr__()
 
 class fake_user:
     
