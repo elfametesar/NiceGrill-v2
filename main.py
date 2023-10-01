@@ -98,8 +98,8 @@ def return_func(func, command="", prefix=prefix):
 
 
 def event_watcher(
-        incoming=True, outgoing=True, forwards=False,
-        pattern=".*", blacklist=None, users=None, chats=None):
+        incoming=True, outgoing=True, forwards=False, custom_event: callable=None,
+        pattern=".*", blacklist=None, users=None, chats=None,):
     
     def inner(func):
         wrapper = return_func(func)
@@ -112,7 +112,8 @@ def event_watcher(
                 forwards=forwards,
                 chats=chats,
                 blacklist_chats=blacklist,
-                from_users=users
+                from_users=users,
+                func=custom_event
             )
         )
         client.add_event_handler(
@@ -124,7 +125,8 @@ def event_watcher(
                 forwards=forwards,
                 chats=chats,
                 blacklist_chats=blacklist,
-                from_users=users
+                from_users=users,
+                func=custom_event
             )
         )
         return func
@@ -134,7 +136,7 @@ def event_watcher(
 
 def run(
         command=None, prefix=prefix, incoming=False, outgoing=True,
-        forwards=False, blacklist=None, users=None, chats=None):
+        forwards=False, blacklist=None, users=None, chats=None, custom_event: callable=None):
     escaped_prefix = re.escape(prefix)
     def inner(func, command=command):
         wrapper = return_func(func, command, prefix)
@@ -153,7 +155,8 @@ def run(
                 forwards=forwards,
                 chats=chats,
                 blacklist_chats=blacklist,
-                from_users=users
+                from_users=users,
+                func=custom_event
             )
         )
         client.add_event_handler(
@@ -165,7 +168,8 @@ def run(
                 forwards=forwards,
                 chats=chats,
                 blacklist_chats=blacklist,
-                from_users=users
+                from_users=users,
+                func=custom_event
             )
         )
 
