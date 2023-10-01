@@ -30,9 +30,11 @@ async def redirect_pipes():
     sys.stdout = StringIO()
     sys.stdout.read = read_stdout
     sys.stdout.write = write_stdout(sys.stdout.write)
-    sys.stderr = open("error.txt", "w+")
 
+    sys.stderr = open("error.txt", "w+")
+    
     read, write = os.pipe()
+
     stdin_read = os.fdopen(
         fd=read,
         mode="r",
@@ -78,6 +80,8 @@ async def initialize_bot(client: TelegramClient):
     client.me = await client.get_me()
     client._loop = asyncio.get_event_loop()
 
+    await redirect_pipes()
+
     await asyncio.gather(
         import_modules(),
         restart_handler()
@@ -85,7 +89,6 @@ async def initialize_bot(client: TelegramClient):
 
     print(f"\nLogged in as {client.me.first_name}\n")
 
-    await redirect_pipes()
     await client.run_until_disconnected()
 
 if not API_ID or not API_HASH or not SESSION or not MONGO_URI:
