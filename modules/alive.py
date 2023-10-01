@@ -29,12 +29,12 @@ class Alive:
 
     @run(command="ping")
     async def ping(message: Message, client: Client):
-        """Shows you the response speed of the bot"""
-        a = message.date.now()
-        b = datetime.now()
+        """Shows you the response time between the message sent and userbot received"""
         await message.edit("<i>Ping...</i>")
+        message_time = message.date
+        current_time = datetime.now(tz=message_time.tzinfo)
         await message.edit("<i>Pong... {}ms</i>"
-                           .format(((b - a).microseconds / 1000), 2))
+                           .format(round((current_time - message_time).microseconds / 1000, 2)))
 
     @run(command="alive")
     async def alive(message: Message, client: Client):

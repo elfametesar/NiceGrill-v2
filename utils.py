@@ -107,10 +107,10 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         message._sender = user
         message.from_user = message.sender
 
+    message.reply_to_text = await message.get_reply_message()
     try:
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
         message._sender.name = message.from_user.name
-        message.reply_to_text = await message.get_reply_message()
     except Exception:
         pass
 

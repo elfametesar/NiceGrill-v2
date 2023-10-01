@@ -17,7 +17,8 @@ class Help:
                 await message.edit(
 f"""{HELP_MENU_CAPTION}
 
-<b>Command:</b> <i>{message.args}</i>
+<b>Command:</b>
+<i>{message.args}</i>
 
 <b>Definition:</b>
 <i>{help_info}</i>"""
