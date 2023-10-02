@@ -190,7 +190,7 @@ class Quote:
         
         return title_bar
 
-    async def break_text(text: str, font: FontType, offset: int=0) ->str:
+    async def break_text(text: str, font: FontType, offset: int=0, add_dot: bool=True) ->str:
         if font.getlength(text) < Quote.MAXIMUM_BOX_WIDTH:
             return text
 
@@ -199,7 +199,7 @@ class Quote:
         for char in text:
             
             if width + 30 + offset >= Quote.MAXIMUM_BOX_WIDTH:
-                new_text += "..."
+                new_text += "..." if add_dot else ""
                 break
             
             width += Quote.FONT_TITLE.getlength(char)
@@ -504,6 +504,64 @@ class Quote:
         return text_box
 
 
+    async def draw_link_preview(webpage_data: types.WebPage):
+        site_name = await Quote.break_text(
+            text=webpage_data.site_name,
+            font=Quote.FONT_TITLE,
+            offset=10,
+            add_dot=False
+        )
+
+        title = await Quote.break_text(
+            text=webpage_data.title,
+            font=Quote.FONT_REGULAR,
+            offset=10,
+            add_dot=False
+        )
+
+        description = "\n".join(webpage_data.description[delim: delim + 52] for delim in range(0, len(webpage_data.description), 52)) + "\n"
+
+        link_preview_image = Image.new(
+            mode="RGBA",
+            size=(
+                round(max(
+                    Quote.FONT_TITLE.getlength(site_name),
+                    Quote.FONT_REGULAR.getlength(title),
+                    Quote.FONT_REGULAR.getlength(description)
+                )),
+                f"{site_name}\n{title}\n{description}".count("\n") * round(Quote.LINE_HEIGHT)
+            ),
+            color=Quote.MESSAGE_COLOR
+        )
+        
+        link_preview_draw = ImageDraw.Draw(link_preview_image)
+        
+        link_preview_draw.text(
+            xy=(10, 3),
+            text=site_name,
+            font=Quote.FONT_TITLE
+        )
+
+        link_preview_draw.text(
+            xy=(10, 3 + Quote.LINE_HEIGHT),
+            text=title,
+            font=Quote.FONT_REGULAR
+        )
+
+        link_preview_draw.text(
+            xy=(10, 3 + (Quote.LINE_HEIGHT) * 2),
+            text=description,
+            font=Quote.FONT_REGULAR
+        )
+        
+        link_preview_draw.line(
+            xy=(0, 0, 0, link_preview_image.height),
+            width=2
+        )
+        
+        return link_preview_image
+
+
     async def draw_media_document(message: Message):
         name, size = message.file.name, message.file.size
         size = await humanize(data=size)
@@ -645,8 +703,15 @@ class Quote:
         if not message.media:
             return text_box_image
 
-        if message.document and not message.sticker:
-            media_image = await Quote.draw_media_document(message)
+        if (message.document or message.web_preview) and not message.sticker:
+            if message.web_preview:
+                media_image = await Quote.draw_link_preview(message.media.webpage)
+                text_box_position = (0, 0)
+                media_image_position = (0, round(message.raw_text.count("\n") or 1 * Quote.LINE_HEIGHT + 3))
+            else:
+                media_image = await Quote.draw_media_document(message)
+                text_box_position = (0, media_image.height + 10)
+                media_image_position = (0, text_box_image.height + Quote.LINE_HEIGHT / 2)
             
             text_box_image, _ = await Quote.expand_text_box(
                 image=text_box_image,
@@ -654,12 +719,12 @@ class Quote:
                     max(text_box_image.width, media_image.width),
                     media_image.height + text_box_image.height + round(Quote.LINE_HEIGHT)
                 ),
-                pos=(0, media_image.height + 10)
+                pos=text_box_position
             )
             
             text_box_image.paste(
                 im=media_image,
-                box=(0,3)
+                box=media_image_position
             )
 
             return text_box_image
@@ -700,7 +765,9 @@ class Quote:
 
             title_bar_image = reply_bar_image = None
 
-            is_frame = True if (message.document and not message.sticker) or (message.message and not message.media) or message.audio or message.voice else False
+            is_frame = True if (message.document and not message.sticker) or \
+                (message.message and not message.media) or \
+                message.audio or message.voice or message.web_preview else False
 
             sender_name = await Quote.break_text(
                 message.from_user.name,
