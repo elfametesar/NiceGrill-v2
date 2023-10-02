@@ -18,7 +18,6 @@ from telethon.types import User
 from telethon.tl.patched import Message as MainMessage
 from pprint import pformat
 
-
 import asyncio
 import html
 import httpx
@@ -112,7 +111,6 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
     
     return message
 
-
 async def humanize(data, time=False):
     hit_limit = 1024 if not time else 60
     magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb") if not time \
@@ -124,7 +122,6 @@ async def humanize(data, time=False):
         m += 1
 
     return f"{data:.2f} {magnitudes[m]}" if not time else f"{int(data)} {magnitudes[m]}"
-
 
 async def get_full_log(url):
     async with httpx.AsyncClient() as session:
