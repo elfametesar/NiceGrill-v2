@@ -739,7 +739,7 @@ class Quote:
                 title_bar_image = await Quote.draw_text(
                     text=sender_name,
                     entities=[fake_entity],
-                    color=Quote.USER_COLORS[message.sender_id],
+                    color=Quote.USER_COLORS[message.from_user.id],
                     is_break_line=False
                 )
 
