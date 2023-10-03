@@ -28,8 +28,6 @@ async def redirect_pipes():
     sys.stdout = StringIO()
     sys.stdout.read = read_stdout
     sys.stdout.write = write_stdout(sys.stdout.write)
-
-    sys.stderr = open("error.txt", "w+")
     
     read, write = os.pipe()
 
@@ -38,6 +36,7 @@ async def redirect_pipes():
         mode="r",
         buffering=True
     )
+
     stdin_write = os.fdopen(
         fd=write,
         mode="w",
@@ -57,7 +56,7 @@ async def import_modules():
             importlib.import_module(module)
             print(f"Module is loaded: {module.replace('modules.', '').title()}")
         except Exception as e:
-            print(f"\nModule {module.replace('modules.', '')} not loaded: {e}\n", file=sys.stderr)
+            print(f"\nModule {module.replace('modules.', '')} not loaded: {e}\n")
 
 async def restart_handler():
     if restart_info := settingsdb.get_restart_details():
@@ -71,7 +70,7 @@ async def restart_handler():
             pass
 
 async def initialize_bot(client: TelegramClient):
-    
+
     await client.connect()
 
     client.parse_mode = 'html'

@@ -1,20 +1,32 @@
 from database import blacklistdb, settingsdb
 from utils import get_messages_recursively, Message
-from telethon.sync import events
+from telethon.events import NewMessage, MessageEdited
 from exrex import generate
 from init import client
 
 import re
-import sys
+import logging
+
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.ERROR)
+
+logging.basicConfig(
+    handlers=[logging.FileHandler("error.txt", mode='w+'), stream_handler],
+    level=logging.ERROR,
+    format='%(asctime)s\n\n%(message)s'
+)
+
+log = logging.getLogger(__name__)
 
 HELP_MENU_DATA = {}
 HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(47)
 HELP_MENU = HELP_MENU_CAPTION
 
-bad_chat_list = blacklistdb.get_all_blacklisted() or []
-prefix = settingsdb.get_prefix() or "."
+bad_chat_list = blacklistdb.get_all_blacklisted()
+prefix = settingsdb.get_prefix()
 
 async def error_handler(message: Message):
+    log.exception("")
 
     await message.edit("<b>Loading..</b>")
     await message.respond(
@@ -23,6 +35,7 @@ async def error_handler(message: Message):
                 f"<code>{message.cmd}</code><b>.\n"
                 "Check logs for more information.</b>"
     )
+    
     await message.delete()
 
     with open('error.txt', 'w'):
@@ -88,7 +101,7 @@ def event_watcher(
         wrapper = return_func(func)
         client.add_event_handler(
             callback=wrapper,
-            event=events.NewMessage(
+            event=NewMessage(
                 pattern=pattern,
                 incoming=incoming,
                 outgoing=outgoing,
@@ -101,7 +114,7 @@ def event_watcher(
         )
         client.add_event_handler(
             callback=wrapper,
-            event=events.MessageEdited(
+            event=MessageEdited(
                 pattern=pattern,
                 incoming=incoming,
                 outgoing=outgoing,
@@ -133,7 +146,7 @@ def run(
 
         client.add_event_handler(
             callback=wrapper,
-            event=events.NewMessage(
+            event=NewMessage(
                 pattern=escaped_prefix + command + r"($| |\n)",
                 incoming=incoming,
                 outgoing=outgoing,
@@ -146,7 +159,7 @@ def run(
         )
         client.add_event_handler(
             callback=wrapper,
-            event=events.MessageEdited(
+            event=MessageEdited(
                 pattern=escaped_prefix + command + r"($| |\n)",
                 incoming=incoming,
                 outgoing=outgoing,

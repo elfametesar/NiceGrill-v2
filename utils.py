@@ -16,11 +16,11 @@
 from telethon import TelegramClient as Client
 from telethon.types import User
 from telethon.tl.patched import Message as MainMessage
+from httpx import AsyncClient
 from pprint import pformat
 
 import asyncio
 import html
-import httpx
 import re
 
 class Message(MainMessage):
@@ -48,13 +48,14 @@ class fake_user:
 message_counter = 0
 async def get_messages_recursively(message: Message, command=None, prefix=None):
 
-    if not message:
-        return
-
     global message_counter
     message_counter += 1
-    
+
     message.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
+    if message._sender:
+        message._sender.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
+    if message.media:
+        message.media.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
 
     if command:
         message.args = get_arg(message)
@@ -95,12 +96,13 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     message.from_user = message.sender
 
-    message.reply_to_text = await message.get_reply_message()
     try:
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
         message._sender.name = message.from_user.name
     except Exception:
         pass
+
+    message.reply_to_text = await message.get_reply_message()
 
     if message_counter > 4:
         message_counter = 0
@@ -124,7 +126,7 @@ async def humanize(data, time=False):
     return f"{data:.2f} {magnitudes[m]}" if not time else f"{int(data)} {magnitudes[m]}"
 
 async def get_full_log(url):
-    async with httpx.AsyncClient() as session:
+    async with AsyncClient() as session:
         content = await session.get(
             url=url,
             follow_redirects=True
@@ -132,7 +134,7 @@ async def get_full_log(url):
         return content
 
 async def full_log(log):
-    async with httpx.AsyncClient() as session:
+    async with AsyncClient() as session:
         url = await session.post(
             url="https://nekobin.com/api/documents",
             json={

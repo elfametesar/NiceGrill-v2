@@ -56,6 +56,8 @@ def is_shell():
 def get_prefix():
     if prefix_data := Mongo.find_one({"Prefix": {"$exists": True}}):
         return prefix_data["Prefix"]
+    else:
+        return "."
 
 def get_restart_details():
     if restart_data := Mongo.find_one({"Message": {"$exists": True}}):

@@ -16,7 +16,7 @@
 from weather import Weather as wtr
 from database import weatherdb
 from telethon import TelegramClient as Client
-from main import Message, run, startup, logger
+from main import Message, run, startup
 
 class Weather:
 
