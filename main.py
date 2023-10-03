@@ -5,6 +5,7 @@ from exrex import generate
 from init import client
 
 import re
+import sys
 
 HELP_MENU_DATA = {}
 HELP_MENU_CAPTION = "<b>•\tHELP\t•</b>".expandtabs(47)
@@ -30,9 +31,6 @@ async def error_handler(message: Message):
 
 def update_help_data(function, command: str):
     global HELP_MENU_DATA, HELP_MENU
-    
-    if not command:
-        command = function.__name__
 
     try:
         class_name = function.__qualname__.split(".")[-2]
@@ -163,6 +161,9 @@ def run(
         return func
 
     return inner
+
+def classhelp(class_object):
+    HELP_MENU_DATA.update({class_object.__name__: class_object.__doc__})
 
 def startup(func):
     func()

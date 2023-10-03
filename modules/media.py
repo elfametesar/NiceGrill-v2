@@ -1,4 +1,4 @@
-from main import Message, run, startup, logger
+from main import Message, run, startup
 from config import GOOGLE_DEV_API, GOOGLE_CX_ID
 from telethon import TelegramClient as Client
 from google_images_search import GoogleImagesSearch
@@ -17,6 +17,7 @@ import json
 import os
 
 class Media:
+    """this is a test"""
     
     GOOGLE_CLIENT: GoogleImagesSearch = None
     SEARCH_LIMIT = 5
@@ -121,7 +122,6 @@ class Media:
             await message.edit("<i>Searching in YouTube for a downloadable media in the link</i>")
             youtube_search = YouTube(message.args).streams.filter()
         except Exception as e:
-            logger.error(e)
             await message.edit("<i>Video is unavailable</i>")
             return
         
