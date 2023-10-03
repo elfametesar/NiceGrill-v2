@@ -472,15 +472,6 @@ class Quote:
             x +=  Quote.FONT_FALLBACK.getlength(char) if is_fallback \
                     else Quote.FONT_EMOJI.getlength(char) if is_emoji \
                     else font.getlength(char)
-                
-            if is_break_line:
-                if char in string.punctuation and line_tracker > 16 and line_tracker % 35 in range(0, 17):
-                    line_tracker = x = 0
-                    y += Quote.LINE_HEIGHT
-                
-                elif char in string.whitespace and line_tracker > 12 and line_tracker % 40 in range(0, 13):
-                    line_tracker = x = 0
-                    y += Quote.LINE_HEIGHT
 
             is_fallback = is_emoji = False
             offset_tracker += 1
