@@ -82,7 +82,7 @@ class Quote:
             elif isinstance(entity, types.MessageEntityItalic):
                 font = Quote.FONT_ITALIC
                 entity_type = "italic"
-            elif isinstance(entity, types.MessageEntityCode):
+            elif isinstance(entity, types.MessageEntityCode) or isinstance(entity, types.MessageEntityPre):
                 font = Quote.FONT_MONO
                 entity_type = "mono"
             elif (isinstance(entity, types.MessageEntityUrl) or
