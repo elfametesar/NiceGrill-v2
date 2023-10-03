@@ -207,124 +207,90 @@ class Quote:
         
         return new_text
 
+    async def draw_reply_bar(name: str, text: str, message: Message, message_box_width: int) ->ImageType:
 
-    async def draw_reply_bar(name: str, text: str, message: Message=None) ->ImageType:
-        
-        width = min(
-            max(Quote.FONT_TITLE.getlength(name) + 15, Quote.FONT_REGULAR.getlength(text)),
-            Quote.MAXIMUM_BOX_WIDTH
-        )
+        thumb_file = None
         x_pos = 10
+
+        if message.photo:
+            text = text or "Photo"
+        elif message.sticker:
+            text =  f"{message.file.emoji} Sticker"
+        elif message.gif:
+            text = text or "GIF"
+        elif message.video:
+            text = text or "Video"
+        elif message.audio:
+            text = text or "🎵 Audio"
+        elif message.voice:
+            text = text or "Voice Message"
+        elif message.document:
+            text = text or "🔗 Document"
+        
+        if message.photo or message.sticker or message.video or message.audio or message.voice:
+            
+            thumb_file = await message.download_media(
+                BytesIO(),
+                thumb=0,
+            )
+
+            thumb_file.seek(0)
+            thumb_file = Image.open(thumb_file)
+            
+            thumb_file = thumb_file.resize((36,36), Image.NEAREST)
 
         reply_bar = Image.new(
             mode="RGBA",
             size=(
-                round(width),
+                message_box_width - 15,
                 round(Quote.LINE_HEIGHT * 2) + 3
             ),
             color=Quote.MESSAGE_COLOR
         )
         
-        symbol = ""
-        if message.media:
-            thumb_file = BytesIO()
-            is_document = False
-
-            if message.sticker:
-                text, symbol = message.file.name, message.file.emoji
-                if symbol:
-                    is_document = True
-                else:
-                    await message.download_media(
-                        thumb_file,
-                        thumb=0,
-                    )
-                text = " Sticker"
-            elif message.photo:
-                text = " Photo"
-                await message.download_media(
-                    thumb_file,
-                    thumb=0,
-                )
-            elif message.video:
-                text = " Video"
-                await message.download_media(
-                    thumb_file,
-                    thumb=0,
-                )
-            elif message.audio:
-                symbol = "🎵"
-                text = " Audio"
-                is_document = True
-            elif message.document:
-                text = message.file.name
-                symbol = "🔗"
-                is_document = True
-
-            if not is_document:
-                thumb_file.seek(0)
-                thumb_file = Image.open(thumb_file)
-
-                thumb_image = Image.new(
-                    mode="RGBA",
-                    size=(36, 36),
-                    color=Quote.MESSAGE_COLOR
-                )
-                
-                thumb_file = thumb_file.resize((36,36), Image.NEAREST)
-                thumb_image.paste(
-                    im=thumb_file,
-                    box=(0, 0)
-                )
-
-                reply_bar.paste(
-                    im=thumb_image,
-                    box=(5, 0)
-                )
-
-                x_pos += 40
-
-        text = await Quote.break_text(
-            text=text,
-            font=Quote.FONT_REGULAR,
-            offset=x_pos + 15
-        )
+        reply_bar_draw = ImageDraw.Draw(reply_bar)
+        
         name = await Quote.break_text(
             text=name,
             font=Quote.FONT_TITLE,
-            offset=x_pos + 15
+            offset=15 if not message.media else 30
         )
         
-        reply_bar_draw = ImageDraw.Draw(reply_bar)
-        
-        reply_bar_draw.text(
-            xy=(x_pos,0),
-            text=name,
-            font=Quote.FONT_TITLE
-        )
-        
-        if symbol:
-            reply_bar_draw.text(
-                xy=(x_pos, Quote.LINE_HEIGHT - 2),
-                text=symbol,
-                font=Quote.FONT_EMOJI,
-                embedded_color=True
-            )
-            x_pos += 24
-        
-        reply_bar_draw.text(
-            xy=(x_pos,Quote.LINE_HEIGHT),
+        text = await Quote.break_text(
             text=text,
-            font=Quote.FONT_REGULAR
+            font=Quote.FONT_REGULAR,
+            offset=15 if not message.media else 30
+        )
+        
+        text_image = await Quote.draw_text(
+            text=text,
+            entities=message.entities
         )
         
         reply_bar_draw.line(
             xy=(0, 0, 0, reply_bar.height),
             width=2
         )
-
+        
+        if thumb_file:
+            reply_bar.paste(
+                im=thumb_file,
+                box=(10, 2)
+            )
+            x_pos += 43
+        
+        reply_bar_draw.text(
+            xy=(x_pos, 2),
+            text=name,
+            font=Quote.FONT_TITLE
+        )
+        
+        reply_bar.paste(
+            im=text_image,
+            box=(x_pos, 2 + round(Quote.LINE_HEIGHT))
+        )
+        
         return reply_bar
-
 
     async def draw_message_box(text_image: ImageType, message_box_width: int, title_image: ImageType=None, reply_image: ImageType=None, is_frame=True) ->ImageType:
 
@@ -390,8 +356,6 @@ class Quote:
 
         return message_box_image
 
-
-
     async def expand_text_box(image: ImageType, size: tuple, pos=(0,0)) ->ImageType:
         temp = Image.new(
             mode="RGBA",
@@ -409,7 +373,7 @@ class Quote:
         return temp, temp_draw
 
 
-    async def draw_text(text: str, entities: list[types.TypeMessageEntity]) ->Image.Image:
+    async def draw_text(text: str, entities: list[types.TypeMessageEntity], is_break_line: bool=True) ->Image.Image:
         
         if not text.strip():
             return Image.new(
@@ -428,7 +392,7 @@ class Quote:
         text_box_draw = ImageDraw.Draw(text_box)
 
         x = y = 0
-        offset_tracker = end_offset = 0
+        line_tracker = offset_tracker = end_offset = 0
         is_emoji = entity_type = is_fallback = False
         font = Quote.FONT_REGULAR
 
@@ -446,7 +410,7 @@ class Quote:
 
             if x + font.getlength(char) + 3 > Quote.MAXIMUM_BOX_WIDTH:
                 y += Quote.LINE_HEIGHT
-                x = 0
+                line_tracker = x = 0
 
             if x + font.getlength(char) > text_box.width and text_box.width < Quote.MAXIMUM_BOX_WIDTH:
                 text_box, text_box_draw = await Quote.expand_text_box(
@@ -477,7 +441,7 @@ class Quote:
                 
             if char == "\n":
                 offset_tracker += 1
-                x = 0
+                line_tracker = x = 0
                 y += Quote.LINE_HEIGHT
                 entity_type = ""
                 continue
@@ -496,9 +460,19 @@ class Quote:
             x +=  Quote.FONT_FALLBACK.getlength(char) if is_fallback \
                     else Quote.FONT_EMOJI.getlength(char) if is_emoji \
                     else font.getlength(char)
+                
+            if is_break_line:
+                if char in string.punctuation and line_tracker > 16 and line_tracker % 35 in range(0, 17):
+                    line_tracker = x = 0
+                    y += Quote.LINE_HEIGHT
+                
+                elif char in string.whitespace and line_tracker > 12 and line_tracker % 40 in range(0, 13):
+                    line_tracker = x = 0
+                    y += Quote.LINE_HEIGHT
 
             is_fallback = is_emoji = False
             offset_tracker += 1
+            line_tracker += 1
             await asyncio.sleep(0)
         
         return text_box
@@ -511,25 +485,20 @@ class Quote:
             offset=10,
             add_dot=False
         )
+        
+        description = f"{webpage_data.title}\n{webpage_data.description}"
 
-        title = await Quote.break_text(
-            text=webpage_data.title,
-            font=Quote.FONT_REGULAR,
-            offset=10,
-            add_dot=False
-        )
-
-        description = "\n".join(webpage_data.description[delim: delim + 52] for delim in range(0, len(webpage_data.description), 52)) + "\n"
+        description = "\n".join(description[delim: delim + 52] \
+            for delim in range(0, len(description), 52)) + "\n"
 
         link_preview_image = Image.new(
             mode="RGBA",
             size=(
                 round(max(
                     Quote.FONT_TITLE.getlength(site_name),
-                    Quote.FONT_REGULAR.getlength(title),
                     Quote.FONT_REGULAR.getlength(description)
                 )),
-                f"{site_name}\n{title}\n{description}".count("\n") * round(Quote.LINE_HEIGHT)
+                f"{site_name}\n{description}".count("\n") * round(Quote.LINE_HEIGHT)
             ),
             color=Quote.MESSAGE_COLOR
         )
@@ -544,12 +513,6 @@ class Quote:
 
         link_preview_draw.text(
             xy=(10, 3 + Quote.LINE_HEIGHT),
-            text=title,
-            font=Quote.FONT_REGULAR
-        )
-
-        link_preview_draw.text(
-            xy=(10, 3 + (Quote.LINE_HEIGHT) * 2),
             text=description,
             font=Quote.FONT_REGULAR
         )
@@ -711,7 +674,7 @@ class Quote:
             else:
                 media_image = await Quote.draw_media_document(message)
                 text_box_position = (0, media_image.height + 10)
-                media_image_position = (0, text_box_image.height + Quote.LINE_HEIGHT / 2)
+                media_image_position = (0, 0)
             
             text_box_image, _ = await Quote.expand_text_box(
                 image=text_box_image,
@@ -757,7 +720,7 @@ class Quote:
     async def to_image(messages: list[Message]):
         
         is_profile_photo = True
-        is_title_bar = False
+        is_title_bar = True
         max_width = total_height = 0
         sticker_list = []
 
@@ -784,26 +747,29 @@ class Quote:
                 message=message
             )
 
-            if not is_title_bar:
+            if is_title_bar:
                 title_bar_image = await Quote.draw_title(
                     user_name=sender_name,
                     user_id=message.sender.id
                 )
 
+            message_box_width = round(
+                max(
+                    Quote.FONT_TITLE.getlength(sender_name), 
+                    Quote.FONT_REGULAR.getlength(message.reply_to_text.message) if message.is_reply else 0,
+                    text_box_image.width
+                )
+            )
+
+            message_box_width = min(message_box_width, Quote.MAXIMUM_BOX_WIDTH)
+
             if message.is_reply:
                 reply_bar_image = await Quote.draw_reply_bar(
                     name=message.reply_to_text.from_user.name,
                     text=message.reply_to_text.message,
-                    message=message.reply_to_text
+                    message=message.reply_to_text,
+                    message_box_width=message_box_width
                 )
-
-            message_box_width = max(
-                Quote.FONT_TITLE.getlength(sender_name), 
-                Quote.FONT_REGULAR.getlength(message.reply_to_text.message) if message.is_reply else 0,
-                text_box_image.width
-            )
-
-            message_box_width = min(message_box_width, Quote.MAXIMUM_BOX_WIDTH)
 
             message_box = await Quote.draw_message_box(
                 text_image=text_box_image,
@@ -826,7 +792,7 @@ class Quote:
                 )
 
             is_profile_photo = False
-            is_title_bar = True
+            is_title_bar = False
 
             sticker_image = await Quote.draw_sticker(
                 message_box=message_box,
