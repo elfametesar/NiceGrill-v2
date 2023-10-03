@@ -14,7 +14,6 @@ class Currency:
             await message.edit("<i>You need to specify an amount to convert</i>")
             return
 
-        raise NameError
         await message.edit("<i>Converting specified currency</i>")
 
         amount = "".join([char for char in message.args if char.isdigit() or char == "."])
