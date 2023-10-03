@@ -165,31 +165,6 @@ class Quote:
         
         return sticker_image
 
-
-    async def draw_title(user_name: str, user_id: int) ->ImageType:
-
-        width = Quote.FONT_TITLE.getlength(user_name)
-
-        title_bar = Image.new(
-            mode="RGBA",
-            size=(
-                round(width),
-                round(Quote.LINE_HEIGHT)
-            ),
-            color=Quote.MESSAGE_COLOR
-        )
-
-        title_bar_draw = ImageDraw.Draw(title_bar)
-        
-        title_bar_draw.text(
-            xy=(0,0),
-            text=user_name,
-            font=Quote.FONT_TITLE,
-            fill=Quote.USER_COLORS[user_id]
-        )
-        
-        return title_bar
-
     async def break_text(text: str, font: FontType, offset: int=0, add_dot: bool=True) ->str:
         if font.getlength(text) < Quote.MAXIMUM_BOX_WIDTH:
             return text
@@ -373,7 +348,7 @@ class Quote:
         return temp, temp_draw
 
 
-    async def draw_text(text: str, entities: list[types.TypeMessageEntity], is_break_line: bool=True) ->Image.Image:
+    async def draw_text(text: str, entities: list[types.TypeMessageEntity], is_break_line: bool=True, color="white") ->Image.Image:
         
         if not text.strip():
             return Image.new(
@@ -421,11 +396,12 @@ class Quote:
                     )
                 )
 
-            if Quote.LINE_HEIGHT * 2 + y + 1 > text_box.height:
-                text_box, text_box_draw = await Quote.expand_text_box(
-                    image=text_box,
-                    size=(text_box.width, round(text_box.height + Quote.LINE_HEIGHT + 5))
-                )
+            if is_break_line:
+                if Quote.LINE_HEIGHT * 2 + y + 1 > text_box.height:
+                    text_box, text_box_draw = await Quote.expand_text_box(
+                        image=text_box,
+                        size=(text_box.width, round(text_box.height + Quote.LINE_HEIGHT + 5))
+                    )
 
             if entity_type == "url" or entity_type == "underline":
                 width = font.getlength(char)
@@ -454,7 +430,7 @@ class Quote:
                 text=char,
                 font=Quote.FONT_FALLBACK if is_fallback else Quote.FONT_EMOJI if is_emoji else font,
                 embedded_color=True,
-                fill="white" if entity_type != "url" else "#a6d8f5",
+                fill=color if entity_type != "url" else "#a6d8f5",
             )
             
             x +=  Quote.FONT_FALLBACK.getlength(char) if is_fallback \
@@ -748,9 +724,12 @@ class Quote:
             )
 
             if is_title_bar:
-                title_bar_image = await Quote.draw_title(
-                    user_name=sender_name,
-                    user_id=message.sender.id
+                fake_entity = types.MessageEntityBold(offset=0, length=len(sender_name))
+                title_bar_image = await Quote.draw_text(
+                    text=sender_name,
+                    entities=[fake_entity],
+                    color=Quote.USER_COLORS[message.sender_id],
+                    is_break_line=False
                 )
 
             message_box_width = round(
