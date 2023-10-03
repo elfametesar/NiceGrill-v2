@@ -225,9 +225,9 @@ class Quote:
         elif message.voice:
             text = text or "Voice Message"
         elif message.document:
-            text = text or "🔗 Document"
+            text = text or message.file.name or "📎 Document"
         
-        if message.photo or message.sticker or message.video or message.audio or message.voice:
+        if message.photo or message.sticker or message.video:
             
             thumb_file = await message.download_media(
                 BytesIO(),
