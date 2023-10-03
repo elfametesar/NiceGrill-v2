@@ -72,9 +72,12 @@ class Quote:
         entity_data = {}
         font = Quote.FONT_REGULAR
         entity_type = None
-        for entity in entities:            
+        for entity in entities:
             if isinstance(entity, types.MessageEntityBold):
-                font = Quote.FONT_BOLD
+                if hasattr(entity, "size"):
+                    font = Quote.FONT_TITLE
+                else:
+                    font = Quote.FONT_BOLD
                 entity_type = "bold"
             elif isinstance(entity, types.MessageEntityItalic):
                 font = Quote.FONT_ITALIC
@@ -222,9 +225,9 @@ class Quote:
             ),
             color=Quote.MESSAGE_COLOR
         )
-        
+
         reply_bar_draw = ImageDraw.Draw(reply_bar)
-        
+
         name = await Quote.break_text(
             text=name,
             font=Quote.FONT_TITLE,
@@ -236,7 +239,15 @@ class Quote:
             font=Quote.FONT_REGULAR,
             offset=15 if not message.media else 30
         )
-        
+
+        fake_entity = types.MessageEntityBold(offset=0, length=len(name))
+        fake_entity.size = 0
+        name_image = await Quote.draw_text(
+            text=name,
+            entities=[fake_entity],
+            is_break_line=False
+        )
+
         text_image = await Quote.draw_text(
             text=text,
             entities=message.entities
@@ -254,10 +265,9 @@ class Quote:
             )
             x_pos += 43
         
-        reply_bar_draw.text(
-            xy=(x_pos, 2),
-            text=name,
-            font=Quote.FONT_TITLE
+        reply_bar.paste(
+            im=name_image,
+            box=(x_pos, 2)
         )
         
         reply_bar.paste(
@@ -725,6 +735,7 @@ class Quote:
 
             if is_title_bar:
                 fake_entity = types.MessageEntityBold(offset=0, length=len(sender_name))
+                fake_entity.size = 0
                 title_bar_image = await Quote.draw_text(
                     text=sender_name,
                     entities=[fake_entity],
