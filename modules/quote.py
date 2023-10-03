@@ -291,7 +291,7 @@ class Quote:
         message_box_width += 40
         
         message_box_height = max(
-            text_image.height + 5,
+            text_image.height + 10,
             Quote.MINIMUM_BOX_HEIGHT
         ) + additional_sizes
 
@@ -317,6 +317,20 @@ class Quote:
             fill=Quote.MESSAGE_COLOR,
             radius=30
         )
+        
+        message_box_mask = Image.new(
+            mode="L",
+            size=message_box_image.size,
+            color=0
+        )
+        
+        mask_draw = ImageDraw.Draw(message_box_mask)
+        
+        mask_draw.rounded_rectangle(
+            xy=(0, 0, message_box_width, message_box_height),
+            fill=255,
+            radius=30
+        )
 
         if title_image:
             y_pos += 4
@@ -338,8 +352,20 @@ class Quote:
             im=text_image,
             box=(20, y_pos + 4)
         )
+        
+        new_box_image = Image.new(
+            mode="RGBA",
+            size=message_box_image.size,
+            color=(0,0,0,0)
+        )
+        
+        new_box_image.paste(
+            im=message_box_image,
+            box=(0, 0),
+            mask=message_box_mask
+        )
 
-        return message_box_image
+        return new_box_image
 
     async def expand_text_box(image: ImageType, size: tuple, pos=(0,0)) ->ImageType:
         temp = Image.new(
@@ -370,7 +396,7 @@ class Quote:
         entity_data = await Quote.get_entity_data(entities)
         text_box = Image.new(
             mode="RGBA",
-            size=(150, (text.count("\n") + 1) * round(Quote.LINE_HEIGHT)),
+            size=(Quote.MINIMUM_BOX_WIDTH - 100, (text.count("\n") + 1) * round(Quote.LINE_HEIGHT)),
             color=Quote.MESSAGE_COLOR
         )
         
@@ -401,16 +427,16 @@ class Quote:
                 text_box, text_box_draw = await Quote.expand_text_box(
                     image=text_box,
                     size=(
-                        text_box.width + (Quote.MAXIMUM_BOX_WIDTH - text_box.width) // 2,
+                        text_box.width + int(font.getlength(char) * 3),
                         text_box.height
                     )
                 )
 
             if is_break_line:
-                if Quote.LINE_HEIGHT * 2 + y + 1 > text_box.height:
+                if Quote.LINE_HEIGHT * 2 + y - 5 > text_box.height:
                     text_box, text_box_draw = await Quote.expand_text_box(
                         image=text_box,
-                        size=(text_box.width, round(text_box.height + Quote.LINE_HEIGHT + 5))
+                        size=(text_box.width, round(text_box.height + font.getbbox(char)[-1] + 5))
                     )
 
             if entity_type == "url" or entity_type == "underline":
