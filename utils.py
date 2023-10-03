@@ -54,7 +54,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
     global message_counter
     message_counter += 1
     
-    message.__class__.__str__ = lambda _: pformat(message.to_dict(), indent=4, sort_dicts=False)
+    message.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
 
     if command:
         message.args = get_arg(message)
@@ -66,12 +66,11 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         if get_cmd:
             message.cmd = get_cmd.group(0).strip()
 
-    message.from_user = message._sender
     if not message.sender and not message.fwd_from:
         try:
-            message.from_user = await message.client.get_entity(message.sender_id)
-        except:
-            message.from_user = None
+            message._sender = await message.client.get_entity(message.sender_id)
+        except Exception:
+            pass
 
     if message.fwd_from:
         user = fake_user()
@@ -93,7 +92,8 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
         user.name = user.title if hasattr(user, "title") else user.first_name
 
         message._sender = user
-        message.from_user = message.sender
+
+    message.from_user = message.sender
 
     message.reply_to_text = await message.get_reply_message()
     try:
@@ -150,7 +150,6 @@ def strip_prefix(string: str, delimiter:str="/"):
     else:
         return index
 
-
 async def get_user(user, client: Client):
     if user.isdigit():
         user = int(user)
@@ -165,7 +164,6 @@ async def get_user(user, client: Client):
 
     except Exception:
         return False
-
 
 async def stream(message: Message, res, template, exit_code="", log=True):
     delim = 3900 - len(template) - len(exit_code)
@@ -208,7 +206,6 @@ async def stream(message: Message, res, template, exit_code="", log=True):
 async def replace_message(message: Message):
     return await message.reply(message.message.message)
 
-
 def get_arg(message: Message):
     msg = message.message
     msg = msg.replace(" ", "", 1) if msg[1] == " " else msg
@@ -216,7 +213,6 @@ def get_arg(message: Message):
     if " ".join(split[1:]).strip() == "":
         return ""
     return " ".join(split[1:])
-
 
 def get_arg_split(message, char=" "):
     args = get_arg(message).split(char)
