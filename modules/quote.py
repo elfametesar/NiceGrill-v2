@@ -303,24 +303,6 @@ class Quote:
             im=text_image,
             box=(x_pos, 2 + round(Quote.LINE_HEIGHT))
         )
-        
-        if is_media:
-            fade_effect = Image.linear_gradient("L")
-            fade_effect = fade_effect.rotate(270).resize((reply_bar.width + 50, reply_bar.height))
-            fade_effect = fade_effect.crop((0, 0, *reply_bar.size))
-            
-            new_reply_bar = Image.new(
-                mode="RGBA",
-                size=reply_bar.size
-            )
-            
-            new_reply_bar.paste(
-                im=reply_bar,
-                box=(reply_bar.width - fade_effect.width, 0),
-                mask=fade_effect
-            )
-            
-            reply_bar = new_reply_bar
 
         return reply_bar
 
@@ -514,9 +496,9 @@ class Quote:
             return media_image
 
     async def to_image(message_list: list[Message]):
-        
-        is_titled = True
+
         sticker_image = None
+        last_user = None
 
         for message in message_list:
 
@@ -547,9 +529,8 @@ class Quote:
             if message.is_reply:
                 reply_image = await Quote.draw_reply_bar(
                     message=message.reply_to_text,
-                    is_media=message.is_media_type
+                    is_media=message.is_media_type,
                 )
-                image_list.append(reply_image)
 
             if message.raw_text:
                 text_image = await Quote.draw_text(
@@ -563,22 +544,64 @@ class Quote:
                     message=message,
                     text_image=text_image
                 )
-                
+
+                if message.is_reply and message.is_media_type and reply_image.width > media_image.width:
+                    reply_image = reply_image.crop((0, 0, media_image.width, reply_image.height))
+
+                    fade_effect = Image.linear_gradient("L")
+                    fade_effect = fade_effect.rotate(270).resize((reply_image.width + 50, reply_image.height))
+                    fade_effect = fade_effect.crop((0, 0, *reply_image.size))
+                    
+                    new_reply_bar = Image.new(
+                        mode="RGBA",
+                        size=reply_image.size
+                    )
+                    
+                    new_reply_bar.paste(
+                        im=reply_image,
+                        box=(reply_image.width - fade_effect.width, 0),
+                        mask=fade_effect
+                    )
+                    
+                    reply_image = new_reply_bar
+
+                image_list.append(reply_image)
                 image_list.append(media_image)
             else:
+                image_list.append(reply_image)
                 image_list.append(text_image)
             
             content_image = await Quote.merge_images(
                 *image_list,
                 vertical=False,
                 spacing=4,
-                background_color=0 if message.is_media_type else None,
-                align=True if message.is_media_type else False
+                background_color=0 if message.is_media_type else None
             )
 
             message_image = await Quote.draw_message_box(
                 content_image=content_image,
                 is_framed=is_framed
+            )
+
+            if last_user != message.from_user.id:
+
+                profile_image = await Quote.get_profile_photo(
+                    client=message.client,
+                    user_info=message.from_user,
+                )
+                
+                last_user = message.from_user.id
+            else:
+                profile_image = Image.new(
+                    mode="RGBA",
+                    size=(50, 50)
+                )
+
+            message_image = await Quote.merge_images(
+                profile_image,
+                message_image,
+                spacing=4,
+                background_color=0
             )
 
             sticker_image = await Quote.merge_images(
@@ -590,10 +613,6 @@ class Quote:
             )
 
         sticker_image = await Quote.merge_images(
-            await Quote.get_profile_photo(
-                client=message.client,
-                user_info=message.from_user,
-            ),
             sticker_image,
             spacing=3,
             background_color=0
@@ -683,7 +702,6 @@ class Quote:
                 height = font.getbbox("m")[3] + 2
                 entity_color = ((166, 216, 245, 255)) if entity_type == "url" else "white"
 
-                print(entity_type, entity_color)
                 text_drawer.line(
                     xy=(x + width, y + height, x, y + height),
                     width=1,
@@ -736,8 +754,7 @@ class Quote:
         async for message_object in client.iter_messages(
             entity=await message.get_chat(),
             limit=message_count,
-            max_id=message.reply_to_text.id + 1,
-            from_user=message.reply_to_text.sender_id
+            max_id=message.reply_to_text.id + 1
         ):
             message_object = await get_messages_recursively(message_object)
             if message_object.sender.id not in Quote.USER_COLORS:
