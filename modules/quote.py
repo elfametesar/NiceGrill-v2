@@ -516,6 +516,7 @@ class Quote:
     async def to_image(message_list: list[Message]):
         
         is_titled = True
+        sticker_image = None
 
         for message in message_list:
 
@@ -527,8 +528,6 @@ class Quote:
 
             title_image = text_image = reply_image = None
             
-            sticker_image = None
-
             if is_titled:
                 title = await Quote.shorten_text(
                     message.from_user.name,
@@ -653,7 +652,7 @@ class Quote:
                 
                 width = font.getlength(char)
                 height = font.getbbox("m")[3] + 2
-                entity_color = "#a6d8f5" if entity_type == "url" else "white",
+                entity_color = 166, 216, 245, 255 if entity_type == "url" else 255,
 
                 text_drawer.line(
                     xy=(x + width, y + height, x, y + height),
@@ -745,7 +744,7 @@ class Quote:
                 )
 
             message_list.append(message_object)
-    
+
         message_list = reversed(message_list)
         sticker_buffer = await Quote.to_image(
             message_list=message_list
