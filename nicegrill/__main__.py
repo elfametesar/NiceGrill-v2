@@ -12,7 +12,7 @@ import os
 
 class NiceGrill:
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
     def read_stdout(self):

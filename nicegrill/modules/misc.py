@@ -29,7 +29,8 @@ class Misc:
     async def restart(message: Message, client: Client):
         msg = await message.edit("<i>Restarting...</i>")
         settings.set_restart_details(msg.chat_id, msg.id)
-        os.execl(sys.executable, sys.executable, "main.py")
+        print(os.getcwd())
+        os.execl(sys.executable, sys.executable, "-m", "nicegrill")
 
 
     @run(command="shutdown")

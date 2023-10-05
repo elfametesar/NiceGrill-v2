@@ -457,6 +457,48 @@ class Quote:
 
         return document_image
 
+    async def draw_link_preview(webpage_data: types.WebPage):
+
+        site_image = await Quote.draw_text(
+            text=webpage_data.site_name
+        )
+
+        description = f"{webpage_data.title}\n{webpage_data.description}"
+        description_image = await Quote.draw_text(
+            text=description
+        )
+
+        link_preview_image = Image.new(
+            mode="RGBA",
+            size=(
+                max(
+                    site_image.width,
+                    description_image.width
+                ) + 10,
+                site_image.height + description_image.height
+            ),
+            color=Quote.MESSAGE_COLOR
+        )
+        
+        link_preview_draw = ImageDraw.Draw(link_preview_image)
+        
+        link_preview_draw.line(
+            xy=(0, 0, 0, link_preview_image.height),
+            width=2
+        )
+        
+        link_preview_image.paste(
+            im=site_image,
+            box=(10, 0)
+        )
+        
+        link_preview_image.paste(
+            im=description_image,
+            box=(10, site_image.height)
+        )
+        
+        return link_preview_image
+
     async def draw_media(message: Message, text_image: ImageType=None):
         if message.is_media_type:
 
@@ -506,6 +548,7 @@ class Quote:
 
             message.is_media_type = message.photo or message.video or message.sticker
             is_framed = not message.is_media_type and (message.document or message.raw_text)
+            
             is_titled = is_framed
 
             title_image = text_image = reply_image = None
