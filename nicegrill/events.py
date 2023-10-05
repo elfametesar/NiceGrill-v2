@@ -1,6 +1,6 @@
 from nicegrill import Message
 
-TextEvent = lambda message: message.message.message
+TextEvent = lambda message: message.raw_text
 MediaEvent = lambda message: message.media
 PhotoEvent = lambda message: message.photo
 VideoEvent = lambda message: message.video
@@ -13,10 +13,10 @@ DiceEvent = lambda message: message.dice
 PollEvent = lambda message: message.poll
 ReplyEvent = lambda message: message.is_reply
 
-PrivateChatEvent = lambda message: message.is_private
-UserChatEvent = lambda message: message.is_private and not message.sender.is_self
-GroupChatEvent = lambda message: message.is_group
-ChannelEvent = lambda message: message.is_channel
+PrivateChatEvent = lambda message: getattr(message, "is_private")
+UserChatEvent = lambda message: getattr(message, "is_private", False) and getattr(message.sender, "is_self", False)
+GroupChatEvent = lambda message: getattr(message, "is_group", False)
+ChannelEvent = lambda message: getattr(message, "is_channel", False)
 RealUserEvent = lambda message: not getattr(message.sender, "bot", False)
 BotEvent = lambda message: getattr(message.sender, "bot", False)
 
