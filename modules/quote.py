@@ -27,7 +27,6 @@ class fake_message:
         self.is_reply = False
         self.media = None
 
-
 class Quote:
 
     FONT_TITLE = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=14, encoding="utf-16")

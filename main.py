@@ -71,12 +71,7 @@ def return_func(func, command="", prefix=prefix):
                 prefix=prefix
             )
         except AttributeError:
-            # because sometimes telethon can't get the entity the first time, cache issues
-            message = await get_messages_recursively(
-                message=message.message,
-                command=command,
-                prefix=prefix
-            )
+            pass
 
         try:
             if command == "blacklist" or command == "whitelist":

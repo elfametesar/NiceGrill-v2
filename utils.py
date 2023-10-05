@@ -73,7 +73,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     if not message.sender and not message.fwd_from:
         try:
-            message._sender = await message.client.get_entity(message.sender_id)
+            message._sender = await message.get_sender()
         except Exception as e:
             print(e)
 
@@ -105,7 +105,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     if hasattr(message.from_user, "first_name"):
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
-    else:
+    elif hasattr(message.from_user, "title"):
         message.from_user.name = f"{message.from_user.title}"
 
     message.reply_to_text = await message.get_reply_message()
