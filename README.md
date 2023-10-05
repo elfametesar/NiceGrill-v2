@@ -11,7 +11,7 @@
 
 ◍ Run the bot:
 
-    python main.py
+    python3 -m nicegrill
 
 ## REQUIREMENTS
 
