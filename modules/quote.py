@@ -652,8 +652,9 @@ class Quote:
                 
                 width = font.getlength(char)
                 height = font.getbbox("m")[3] + 2
-                entity_color = 166, 216, 245, 255 if entity_type == "url" else 255,
+                entity_color = ((166, 216, 245, 255)) if entity_type == "url" else "white"
 
+                print(entity_type, entity_color)
                 text_drawer.line(
                     xy=(x + width, y + height, x, y + height),
                     width=1,
