@@ -17,8 +17,8 @@ PrivateChatEvent = lambda message: message.is_private
 UserChatEvent = lambda message: message.is_private and message.sender_id != client.me.id
 GroupChatEvent = lambda message: message.is_group
 ChannelEvent = lambda message: message.is_channel
-RealUserEvent = lambda message: not message.is_bot
-BotEvent = lambda message: message.is_bot
+RealUserEvent = lambda message: not message.sender.bot
+BotEvent = lambda message: message.sender.bot
 
 def AndEvent(*args):
     def call_events(message: Message):
@@ -31,7 +31,3 @@ def OrEvent(*args):
         return any(lambda_expr(message) for lambda_expr in args)
 
     return call_events
-
-
-
-

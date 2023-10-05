@@ -31,7 +31,7 @@ async def error_handler(message: Message):
     await message.edit("<b>Loading..</b>")
     await message.respond(
         file="error.txt",
-        message=f"<b>NiceGrill has crashed. Command was </b>"
+        message="<b>NiceGrill has crashed. Command was </b>"
                 f"<code>{message.cmd}</code><b>.\n"
                 "Check logs for more information.</b>"
     )
@@ -176,7 +176,7 @@ def run(
     return inner
 
 def classhelp(class_object):
-    HELP_MENU_DATA.update({class_object.__name__: class_object.__doc__})
+    HELP_MENU_DATA.update({class_object.__name__.lower(): class_object.__doc__})
 
 def startup(func):
     func()

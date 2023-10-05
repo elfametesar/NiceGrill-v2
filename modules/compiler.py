@@ -14,11 +14,9 @@
 from database import settingsdb as settings
 from main import Message, run, event_watcher
 from telethon import TelegramClient as Client
-from types import AsyncGeneratorType
 from meval import meval
 
 import utils
-import re
 import os
 import sys
 import html
@@ -51,6 +49,19 @@ class Compiler:
 
     @run(command="term")
     async def terminal(message: Message, client: Client):
+        """Asynchronous function for running terminal commands and capturing their output. It captures the standard output and error streams of the command and provides real-time feedback
+
+This command can be used to execute shell commands and display their output in a chat or messaging environment, making it useful for interactive shell-like experiences within a chatbot or similar application
+
+Notes:
+- It asynchronously manages the execution of the command and processes its output.
+- The output is formatted with information about the input command, actual output, and exit code.
+- It provides an option to view the full log if the output exceeds a certain length.
+
+Usage:
+
+.term <shellscript code>
+"""
         cmd = message.args.strip()
 
         if not Compiler.TERMINAL_EXEC:
@@ -113,7 +124,7 @@ class Compiler:
                 )
                 return
 
-            if flood_control < 20:
+            if flood_control < 3:
                 flood_control += 1
                 continue
             else:
@@ -159,7 +170,30 @@ class Compiler:
 
     @run(command="cpp")
     async def cpp_compiler(message: Message, client: Client):
-        """Compiles a given C++ code"""
+        """
+Compiles and executes C++ code provided in a message.
+
+This function is a decorator function designed to be used with a command handler.
+It compiles and executes C++ code and returns the output. If the code doesn't
+contain a `main` function, a default one is added.
+
+Parameters:
+    message (Message): A message object containing the C++ code to be compiled and executed.
+    client (Client): The client instance that manages the interaction.
+
+Notes:
+- It automatically determines the C++ compiler ('c++' or 'g++') to use based on
+  availability.
+- The input code can be provided as the argument or as a reply to another message.
+- It compiles the code, executes it, captures the output, and provides real-time feedback.
+- The function handles output formatting, including information about the input code
+  and exit code.
+- For long output, it calls the 'utils.stream' function to handle streaming.
+
+Usage:
+
+.cpp <c++ code> - you do not necessarily need to provide a main function
+"""
         code = message.args
 
         if not (code := code.strip()):
@@ -236,7 +270,22 @@ int main(int argc, char** argv) {{
 
     @run(command="(py|pyr)")
     async def python(message: Message, client: Client):
-        """A nice tool (like you 🥰) to test python codes"""
+        """
+A utility for testing Python code snippets interactively.
+
+This command allows users to execute Python code and view the results in a chat or messaging
+environment. The code can be provided as an argument or as a reply to another message.
+
+Notes:
+- It captures the output of the code, handles exceptions, and formats the output for display.
+- If the output is too long, it uses the 'utils.stream' function to handle streaming.
+- Users can use the command 'py' to clear the output buffer and to evaluate an expression and 'pyr' to evaluate an expression without clearing buffer.
+
+Usage:
+
+.py <python code>
+.pyr <python code>
+"""
         args = message.args
 
         if not (args := args.strip()):
@@ -358,6 +407,21 @@ int main(int argc, char** argv) {{
 
     @run(command="input")
     async def input(message: Message, client: Client):
+        """
+Send input to a running terminal process.
+
+This command allows users to send input to a running terminal process by replying to that
+process's message with the desired input.
+
+Notes:
+- This function assumes that there is an ongoing terminal process with which the user
+  can interact by providing input.
+- It checks if the input message is a reply to a running terminal process and sends
+  the input to that process.
+
+Usage:
+.input <data> - as a reply to a running process
+"""
         args = message.args.strip()
 
         if not args:
@@ -384,6 +448,23 @@ int main(int argc, char** argv) {{
 
     @run(command="kill")
     async def kill(message: Message, client: Client):
+        """
+Terminate a running process in response to a user command.
+
+This function is designed to be used as a decorator for a command handler.
+It allows users to terminate a running process by replying to the message
+associated with that process.
+
+Notes:
+- This function checks if the input message is a reply to a message that corresponds
+  to a running process.
+- If a process is found, it attempts to terminate it using the 'kill' method.
+- The terminated process is removed from the process list.
+
+Usage:
+
+.kill - as a reply to a running process
+"""
         process = message.reply_to_text
 
         if not process:
@@ -405,6 +486,25 @@ int main(int argc, char** argv) {{
 
     @run(command="shell")
     async def set_shell_mode(message: Message, client: Client):
+        """
+Set the shell mode for executing commands.
+
+This command allows users to switch between different shell modes for executing commands,
+such as using the Python executable or the default shell.
+
+Notes:
+- The function checks the current shell mode and switches between the Python executable
+  mode and the default shell mode based on user input.
+- The available shell modes are "python" (for Python executable) and "shell" (for the
+  default shell).
+- The selected shell mode will affect how subsequent commands are executed.
+
+Usage:
+
+.shell - to enable/disable shell mode
+.shell shell - to switch to shellscripting mode
+.shell python - to switch to python mode
+"""
         if Compiler.SHELL_MODE is None:
             Compiler.SHELL_MODE = settings.is_shell()
 

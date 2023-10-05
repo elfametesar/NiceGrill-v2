@@ -48,10 +48,14 @@ class fake_user:
 message_counter = 0
 async def get_messages_recursively(message: Message, command=None, prefix=None):
 
+    if not message:
+        return
+
     global message_counter
     message_counter += 1
 
     message.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
+
     if message._sender:
         message._sender.__class__.__str__ = lambda self: pformat(self.to_dict(), indent=4, sort_dicts=False)
     if message.media:
@@ -70,8 +74,8 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
     if not message.sender and not message.fwd_from:
         try:
             message._sender = await message.client.get_entity(message.sender_id)
-        except Exception:
-            pass
+        except Exception as e:
+            print(e)
 
     if message.fwd_from:
         user = fake_user()
@@ -86,21 +90,23 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
             else:
                 fwd_id = message.fwd_from.from_id.chat_id
 
-            user = await message.client.get_entity(
-                entity=fwd_id
-            )
+            try:
+                user = await message.client.get_entity(
+                    entity=fwd_id
+                )
+            except Exception as e:
+                print(e)
 
         user.name = user.title if hasattr(user, "title") else user.first_name
 
         message._sender = user
 
-    message.from_user = message.sender
+    message.from_user = message._sender
 
-    try:
+    if hasattr(message.from_user, "first_name"):
         message.from_user.name = f"{message.from_user.first_name} {message.from_user.last_name or ''}".strip()
-        message._sender.name = message.from_user.name
-    except Exception:
-        pass
+    else:
+        message.from_user.name = f"{message.from_user.title}"
 
     message.reply_to_text = await message.get_reply_message()
 

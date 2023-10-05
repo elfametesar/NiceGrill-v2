@@ -1,6 +1,8 @@
 from main import Message, run, HELP_MENU, HELP_MENU_DATA, HELP_MENU_CAPTION
 from telethon import TelegramClient as Client
 
+import html
+
 class Help:
 
     @run(command="help")
@@ -21,7 +23,7 @@ f"""{HELP_MENU_CAPTION}
 <i>{message.args}</i>
 
 <b>Definition:</b>
-<i>{help_info}</i>"""
+<i>{html.escape(help_info)}</i>"""
                 )
             else:
                 await message.edit("<i>No help found for this command</i>")

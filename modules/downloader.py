@@ -27,10 +27,10 @@ class Downloader:
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
 <b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
-<b>Speed:</b> <i>{await humanize(speed)}/s</i>
-<b>Time Passed:</b> <i>{await humanize(seconds=received_bytes//speed)}</i>
-<b>Downloaded:</b> <i>{await humanize(received_bytes)}</i>
-<b>Estimated:</b> <i>{await humanize(seconds=total_bytes//speed)}</i>
+<b>Speed:</b> <i>{await humanize(data=speed)}/s</i>
+<b>Time Passed:</b> <i>{await humanize(data=received_bytes//speed, time=True)}</i>
+<b>Downloaded:</b> <i>{await humanize(data=received_bytes)}</i>
+<b>Estimated:</b> <i>{await humanize(data=total_bytes//speed, time=True)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
 
@@ -102,9 +102,14 @@ class Downloader:
             return
 
         try:
-            await message.respond(
+            await client.send_file(
+                entity=message.chat,
                 file=files,
-                message="<i>Here's your uploaded file(s))</i>"
+                caption="<i>Here's your uploaded file(s))</i>",
+                video_note=True,
+                voice_note=True,
+                supports_streaming=True,
+                nosound_video=True
             )
         except Exception as e:
             await message.respond(f"<i>{e}</i>")
