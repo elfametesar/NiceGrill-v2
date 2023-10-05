@@ -641,34 +641,6 @@ class Quote:
                 x = x_offset
                 y += Quote.LINE_HEIGHT
 
-            if entity_type == "bold":
-                font = Quote.FONT_BOLD
-            elif entity_type == "italic":
-                font = Quote.FONT_ITALIC
-            elif entity_type == "mono":
-                font = Quote.FONT_MONO
-            elif entity_type == "url" or entity_type == "underline":
-                font = Quote.FONT_REGULAR
-                
-                width = font.getlength(char)
-                height = font.getbbox("m")[3] + 2
-                entity_color = ((166, 216, 245, 255)) if entity_type == "url" else "white"
-
-                print(entity_type, entity_color)
-                text_drawer.line(
-                    xy=(x + width, y + height, x, y + height),
-                    width=1,
-                    fill=entity_color
-                )
-
-                kwargs.update({"fill": entity_color})
-            elif entity_type == "regular":
-                kwargs = {"fill": color}
-                font = font
-            
-            if entity_type != "url":
-                kwargs = {"fill": color}
-
             if x + font.getlength(char) > text_image.width and x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
                 additional_section = Image.new(
                     mode="RGBA",
@@ -697,6 +669,35 @@ class Quote:
                 )
 
                 text_drawer = ImageDraw.Draw(text_image)
+
+            if entity_type == "bold":
+                font = Quote.FONT_BOLD
+            elif entity_type == "italic":
+                font = Quote.FONT_ITALIC
+            elif entity_type == "mono":
+                font = Quote.FONT_MONO
+            elif entity_type == "url" or entity_type == "underline":
+                font = Quote.FONT_REGULAR
+                
+                width = font.getlength(char)
+                height = font.getbbox("m")[3] + 2
+                entity_color = ((166, 216, 245, 255)) if entity_type == "url" else "white"
+
+                print(entity_type, entity_color)
+                text_drawer.line(
+                    xy=(x + width, y + height, x, y + height),
+                    width=1,
+                    fill=entity_color
+                )
+
+                kwargs.update({"fill": entity_color})
+
+            elif entity_type == "regular":
+                kwargs = {"fill": color}
+                font = font
+            
+            if entity_type != "url":
+                kwargs = {"fill": color}
             
             text_drawer.text(
                 xy=(x, y),
