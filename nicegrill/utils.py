@@ -117,6 +117,8 @@ async def get_messages_recursively(message: Message, command=None, prefix=None, 
 
     if message.is_reply:
         await get_messages_recursively(message.reply_to_text)
+    else:
+        message_counter = 0
     
     return message
 
