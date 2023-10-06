@@ -32,11 +32,11 @@ class AntiPM:
                       "<b>I have not allowed you to PM, please ask or say whatever" \
                       " it is in a group chat.\n\n" \
                       "I'm letting you off the hook for this time but be warned that " \
-                      "you will be blocked & reported spam if you continue sending messages.</b>"
+                      "you will be blocked if you continue sending messages.</b>"
 
     BLOCK_MESSAGE = \
         "<b>I have warned you, however, you did not stop " \
-        "spamming my chat. Therefore, you have been blocked and reported " \
+        "spamming my chat. Therefore, you have been blocked " \
         "as spam. Good luck!</b>"
 
 
@@ -239,9 +239,7 @@ will be deleted when the idiot passes the message limit"""
                 AntiPM.WARNS[user.id] = 0
 
                 await message.reply(AntiPM.BLOCK_MESSAGE)
-
-                await message.client(functions.messages.ReportSpamRequest(peer=user))
-                await message.client(functions.contacts.BlockRequest(id=user))
+                await client(functions.contacts.BlockRequest(id=user))
 
             if AntiPM.SUPER_BLOCK:
                 await client.delete_dialog(entity=user, revoke=True)

@@ -798,7 +798,7 @@ class Quote:
         async for message_object in client.iter_messages(
             entity=await message.get_chat(),
             limit=message_count,
-            max_id=message.reply_to_text.id
+            max_id=message.reply_to_text.id + 1
         ):
             i += 1
             message_object = await get_messages_recursively(message_object)
