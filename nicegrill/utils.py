@@ -46,7 +46,7 @@ class fake_user:
         return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
 
 message_counter = 0
-async def get_messages_recursively(message: Message, command=None, prefix=None):
+async def get_messages_recursively(message: Message, command=None, prefix=None, recursion_limit: int=4):
 
     if not message:
         return
@@ -100,8 +100,6 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
             except Exception as e:
                 print(e)
 
-        user.name = user.title if hasattr(user, "title") else user.first_name
-
         message._sender = user
 
     message.from_user = message._sender
@@ -113,7 +111,7 @@ async def get_messages_recursively(message: Message, command=None, prefix=None):
 
     message.reply_to_text = await message.get_reply_message()
 
-    if message_counter > 4:
+    if message_counter > recursion_limit:
         message_counter = 0
         return message
 

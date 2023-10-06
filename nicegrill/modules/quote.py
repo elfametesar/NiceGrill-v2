@@ -793,13 +793,16 @@ class Quote:
             message_count = int(message.args)
         
         message_list = []
+        i = 0
         
         async for message_object in client.iter_messages(
             entity=await message.get_chat(),
             limit=message_count,
-            max_id=message.reply_to_text.id + 1
+            max_id=message.reply_to_text.id
         ):
+            i += 1
             message_object = await get_messages_recursively(message_object)
+
             if message_object.sender.id not in Quote.USER_COLORS:
                 Quote.USER_COLORS.update(
                     {message_object.sender.id: random.choice(Quote.TITLE_COLOR_PALETTE)}
@@ -807,7 +810,7 @@ class Quote:
 
             message_list.append(message_object)
 
-        message_list = reversed(message_list)
+        message_list.reverse()
         sticker_buffer = await Quote.to_image(
             message_list=message_list
         )

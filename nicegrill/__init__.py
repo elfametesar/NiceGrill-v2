@@ -71,7 +71,8 @@ def return_func(func, command="", prefix=prefix):
                 command=command,
                 prefix=prefix
             )
-        except AttributeError:
+        except Exception as e:
+            print(e)
             pass
 
         try:
