@@ -54,7 +54,7 @@ class Mirror:
         if response:
             await message.edit(
                 "<i>Your file has been uploaded to the mirror host\n"
-                f"You can access it through: </i>{Mirror.API}{response.json().get("id")}",
+                f"You can access it through: </i>{Mirror.API}{response.json().get('id')}",
                 link_preview=True
             )
         else:
