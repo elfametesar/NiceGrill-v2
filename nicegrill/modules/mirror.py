@@ -2,9 +2,7 @@ import html
 
 from nicegrill import Message, run
 from telethon import TelegramClient as Client
-from telethon.types import MessageEntityUrl
 from nicegrill.modules.downloader import Downloader
-from pyFunloader import Funload
 from httpx import post
 
 import asyncio
@@ -48,14 +46,14 @@ class Mirror:
                     file_data=fd.read()
                 )
             except Exception as e:
-                await message.edit(f"<i>Error: {html.escape(str(e))}")
+                await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
                 return
 
         if response:
             await message.edit(
                 "<i>Your file has been uploaded to the mirror host\n"
                 f"You can access it through: </i>{Mirror.API}{response.json().get('id')}",
-                link_preview=True
+                link_preview=False
             )
         else:
             await message.edit(
