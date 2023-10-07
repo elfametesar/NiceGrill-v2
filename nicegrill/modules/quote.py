@@ -521,6 +521,8 @@ class Quote:
             if message.web_preview:
                 media_image = await Quote.draw_link_preview(message.media.webpage)
                 ordered_images = [text_image, media_image]
+            elif isinstance(message.media.webpage, types.WebPageEmpty):
+                return text_image
             else:
                 media_image = await Quote.draw_document(message)
                 ordered_images = [media_image, text_image]
@@ -547,7 +549,7 @@ class Quote:
 
             is_titled = is_framed
 
-            title_image = text_image = reply_image = None
+            text_image = reply_image = None
 
             if is_titled:
                 title = await Quote.shorten_text(
@@ -562,8 +564,6 @@ class Quote:
                 )
 
                 image_list.append(title_image)
-
-                is_titled = False
 
             if message.is_reply:
                 reply_image = await Quote.draw_reply_bar(
