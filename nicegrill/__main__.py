@@ -11,7 +11,6 @@ import sys
 import os
 
 class NiceGrill:
-    
     def __init__(self):
         self.client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
@@ -105,4 +104,3 @@ export SESSION='YOUR_STRING_SESSION'
 export MONGO_URI='YOUR_MONGO_URI'
 """)
     exit(1)
-

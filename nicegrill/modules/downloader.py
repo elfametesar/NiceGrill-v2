@@ -11,13 +11,13 @@ import os
 import glob
 import html
 
+
 class Downloader:
 
     DOWNLOAD_QUEUE = {}
     FLOOD_CONTROL = 7
     PROGRESS_BAR = "⚆" * 20
     DOWNLOAD_PATH = None
-
 
     async def telegram_progress_bar(message: Message, received_bytes, total_bytes, file_name, start_time):
         percentage = round((received_bytes / total_bytes) * 20, 2)
@@ -28,9 +28,9 @@ class Downloader:
 <b>File Name:</b> <i>{{}}</i>
 <b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
 <b>Speed:</b> <i>{await humanize(data=speed)}/s</i>
-<b>Time Passed:</b> <i>{await humanize(data=received_bytes//speed, time=True)}</i>
+<b>Time Passed:</b> <i>{await humanize(data=received_bytes // speed, time=True)}</i>
 <b>Downloaded:</b> <i>{await humanize(data=received_bytes)}</i>
-<b>Estimated:</b> <i>{await humanize(data=total_bytes//speed, time=True)}</i>
+<b>Estimated:</b> <i>{await humanize(data=total_bytes // speed, time=True)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
 
@@ -45,15 +45,14 @@ class Downloader:
         else:
             await asyncio.sleep(1)
 
-
     async def regular_progress_bar(DownloadAction: Funload, message: Message):
         while True:
-            custom_percentage = round((DownloadAction.downloaded/ (DownloadAction.file_size or 1)) * 20, 2)
+            custom_percentage = round((DownloadAction.downloaded / (DownloadAction.file_size or 1)) * 20, 2)
             custom_percentage = min(custom_percentage, 20)
-            
+
             try:
                 await message.edit(
-                f"""
+                    f"""
 <b>File Name: </b> <i>{DownloadAction.destination}</i>
 <b>Size: </b> <i>{await humanize(DownloadAction.file_size)}</i>
 <b>Speed: </b> <i>{DownloadAction.speed}</i>
@@ -72,13 +71,12 @@ class Downloader:
 
             await asyncio.sleep(2)
 
-
     @run(command="(up|upload)")
     async def upload_file(message: Message, client: Client):
         if not message.args:
             await message.edit("<i>Point to files in your file system</i>")
             return
-        
+
         await message.edit("<i>Uploading the file(s) to Telegram</i>")
         files = []
         for file in message.args.split():
@@ -88,7 +86,7 @@ class Downloader:
 
                 if os.path.islink(file_match):
                     continue
-                
+
                 if not os.access(file_match, os.R_OK):
                     continue
 
@@ -116,27 +114,26 @@ class Downloader:
 
         await message.delete()
 
-
     async def telegram_download_file(message: Message, client: Client, file_name):
         await message.edit("<i>Download is starting...</i>")
-        
+
         if not os.path.exists(Downloader.DOWNLOAD_PATH):
             os.makedirs(Downloader.DOWNLOAD_PATH)
-        
+
         start_time = datetime.now()
 
         return await client.download_media(
             message=message.reply_to_text,
             progress_callback=lambda received_bytes, total_bytes:
-                asyncio.create_task(
-                    Downloader.telegram_progress_bar(
-                        message=message,
-                        file_name=file_name,
-                        total_bytes=total_bytes,
-                        received_bytes=received_bytes,
-                        start_time=start_time
-                    )
-                ),
+            asyncio.create_task(
+                Downloader.telegram_progress_bar(
+                    message=message,
+                    file_name=file_name,
+                    total_bytes=total_bytes,
+                    received_bytes=received_bytes,
+                    start_time=start_time
+                )
+            ),
             file=Downloader.DOWNLOAD_PATH
         )
 
@@ -168,12 +165,11 @@ class Downloader:
         except Exception as e:
             await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
 
-
     @run(command="(dl|download)")
     async def download_file(message: Message, client: Client):
         if message.is_reply and message.reply_to_text.file:
             file_name = message.reply_to_text.file.name or "Unknown"
-            
+
             task = asyncio.create_task(
                 Downloader.telegram_download_file(
                     message=message,
@@ -184,23 +180,23 @@ class Downloader:
 
             task.stop = task.cancel
             Downloader.DOWNLOAD_QUEUE[message.id] = task
-            
+
             try:
                 file_name = await task
             except asyncio.CancelledError:
                 await message.edit(
                     message.text
-                        .format(file_name, "Stopped")
+                    .format(file_name, "Stopped")
                 )
                 return
-            
+
             if message.id in Downloader.DOWNLOAD_QUEUE:
                 del Downloader.DOWNLOAD_QUEUE[message.id]
-            
+
             await message.edit(
                 message.text
-                    .format(file_name, "Finished")
-                    .replace("⚆", "⚈")
+                .format(file_name, "Finished")
+                .replace("⚆", "⚈")
             )
 
         elif message.is_reply or message.args:
@@ -216,7 +212,7 @@ class Downloader:
                 return
 
             await Downloader.regular_download_file(message, client, urls)
-        
+
         elif not message.args or not message.is_reply:
             await message.edit("<i>You need to either input/reply to a URL or a message that contains media</i>")
             return
@@ -225,7 +221,6 @@ class Downloader:
     async def clear_downloads(message: Message, client: Client):
         os.system(f"rm -rf {Downloader.DOWNLOAD_PATH}/* 2>&-")
         await message.edit("<i>Download folder has been cleared out</i>")
-
 
     @run(command="setpath")
     async def set_download_path(message: Message, client: Client):
@@ -239,7 +234,7 @@ class Downloader:
             if not os.access(message.args, os.W_OK):
                 await message.edit("<i>This path is not suitable for your downloads</i>")
                 return
-        
+
         else:
             try:
                 await message.edit("<i>This path doesn't exist in your filesystem, creating it for you</i>")
@@ -248,25 +243,24 @@ class Downloader:
             except Exception as e:
                 await message.edit(f"<i>Error: {e}</i>")
                 return
-        
+
         settingsdb.set_download_path(download_path)
         Downloader.DOWNLOAD_PATH = download_path
 
         await message.edit(f"<i>New directory for your downloads is set to {message.args}</i>")
-
 
     @run(command="(stop|pause|resume|retry)")
     async def control_download(message: Message, client: Client):
         if not message.is_reply:
             await message.edit("<i>You need to reply to a message running a download action first</i>")
             return
-        
+
         if message.reply_to_text.id not in Downloader.DOWNLOAD_QUEUE:
             await message.edit("<i>No download action on this message</i>")
             return
-        
-        task: asyncio.Task|Funload = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
-        
+
+        task: asyncio.Task | Funload = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
+
         try:
             if message.cmd == "stop":
                 Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id].stop()
@@ -288,7 +282,8 @@ class Downloader:
             else:
                 await message.edit(f"<i>Error: {e}</i>")
 
+
 @startup
 def load_from_database():
-    Downloader.DOWNLOAD_PATH = settingsdb.get_download_path() or "downloads"
+    Downloader.DOWNLOAD_PATH = settingsdb.get_download_path() or "../downloads"
     Downloader.DOWNLOAD_PATH = Downloader.DOWNLOAD_PATH.rstrip("/") + "/"

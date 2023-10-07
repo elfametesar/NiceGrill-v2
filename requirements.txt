@@ -8,12 +8,13 @@ httpx
 meval
 pillow
 pymongo
-pyrogram
+telethon
 pySmartDL
 pytube3
 requests
 urbandictionary_python
 youtube_search
+pyFunloader
 google
 yt-dlp
 tgcrypto

@@ -39,7 +39,7 @@ async def error_handler(message: Message):
     
     await message.delete()
 
-    with open('error.txt', 'w'):
+    with open('../error.txt', 'w'):
         pass
 
 
