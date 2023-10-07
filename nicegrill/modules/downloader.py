@@ -162,6 +162,8 @@ class Downloader:
                 if message.id in Downloader.DOWNLOAD_QUEUE:
                     del Downloader.DOWNLOAD_QUEUE[message.id]
 
+                return DownloadAction.destination
+
         except Exception as e:
             await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
 
@@ -199,6 +201,8 @@ class Downloader:
                 .replace("⚆", "⚈")
             )
 
+            return file_name
+
         elif message.is_reply or message.args:
             urls = [link for _, link in message.get_entities_text(MessageEntityUrl)]
 
@@ -211,11 +215,12 @@ class Downloader:
                 await message.edit("<i>There are no URLs to parse in your input</i>")
                 return
 
-            await Downloader.regular_download_file(message, client, urls)
+            return await Downloader.regular_download_file(message, client, urls)
 
         elif not message.args or not message.is_reply:
             await message.edit("<i>You need to either input/reply to a URL or a message that contains media</i>")
             return
+
 
     @run(command="clear")
     async def clear_downloads(message: Message, client: Client):

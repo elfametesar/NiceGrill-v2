@@ -29,47 +29,27 @@ class Mirror:
     async def mirror_file(message: Message, client: Client):
         url_or_file = message.args
 
-        if message.is_reply:
-            _, url_or_file = message.get_entities_text(MessageEntityUrl)
-
-        if not url_or_file:
+        if not url_or_file and not message.is_reply:
             await message.edit("<i>You haven't provided a URL or a file name to mirror</i>")
             return
 
         if not os.path.exists(url_or_file):
-            action = Funload(
-                url=url_or_file,
-                block=True,
-                progress_bar=True,
-                in_memory=True
-            )
 
-            await message.edit("<i>Downloading...</i>")
-
-            await action.start()
-
-            await Downloader.regular_progress_bar(
-                DownloadAction=action,
-                message=message
-            )
-
-            url_or_file = action.memory_file.getbuffer().tobytes()
+            url_or_file = await Downloader.download_file(message=message, client=client)
 
             await message.edit("<i>File has been downloaded, uploading to the mirror host now..</i>")
             await asyncio.sleep(1)
-        else:
-            with open(url_or_file, "rb+") as fd:
-                url_or_file = fd.read()
 
         await message.edit("<i>Uploading</i>")
 
-        try:
-            response = await Mirror.upload_to_mirror(
-                file_data=url_or_file
-            )
-        except Exception as e:
-            await message.edit(f"<i>Error: {html.escape(str(e))}")
-            return
+        with open(url_or_file, "rb+") as fd:
+            try:
+                response = await Mirror.upload_to_mirror(
+                    file_data=fd.read()
+                )
+            except Exception as e:
+                await message.edit(f"<i>Error: {html.escape(str(e))}")
+                return
 
         if response:
             await message.edit(
