@@ -770,7 +770,7 @@ class Quote:
             )
 
             x += Quote.FONT_EMOJI.getlength(char) \
-                if char.__sizeof__() == 80 \
+                if emoji.is_emoji(char) \
                 else Quote.FONT_FALLBACK.getlength(char) \
                 if char not in string.printable \
                 else font.getlength(char)
