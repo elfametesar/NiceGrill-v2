@@ -437,9 +437,9 @@ class Quote:
             color=Quote.MESSAGE_COLOR
         )
 
-        document_image.paste(
+        document_image.alpha_composite(
             im=thumb_image,
-            box=(0, 0)
+            dest=(0, 0)
         )
 
         document_image.paste(
