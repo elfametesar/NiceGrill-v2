@@ -10,6 +10,7 @@ from io import BytesIO
 
 import random
 import string
+import emoji
 
 string.printable += "ğşüİıçö"
 
@@ -761,7 +762,7 @@ class Quote:
                 text=char,
                 embedded_color=True,
                 font=Quote.FONT_EMOJI
-                if char.__sizeof__() == 80
+                if emoji.is_emoji(char)
                 else Quote.FONT_FALLBACK
                 if char not in string.printable
                 else font,
