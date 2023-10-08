@@ -1,5 +1,3 @@
-import sys
-
 from nicegrill import Message, run
 from telethon import TelegramClient as Client
 from nicegrill.modules.downloader import Downloader
