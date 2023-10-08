@@ -95,8 +95,15 @@ class Mirror:
 
         try:
             service = await Mirror.authenticate(message=message)
+
             metadata = {
-                "name": url_or_file
+                "name": os.path.basename(url_or_file)
+            }
+
+            permissions = {
+                'value': 'default',
+                'type': 'anyone',
+                'role': 'reader'
             }
 
             media = MediaFileUpload(
@@ -107,6 +114,12 @@ class Mirror:
                 body=metadata,
                 media_body=media,
                 fields='id'
+            ).execute()
+
+            service.permissions().create(
+                body=permissions,
+                fileId=file.get('id'),
+                fields="id"
             ).execute()
 
             await message.edit(
