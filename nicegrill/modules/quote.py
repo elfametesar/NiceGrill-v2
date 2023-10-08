@@ -286,9 +286,9 @@ class Quote:
         )
 
         if thumb_file:
-            reply_bar.paste(
+            reply_bar.alpha_composite(
                 im=thumb_file,
-                box=(10, 2)
+                dest=(10, 2)
             )
             x_pos += 43
 
