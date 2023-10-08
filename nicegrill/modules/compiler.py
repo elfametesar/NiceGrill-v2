@@ -24,6 +24,7 @@ import asyncio
 import traceback
 
 class Compiler:
+
     PROCESSES = {}
     SHELL_MODE = None
     TERMINAL_EXEC = None
