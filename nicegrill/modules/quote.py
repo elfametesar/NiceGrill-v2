@@ -714,6 +714,7 @@ class Quote:
             if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
                 x = x_offset
                 y += Quote.LINE_HEIGHT
+                continue
 
             if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
                 additional_section = Image.new(
