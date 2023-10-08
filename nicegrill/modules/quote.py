@@ -699,7 +699,7 @@ class Quote:
                 x = x_offset
                 y += Quote.LINE_HEIGHT
 
-            if x + font.getlength(char) > text_image.width and x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
+            if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
                 additional_section = Image.new(
                     mode="RGBA",
                     size=(15, text_image.height),

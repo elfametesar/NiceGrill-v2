@@ -30,6 +30,9 @@ class Mirror:
             if creds:
                 os.remove("token.json")
 
+            if not os.path.isfile("client_secret.json"):
+                raise FileNotFoundError("You need client_secret.json to run this, obtain it from Google Cloud")
+
             flow = InstalledAppFlow.from_client_secrets_file(
                 'client_secret.json', scopes, redirect_uri="http://localhost")
 
