@@ -31,6 +31,7 @@ class FakeMessage:
 
 
 class Quote:
+
     FONT_TITLE = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=14, encoding="utf-16")
     FONT_REGULAR = ImageFont.truetype("fonts/Roboto-Regular.ttf", size=13, encoding="utf-16")
     FONT_MEDIUM = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=13, encoding="utf-16")
@@ -286,10 +287,16 @@ class Quote:
         )
 
         if thumb_file:
-            reply_bar.alpha_composite(
-                im=thumb_file,
-                dest=(10, 2)
-            )
+            try:
+                reply_bar.alpha_composite(
+                    im=thumb_file,
+                    dest=(10, 2)
+                )
+            except ValueError:
+                reply_bar.paste(
+                    im=thumb_file,
+                    box=(10, 2)
+                )
             x_pos += 43
 
         reply_bar.paste(

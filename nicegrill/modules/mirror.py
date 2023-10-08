@@ -34,7 +34,7 @@ class Mirror:
                 raise FileNotFoundError("You need client_secret.json to run this, obtain it from Google Cloud")
 
             flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secret.json', scopes, redirect_uri="http://localhost")
+                'client_secret.json', scopes, redirect_uri="http://localhost/authorize/")
 
             auth_url, _ = await asyncio.to_thread(flow.authorization_url)
 
