@@ -159,8 +159,14 @@ class Quote:
 
     async def get_profile_photo(client: Client, user_info):
 
-        photo_buffer = BytesIO()
-        if not await client.download_profile_photo(user_info, photo_buffer):
+        photo_buffer = None
+
+        try:
+            photo_buffer = await client.download_profile_photo(user_info, BytesIO())
+        except Exception:
+            pass
+
+        if not photo_buffer:
             profile_photo = Image.new(
                 mode="RGBA",
                 size=(50, 50),
@@ -177,6 +183,8 @@ class Quote:
                 font=temp_font,
                 fill="white"
             )
+
+            photo_buffer = BytesIO()
 
             profile_photo.save(photo_buffer, format="png")
 
