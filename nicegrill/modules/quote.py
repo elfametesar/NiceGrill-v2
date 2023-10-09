@@ -16,7 +16,6 @@ string.printable += "ğşüİıçö"
 
 
 class FakeMessage:
-
     def __init__(self, message_id, message: str, sender, client, entities=[]) -> None:
         self.id = message_id
         self.sender = sender
@@ -31,13 +30,22 @@ class FakeMessage:
 
 
 class Quote:
-
-    FONT_TITLE = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=14, encoding="utf-16")
-    FONT_REGULAR = ImageFont.truetype("fonts/Roboto-Regular.ttf", size=13, encoding="utf-16")
-    FONT_MEDIUM = ImageFont.truetype("fonts/Roboto-Medium.ttf", size=13, encoding="utf-16")
+    FONT_TITLE = ImageFont.truetype(
+        "fonts/Roboto-Medium.ttf", size=14, encoding="utf-16"
+    )
+    FONT_REGULAR = ImageFont.truetype(
+        "fonts/Roboto-Regular.ttf", size=13, encoding="utf-16"
+    )
+    FONT_MEDIUM = ImageFont.truetype(
+        "fonts/Roboto-Medium.ttf", size=13, encoding="utf-16"
+    )
     FONT_BOLD = ImageFont.truetype("fonts/Roboto-Bold.ttf", size=13, encoding="utf-16")
-    FONT_ITALIC = ImageFont.truetype("fonts/Roboto-Italic.ttf", size=13, encoding="utf-16")
-    FONT_BOLD_ITALIC = ImageFont.truetype("fonts/Roboto-Bold.ttf", size=13, encoding="utf-16")
+    FONT_ITALIC = ImageFont.truetype(
+        "fonts/Roboto-Italic.ttf", size=13, encoding="utf-16"
+    )
+    FONT_BOLD_ITALIC = ImageFont.truetype(
+        "fonts/Roboto-Bold.ttf", size=13, encoding="utf-16"
+    )
     FONT_MONO = ImageFont.truetype("fonts/Roboto-Mono.ttf", size=12, encoding="utf-16")
     FONT_EMOJI = ImageFont.truetype("fonts/Apple Color Emoji.ttc", size=20)
     FONT_FALLBACK = ImageFont.truetype("fonts/Unicode.ttf", size=13, encoding="utf-16")
@@ -48,43 +56,48 @@ class Quote:
 
     USER_COLORS = {}
     MESSAGE_COLOR = (50, 50, 50, 255)
-    TITLE_COLOR_PALETTE = ["#F07975", "#F49F69", "#F9C84A", "#8CC56E", "#6CC7DC", "#80C1FA", "#BCB3F9", "#E181AC"]
+    TITLE_COLOR_PALETTE = [
+        "#F07975",
+        "#F49F69",
+        "#F9C84A",
+        "#8CC56E",
+        "#6CC7DC",
+        "#80C1FA",
+        "#BCB3F9",
+        "#E181AC",
+    ]
 
     async def draw_message_box(content_image: ImageType, is_framed: bool = True):
-
         frame_width = 40 if is_framed else 0
         frame_height = 20 if is_framed else 0
 
         message_box = Image.new(
             mode="RGBA",
-            size=(content_image.width + frame_width, content_image.height + frame_height),
-            color=0
+            size=(
+                content_image.width + frame_width,
+                content_image.height + frame_height,
+            ),
+            color=0,
         )
 
         draw_box = ImageDraw.Draw(message_box)
 
         if is_framed:
             draw_box.rounded_rectangle(
-                xy=(0, 0, *message_box.size),
-                radius=30,
-                fill=Quote.MESSAGE_COLOR
+                xy=(0, 0, *message_box.size), radius=30, fill=Quote.MESSAGE_COLOR
             )
 
-        message_box.paste(
-            im=content_image,
-            box=(20, 10) if is_framed else (0, 0)
-        )
+        message_box.paste(im=content_image, box=(20, 10) if is_framed else (0, 0))
 
         return message_box
 
     async def merge_images(
-            *image_args: ImageType,
-            spacing: int = 0,
-            vertical: bool = True,
-            background_color=None,
-            align: bool = False
+        *image_args: ImageType,
+        spacing: int = 0,
+        vertical: bool = True,
+        background_color=None,
+        align: bool = False,
     ):
-
         if not image_args:
             return
 
@@ -94,27 +107,27 @@ class Quote:
         if vertical:
             heights = [image.height for image in image_args if image]
             max_height = max(heights) if not align else min(heights)
-            size = (sum([image.width + spacing for image in image_args if image]) - spacing, max_height)
+            size = (
+                sum([image.width + spacing for image in image_args if image]) - spacing,
+                max_height,
+            )
         else:
             widths = [image.width for image in image_args if image]
             max_width = max(widths) if not align else min(widths)
-            size = (max_width, sum([image.height + spacing for image in image_args if image]) - spacing)
+            size = (
+                max_width,
+                sum([image.height + spacing for image in image_args if image])
+                - spacing,
+            )
 
-        new_image = Image.new(
-            mode="RGBA",
-            size=size,
-            color=background_color
-        )
+        new_image = Image.new(mode="RGBA", size=size, color=background_color)
 
         x, y = (0, 0)
         for image in image_args:
             if not image:
                 continue
 
-            new_image.paste(
-                im=image,
-                box=(x, y)
-            )
+            new_image.paste(im=image, box=(x, y))
             if vertical:
                 x += image.width + spacing
             else:
@@ -134,13 +147,17 @@ class Quote:
                 entity_type = "bold"
             elif isinstance(entity, types.MessageEntityItalic):
                 entity_type = "italic"
-            elif isinstance(entity, types.MessageEntityCode) or isinstance(entity, types.MessageEntityPre):
+            elif isinstance(entity, types.MessageEntityCode) or isinstance(
+                entity, types.MessageEntityPre
+            ):
                 entity_type = "mono"
-            elif (isinstance(entity, types.MessageEntityUrl) or
-                  isinstance(entity, types.MessageEntityMention) or
-                  isinstance(entity, types.MessageEntityMentionName) or
-                  isinstance(entity, types.InputMessageEntityMentionName) or
-                  isinstance(entity, types.MessageEntityTextUrl)):
+            elif (
+                isinstance(entity, types.MessageEntityUrl)
+                or isinstance(entity, types.MessageEntityMention)
+                or isinstance(entity, types.MessageEntityMentionName)
+                or isinstance(entity, types.InputMessageEntityMentionName)
+                or isinstance(entity, types.MessageEntityTextUrl)
+            ):
                 entity_type = "url"
             elif isinstance(entity, types.MessageEntityUnderline):
                 entity_type = "underline"
@@ -148,17 +165,11 @@ class Quote:
             offset = entity.offset
             length = entity.length
 
-            entity_data.update(
-                {
-                    offset: entity_type,
-                    offset + length: "regular"
-                }
-            )
+            entity_data.update({offset: entity_type, offset + length: "regular"})
 
         return entity_data
 
     async def get_profile_photo(client: Client, user_info):
-
         photo_buffer = None
 
         try:
@@ -168,9 +179,7 @@ class Quote:
 
         if not photo_buffer:
             profile_photo = Image.new(
-                mode="RGBA",
-                size=(50, 50),
-                color=Quote.USER_COLORS[user_info.id]
+                mode="RGBA", size=(50, 50), color=Quote.USER_COLORS[user_info.id]
             )
 
             profile_draw = ImageDraw.Draw(profile_photo, "RGBA")
@@ -178,10 +187,7 @@ class Quote:
             temp_font = ImageFont.truetype(Quote.FONT_REGULAR.path, 25)
 
             profile_draw.text(
-                xy=(16, 12),
-                text=user_info.name[0],
-                font=temp_font,
-                fill="white"
+                xy=(16, 12), text=user_info.name[0], font=temp_font, fill="white"
             )
 
             photo_buffer = BytesIO()
@@ -193,10 +199,7 @@ class Quote:
         profile_photo = Image.open(photo_buffer)
         profile_photo = profile_photo.resize((50, 50))
 
-        profile_photo_canvas = Image.new(
-            mode="RGBA",
-            size=(50, 50)
-        )
+        profile_photo_canvas = Image.new(mode="RGBA", size=(50, 50))
 
         profile_photo_mask = Image.new(
             mode="L",
@@ -205,20 +208,17 @@ class Quote:
 
         profile_photo_mask_draw = ImageDraw.Draw(profile_photo_mask)
 
-        profile_photo_mask_draw.ellipse(
-            xy=(0, 0, 48, 48),
-            fill=255
-        )
+        profile_photo_mask_draw.ellipse(xy=(0, 0, 48, 48), fill=255)
 
         profile_photo_canvas.paste(
-            im=profile_photo,
-            box=(0, 0),
-            mask=profile_photo_mask
+            im=profile_photo, box=(0, 0), mask=profile_photo_mask
         )
 
         return profile_photo_canvas
 
-    async def shorten_text(text: str, font: FontType = None, offset: int = 0, is_dotted: bool = False):
+    async def shorten_text(
+        text: str, font: FontType = None, offset: int = 0, is_dotted: bool = False
+    ):
         if not text:
             return text
 
@@ -228,7 +228,6 @@ class Quote:
         new_text = ""
         width = 0
         for char in text:
-
             if width + offset + (15 if is_dotted else 0) >= Quote.MAXIMUM_BOX_WIDTH:
                 new_text += "..." if is_dotted else ""
                 break
@@ -239,7 +238,6 @@ class Quote:
         return new_text
 
     async def draw_reply_bar(message: Message, is_media: bool = False):
-
         thumb_file = None
         x_pos = 10
 
@@ -270,117 +268,68 @@ class Quote:
             thumb_file = thumb_file.resize((36, 36), Image.NEAREST)
 
         name_image = await Quote.draw_text(
-            text=message.from_user.name,
-            font=Quote.FONT_TITLE
+            text=message.from_user.name, font=Quote.FONT_TITLE
         )
 
-        text_image = await Quote.draw_text(
-            text=text
-        )
+        text_image = await Quote.draw_text(text=text)
 
         reply_bar = Image.new(
             mode="RGBA",
             size=(
                 max(name_image.width, text_image.width) + (15 if message.media else 30),
-                Quote.LINE_HEIGHT * 2 + 4
+                Quote.LINE_HEIGHT * 2 + 4,
             ),
-            color=Quote.MESSAGE_COLOR
+            color=Quote.MESSAGE_COLOR,
         )
 
         reply_bar_draw = ImageDraw.Draw(reply_bar)
 
-        reply_bar_draw.line(
-            xy=(0, 0, 0, Quote.LINE_HEIGHT * 2),
-            width=2
-        )
+        reply_bar_draw.line(xy=(0, 0, 0, Quote.LINE_HEIGHT * 2), width=2)
 
         if thumb_file:
             try:
-                reply_bar.alpha_composite(
-                    im=thumb_file,
-                    dest=(10, 2)
-                )
+                reply_bar.alpha_composite(im=thumb_file, dest=(10, 2))
             except ValueError:
-                reply_bar.paste(
-                    im=thumb_file,
-                    box=(10, 2)
-                )
+                reply_bar.paste(im=thumb_file, box=(10, 2))
             x_pos += 43
 
-        reply_bar.paste(
-            im=name_image,
-            box=(x_pos, 2)
-        )
+        reply_bar.paste(im=name_image, box=(x_pos, 2))
 
-        reply_bar.paste(
-            im=text_image,
-            box=(x_pos, 2 + round(Quote.LINE_HEIGHT))
-        )
+        reply_bar.paste(im=text_image, box=(x_pos, 2 + round(Quote.LINE_HEIGHT)))
 
         return reply_bar
 
     async def add_radius(image: ImageType, radius: int = 10):
-        new_image = Image.new(
-            mode="RGBA",
-            size=image.size
-        )
+        new_image = Image.new(mode="RGBA", size=image.size)
 
-        mask = Image.new(
-            mode="L",
-            size=image.size
-        )
+        mask = Image.new(mode="L", size=image.size)
 
         mask_draw = ImageDraw.Draw(mask)
 
-        mask_draw.rounded_rectangle(
-            xy=(0, 0, *image.size),
-            radius=radius,
-            fill=255
-        )
+        mask_draw.rounded_rectangle(xy=(0, 0, *image.size), radius=radius, fill=255)
 
-        new_image.paste(
-            im=image,
-            box=(0, 0),
-            mask=mask
-        )
+        new_image.paste(im=image, box=(0, 0), mask=mask)
 
         return new_image
 
     async def draw_media_type(thumb_buffer: BytesIO, text_image: ImageType):
-
         media_image = Image.open(thumb_buffer)
 
         media_image = await Quote.merge_images(
             *[image for image in [media_image, text_image] if image],
             vertical=False,
-            spacing=5
+            spacing=5,
         )
 
-        media_mask = Image.new(
-            mode="L",
-            size=media_image.size,
-            color=0
-        )
+        media_mask = Image.new(mode="L", size=media_image.size, color=0)
 
         mask_draw = ImageDraw.Draw(media_mask)
 
-        mask_draw.rounded_rectangle(
-            xy=(0, 0, *media_mask.size),
-            radius=10,
-            fill=255
-        )
+        mask_draw.rounded_rectangle(xy=(0, 0, *media_mask.size), radius=10, fill=255)
 
-        content_image = Image.new(
-            mode="RGBA",
-            size=media_mask.size,
-            color=0
-        )
+        content_image = Image.new(mode="RGBA", size=media_mask.size, color=0)
 
-        content_image.paste(
-            im=media_image,
-            box=(0, 0),
-            mask=media_mask
-        )
+        content_image.paste(im=media_image, box=(0, 0), mask=media_mask)
 
         return content_image
 
@@ -395,143 +344,92 @@ class Quote:
             thumb_image = Image.open(thumb_buffer)
             thumb_image = thumb_image.resize((45, 45))
 
-            thumb_image = await Quote.add_radius(
-                image=thumb_image,
-                radius=7
-            )
+            thumb_image = await Quote.add_radius(image=thumb_image, radius=7)
 
             y_pos = 4
 
         else:
             thumb_image = Image.new(
-                mode="RGBA",
-                size=(45, 45),
-                color=Quote.MESSAGE_COLOR
+                mode="RGBA", size=(45, 45), color=Quote.MESSAGE_COLOR
             )
 
             download_draw = ImageDraw.Draw(thumb_image)
 
-            download_draw.ellipse(
-                xy=(0, 0, 45, 45),
-                fill="#434343"
-            )
+            download_draw.ellipse(xy=(0, 0, 45, 45), fill="#434343")
 
             download_draw.text(
                 xy=(18, 10),
                 text="⬇",
                 font=ImageFont.truetype(Quote.FONT_FALLBACK.path, 25),
                 embedded_color=True,
-                fill="white"
+                fill="white",
             )
 
             y_pos = 7
 
         size = await humanize(data=size)
         name = await Quote.shorten_text(
-            text=name,
-            font=Quote.FONT_TITLE,
-            offset=thumb_image.width + 10
+            text=name, font=Quote.FONT_TITLE, offset=thumb_image.width + 10
         )
 
-        name_image = await Quote.draw_text(
-            text=name,
-            font=Quote.FONT_TITLE
-        )
+        name_image = await Quote.draw_text(text=name, font=Quote.FONT_TITLE)
 
-        size_image = await Quote.draw_text(
-            text=size,
-            font=Quote.FONT_REGULAR
-        )
+        size_image = await Quote.draw_text(text=size, font=Quote.FONT_REGULAR)
 
         document_image = Image.new(
             mode="RGBA",
-            size=(
-                name_image.width + thumb_image.width,
-                thumb_image.height + 6
-            ),
-            color=Quote.MESSAGE_COLOR
+            size=(name_image.width + thumb_image.width, thumb_image.height + 6),
+            color=Quote.MESSAGE_COLOR,
         )
 
-        document_image.alpha_composite(
-            im=thumb_image,
-            dest=(0, 0)
-        )
+        document_image.alpha_composite(im=thumb_image, dest=(0, 0))
+
+        document_image.paste(im=name_image, box=(thumb_image.width + 10, y_pos))
 
         document_image.paste(
-            im=name_image,
-            box=(thumb_image.width + 10, y_pos)
-        )
-
-        document_image.paste(
-            im=size_image,
-            box=(thumb_image.width + 10, y_pos + Quote.LINE_HEIGHT)
+            im=size_image, box=(thumb_image.width + 10, y_pos + Quote.LINE_HEIGHT)
         )
 
         return document_image
 
     async def draw_link_preview(webpage_data: types.WebPage):
-
-        site_image = await Quote.draw_text(
-            text=webpage_data.site_name
-        )
+        site_image = await Quote.draw_text(text=webpage_data.site_name)
 
         description = f"{webpage_data.title}\n{webpage_data.description}"
-        description_image = await Quote.draw_text(
-            text=description
-        )
+        description_image = await Quote.draw_text(text=description)
 
         link_preview_image = Image.new(
             mode="RGBA",
             size=(
-                max(
-                    site_image.width,
-                    description_image.width
-                ) + 10,
-                site_image.height + description_image.height
+                max(site_image.width, description_image.width) + 10,
+                site_image.height + description_image.height,
             ),
-            color=Quote.MESSAGE_COLOR
+            color=Quote.MESSAGE_COLOR,
         )
 
         link_preview_draw = ImageDraw.Draw(link_preview_image)
 
-        link_preview_draw.line(
-            xy=(0, 0, 0, link_preview_image.height),
-            width=2
-        )
+        link_preview_draw.line(xy=(0, 0, 0, link_preview_image.height), width=2)
 
-        link_preview_image.paste(
-            im=site_image,
-            box=(10, 0)
-        )
+        link_preview_image.paste(im=site_image, box=(10, 0))
 
-        link_preview_image.paste(
-            im=description_image,
-            box=(10, site_image.height)
-        )
+        link_preview_image.paste(im=description_image, box=(10, site_image.height))
 
         return link_preview_image
 
     async def draw_media(message: Message, text_image: ImageType = None):
         if message.is_media_type:
-
             thumb_buffer = BytesIO()
 
             try:
-                await message.download_media(
-                    file=thumb_buffer,
-                    thumb=1
-                )
+                await message.download_media(file=thumb_buffer, thumb=1)
             except:
-                await message.download_media(
-                    file=thumb_buffer,
-                    thumb=0
-                )
+                await message.download_media(file=thumb_buffer, thumb=0)
 
             thumb_buffer.seek(0)
 
             return await Quote.draw_media_type(
-                thumb_buffer=thumb_buffer,
-                text_image=text_image
+                thumb_buffer=thumb_buffer, text_image=text_image
             )
         else:
             if message.web_preview:
@@ -544,24 +442,22 @@ class Quote:
                 ordered_images = [media_image, text_image]
 
             media_image = await Quote.merge_images(
-                *[image for image in ordered_images if image],
-                spacing=5,
-                vertical=False
+                *[image for image in ordered_images if image], spacing=5, vertical=False
             )
 
             return media_image
 
     async def to_image(message_list: list[Message]):
-
         sticker_image = None
         last_user = None
 
         for message in message_list:
-
             image_list = []
 
             message.is_media_type = message.photo or message.video or message.sticker
-            is_framed = not message.is_media_type and (message.document or message.raw_text)
+            is_framed = not message.is_media_type and (
+                message.document or message.raw_text
+            )
 
             is_titled = is_framed
 
@@ -569,14 +465,13 @@ class Quote:
 
             if is_titled:
                 title = await Quote.shorten_text(
-                    message.from_user.name,
-                    font=Quote.FONT_TITLE
+                    message.from_user.name, font=Quote.FONT_TITLE
                 )
 
                 title_image = await Quote.draw_text(
                     text=title,
                     font=Quote.FONT_TITLE,
-                    color=Quote.USER_COLORS[message.from_user.id]
+                    color=Quote.USER_COLORS[message.from_user.id],
                 )
 
                 image_list.append(title_image)
@@ -591,31 +486,35 @@ class Quote:
                 text_image = await Quote.draw_text(
                     text=message.raw_text,
                     entities=message.entities,
-                    x_offset=10 if message.is_media_type else 0
+                    x_offset=10 if message.is_media_type else 0,
                 )
 
             if message.media:
                 media_image = await Quote.draw_media(
-                    message=message,
-                    text_image=text_image
+                    message=message, text_image=text_image
                 )
 
-                if message.is_reply and message.is_media_type and reply_image.width > media_image.width:
-                    reply_image = reply_image.crop((0, 0, media_image.width, reply_image.height))
+                if (
+                    message.is_reply
+                    and message.is_media_type
+                    and reply_image.width > media_image.width
+                ):
+                    reply_image = reply_image.crop(
+                        (0, 0, media_image.width, reply_image.height)
+                    )
 
                     fade_effect = Image.linear_gradient("L")
-                    fade_effect = fade_effect.rotate(270).resize((reply_image.width + 50, reply_image.height))
+                    fade_effect = fade_effect.rotate(270).resize(
+                        (reply_image.width + 50, reply_image.height)
+                    )
                     fade_effect = fade_effect.crop((0, 0, *reply_image.size))
 
-                    new_reply_bar = Image.new(
-                        mode="RGBA",
-                        size=reply_image.size
-                    )
+                    new_reply_bar = Image.new(mode="RGBA", size=reply_image.size)
 
                     new_reply_bar.paste(
                         im=reply_image,
                         box=(reply_image.width - fade_effect.width, 0),
-                        mask=fade_effect
+                        mask=fade_effect,
                     )
 
                     reply_image = new_reply_bar
@@ -630,16 +529,14 @@ class Quote:
                 *image_list,
                 vertical=False,
                 spacing=4,
-                background_color=0 if message.is_media_type else None
+                background_color=0 if message.is_media_type else None,
             )
 
             message_image = await Quote.draw_message_box(
-                content_image=content_image,
-                is_framed=is_framed
+                content_image=content_image, is_framed=is_framed
             )
 
             if last_user != message.from_user.id:
-
                 profile_image = await Quote.get_profile_photo(
                     client=message.client,
                     user_info=message.from_user,
@@ -647,16 +544,10 @@ class Quote:
 
                 last_user = message.from_user.id
             else:
-                profile_image = Image.new(
-                    mode="RGBA",
-                    size=(50, 50)
-                )
+                profile_image = Image.new(mode="RGBA", size=(50, 50))
 
             message_image = await Quote.merge_images(
-                profile_image,
-                message_image,
-                spacing=4,
-                background_color=0
+                profile_image, message_image, spacing=4, background_color=0
             )
 
             sticker_image = await Quote.merge_images(
@@ -664,13 +555,11 @@ class Quote:
                 message_image,
                 spacing=5,
                 vertical=False,
-                background_color=0
+                background_color=0,
             )
 
         sticker_image = await Quote.merge_images(
-            sticker_image,
-            spacing=3,
-            background_color=0
+            sticker_image, spacing=3, background_color=0
         )
 
         image_buffer = BytesIO()
@@ -682,16 +571,16 @@ class Quote:
         return image_buffer
 
     async def draw_text(
-            text: str,
-            entities: list[types.TypeMessageEntity] = [],
-            font: FontType = None,
-            color="white",
-            x_offset: int = 0
+        text: str,
+        entities: list[types.TypeMessageEntity] = [],
+        font: FontType = None,
+        color="white",
+        x_offset: int = 0,
     ):
         text_image = Image.new(
             mode="RGBA",
             size=(Quote.MINIMUM_BOX_WIDTH, Quote.LINE_HEIGHT),
-            color=Quote.MESSAGE_COLOR
+            color=Quote.MESSAGE_COLOR,
         )
 
         text_drawer = ImageDraw.Draw(text_image)
@@ -709,27 +598,14 @@ class Quote:
         index = 0
 
         for char in text:
-
             entity_type = entity_book.get(index) or entity_type
-
-            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
-                x = x_offset
-                y += Quote.LINE_HEIGHT
-                if char == r"\n":
-                    index += 1
-                    continue
 
             if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
                 additional_section = Image.new(
-                    mode="RGBA",
-                    size=(15, text_image.height),
-                    color=Quote.MESSAGE_COLOR
+                    mode="RGBA", size=(15, text_image.height), color=Quote.MESSAGE_COLOR
                 )
 
-                text_image = await Quote.merge_images(
-                    text_image,
-                    additional_section
-                )
+                text_image = await Quote.merge_images(text_image, additional_section)
 
                 text_drawer = ImageDraw.Draw(text_image)
 
@@ -737,16 +613,22 @@ class Quote:
                 additional_section = Image.new(
                     mode="RGBA",
                     size=(text_image.width, Quote.LINE_HEIGHT),
-                    color=Quote.MESSAGE_COLOR
+                    color=Quote.MESSAGE_COLOR,
                 )
 
                 text_image = await Quote.merge_images(
-                    text_image,
-                    additional_section,
-                    vertical=False
+                    text_image, additional_section, vertical=False
                 )
 
                 text_drawer = ImageDraw.Draw(text_image)
+
+
+            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
+                x = x_offset
+                y += Quote.LINE_HEIGHT
+                if char == "\n":
+                    index += 1
+                    continue
 
             if entity_type == "bold":
                 font = Quote.FONT_BOLD
@@ -759,12 +641,14 @@ class Quote:
 
                 width = font.getlength(char)
                 height = font.getbbox("m")[3] + 2
-                entity_color = ((166, 216, 245, 255)) if entity_type == "url" else "white"
+                entity_color = (
+                    ((166, 216, 245, 255)) if entity_type == "url" else "white"
+                )
 
                 text_drawer.line(
                     xy=(x + width, y + height, x, y + height),
                     width=1,
-                    fill=entity_color
+                    fill=entity_color,
                 )
 
                 kwargs.update({"fill": entity_color})
@@ -785,15 +669,17 @@ class Quote:
                 else Quote.FONT_FALLBACK
                 if char not in string.printable
                 else font,
-                **kwargs
+                **kwargs,
             )
 
-            x += Quote.FONT_EMOJI.getlength(char) \
-                if emoji.is_emoji(char) \
-                else Quote.FONT_FALLBACK.getlength(char) \
-                if char not in string.printable \
+            x += (
+                Quote.FONT_EMOJI.getlength(char)
+                if emoji.is_emoji(char)
+                else Quote.FONT_FALLBACK.getlength(char)
+                if char not in string.printable
                 else font.getlength(char)
-            
+            )
+
             index += 1 if not emoji.is_emoji(char) else 2
 
         return text_image
@@ -814,9 +700,9 @@ class Quote:
         i = 0
 
         async for message_object in client.iter_messages(
-                entity=await message.get_chat(),
-                limit=message_count,
-                max_id=message.reply_to_text.id + 1
+            entity=await message.get_chat(),
+            limit=message_count,
+            max_id=message.reply_to_text.id + 1,
         ):
             i += 1
             message_object = await get_messages_recursively(message_object)
@@ -829,21 +715,23 @@ class Quote:
             message_list.append(message_object)
 
         message_list.reverse()
-        sticker_buffer = await Quote.to_image(
-            message_list=message_list
-        )
+        sticker_buffer = await Quote.to_image(message_list=message_list)
 
         await message.respond(file=sticker_buffer)
 
     @run(command="fq")
     async def fake_quote(message: Message, client: Client):
         if not message.args:
-            await message.edit("<i>You need to input a username and a message attached to it in that order</i>")
+            await message.edit(
+                "<i>You need to input a username and a message attached to it in that order</i>"
+            )
             return
 
         arguments = message.args.split()
         if len(arguments) < 2:
-            await message.edit("<i>Invalid arguments passed in, check the help page for usage</i>")
+            await message.edit(
+                "<i>Invalid arguments passed in, check the help page for usage</i>"
+            )
             return
 
         user_info, user_text = arguments[0], " ".join(arguments[1:])
@@ -860,10 +748,7 @@ class Quote:
         user_info.name = f"{user_info.first_name} {user_info.last_name or ''}".strip()
 
         fake_message_object = FakeMessage(
-            id=user_info.id,
-            message=user_text,
-            sender=user_info,
-            client=client
+            id=user_info.id, message=user_text, sender=user_info, client=client
         )
 
         if fake_message_object.id not in Quote.USER_COLORS:
@@ -871,9 +756,7 @@ class Quote:
                 {fake_message_object.id: random.choice(Quote.TITLE_COLOR_PALETTE)}
             )
 
-        sticker_buffer = await Quote.to_image(
-            [fake_message_object]
-        )
+        sticker_buffer = await Quote.to_image([fake_message_object])
 
         await message.respond(file=sticker_buffer)
 
@@ -887,32 +770,31 @@ class Quote:
         arguments = message.args.split()
 
         if len(arguments) > 3 and "".join(arguments).isdigit():
-            r, g, b, a = int(arguments[0]), int(arguments[1]), int(arguments[2]), int(arguments[3])
+            r, g, b, a = (
+                int(arguments[0]),
+                int(arguments[1]),
+                int(arguments[2]),
+                int(arguments[3]),
+            )
             color = (r, g, b, a)
         elif message.args.startswith("#"):
             color = message.args
         else:
             color = message.args
 
-        tester_image = Image.new(
-            mode="RGBA",
-            size=(50, 50)
-        )
+        tester_image = Image.new(mode="RGBA", size=(50, 50))
 
         tester_draw = ImageDraw.Draw(tester_image)
 
         try:
-            tester_draw.text(
-                xy=(0, 0),
-                text="a",
-                fill=color
-            )
+            tester_draw.text(xy=(0, 0), text="a", fill=color)
 
             quotedb.set_message_color(color)
             Quote.MESSAGE_COLOR = color
             await message.edit(f"<i>Message box color has been set to {color}</i>")
         except Exception as e:
             await message.edit(f"<i>{e}</i>")
+
 
 @startup
 def load_from_database():
