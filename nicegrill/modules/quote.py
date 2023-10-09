@@ -716,6 +716,7 @@ class Quote:
                 x = x_offset
                 y += Quote.LINE_HEIGHT
                 if char == r"\n":
+                    index += 1
                     continue
 
             if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
@@ -770,7 +771,7 @@ class Quote:
 
             elif entity_type == "regular":
                 kwargs = {"fill": color}
-                font = font
+                font = Quote.FONT_REGULAR
 
             if entity_type != "url":
                 kwargs = {"fill": color}
