@@ -36,9 +36,7 @@ class AntiPM:
 
     BLOCK_MESSAGE = \
         "<b>I have warned you, however, you did not stop " \
-        "spamming my chat. Therefore, you have been blocked " \
-        "as spam. Good luck!</b>"
-
+        "spamming my chat. Therefore, you have been blocked, good luck!</b>"
 
     @run(command="antipm")
     async def antipm_switch(message: Message, client: Client):

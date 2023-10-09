@@ -14,10 +14,10 @@ PollEvent = lambda message: message.poll
 ReplyEvent = lambda message: message.is_reply
 
 PrivateChatEvent = lambda message: message.is_private
-UserChatEvent = lambda message: message.is_private and hasattr(message, "is_self") and not message.sender.is_self
+UserChatEvent = lambda message: message.is_private and hasattr(message.sender, "is_self") and not message.sender.is_self
 GroupChatEvent = lambda message: message.is_group
 ChannelEvent = lambda message: message.is_channel
-RealUserEvent = lambda message: not getattr(message.sender, "bot", False)
+RealUserEvent = lambda message: not (hasattr(message.sender, "bot") and message.sender.bot)
 BotEvent = lambda message: getattr(message.sender, "bot", False)
 
 def AndEvent(*args):
