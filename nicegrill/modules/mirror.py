@@ -11,7 +11,7 @@ from httpx import post
 import asyncio
 import os.path
 import html
-
+import urllib.parse
 
 class Mirror:
 
@@ -38,7 +38,8 @@ class Mirror:
 
             auth_url, _ = await asyncio.to_thread(flow.authorization_url)
 
-            await message.edit("<b>Bot response: </b><i>Check your private chat</i>")
+            if not message.is_private:
+                await message.edit("<b>Bot response: </b><i>Check your private chat</i>")
 
             message = await message.client.send_message(
                 message=f"<i>You need to do Google Auth before you can continue. "
@@ -57,7 +58,7 @@ class Mirror:
                 {message.id: fetch_code}
             )
 
-            code = await fetch_code
+            code = urllib.parse.unquote(await fetch_code)
 
             flow.fetch_token(code=code)
             creds = flow.credentials
