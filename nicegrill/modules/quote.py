@@ -631,6 +631,10 @@ class Quote:
                 if char not in string.printable and char != "\n" \
                 else previous_font
 
+            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
+                x = x_offset
+                y += Quote.LINE_HEIGHT
+
             if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
                 additional_section = Image.new(
                     mode="RGBA", size=(15, text_image.height), color=Quote.MESSAGE_COLOR
@@ -653,22 +657,16 @@ class Quote:
 
                 text_drawer = ImageDraw.Draw(text_image)
 
-            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
-                x = x_offset
-                y += Quote.LINE_HEIGHT
-                if char == "\n":
-                    index += 1
-                    continue
+            if char != "\n":
+                text_drawer.text(
+                    xy=(x, y),
+                    text=char,
+                    embedded_color=True,
+                    font=font,
+                    **kwargs,
+                )
 
-            text_drawer.text(
-                xy=(x, y),
-                text=char,
-                embedded_color=True,
-                font=font,
-                **kwargs,
-            )
-
-            x += font.getlength(char)
+                x += font.getlength(char)
 
             index += 1 if not emoji.is_emoji(char) else 2
             font = previous_font
