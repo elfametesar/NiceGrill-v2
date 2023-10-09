@@ -706,15 +706,16 @@ class Quote:
 
         kwargs = {"fill": color}
         entity_type = "regular"
+        index = 0
 
-        for index, char in enumerate(text):
+        for char in text:
 
             entity_type = entity_book.get(index) or entity_type
 
             if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
                 x = x_offset
                 y += Quote.LINE_HEIGHT
-                if char == "\n":
+                if char == r"\n":
                     continue
 
             if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
@@ -791,6 +792,8 @@ class Quote:
                 else Quote.FONT_FALLBACK.getlength(char) \
                 if char not in string.printable \
                 else font.getlength(char)
+            
+            index += 1 if not emoji.is_emoji(char) else 2
 
         return text_image
 
