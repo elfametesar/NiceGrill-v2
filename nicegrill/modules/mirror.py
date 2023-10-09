@@ -4,6 +4,7 @@ from nicegrill.modules.downloader import Downloader
 from nicegrill.modules.compiler import Compiler
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from httpx import post
@@ -26,17 +27,17 @@ class Mirror:
         if os.path.exists('token.json'):
             creds = Credentials.from_authorized_user_file('token.json', scopes)
 
-        if not creds or (creds and not creds.valid):
-            if creds:
-                os.remove("token.json")
+        if creds and not creds.valid:
+            creds.refresh(Request())
 
+        elif not creds:
             if not os.path.isfile("client_secret.json"):
                 raise FileNotFoundError("You need client_secret.json to run this, obtain it from Google Cloud")
 
             flow = InstalledAppFlow.from_client_secrets_file(
                 'client_secret.json', scopes, redirect_uri="http://localhost/authorize/")
 
-            auth_url, _ = await asyncio.to_thread(flow.authorization_url)
+            auth_url, _ = flow.authorization_url()
 
             if not message.is_private:
                 await message.edit("<b>Bot response: </b><i>Check your private chat</i>")
@@ -83,7 +84,7 @@ class Mirror:
 
             url_or_file = await Downloader.download_file(message=message, client=client)
 
-            await message.edit("<i>File has been downloaded, uploading to the mirror host now..</i>")
+            await message.edit("<i>File has been downloaded, uploading to PixelDrain now..</i>")
             await asyncio.sleep(1)
 
         return url_or_file
