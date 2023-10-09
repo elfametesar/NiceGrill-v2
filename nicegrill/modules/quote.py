@@ -231,21 +231,23 @@ class Quote:
     async def draw_reply_bar(message: Message, is_media: bool = False):
         thumb_file = None
         x_pos = 10
+        
+        text = "    ".join(message.raw_text.splitlines()) if message.raw_text else ""
 
         if message.photo:
-            text = message.raw_text or "Photo"
+            text = text or "Photo"
         elif message.sticker:
             text = f"{message.file.emoji} Sticker"
         elif message.gif:
-            text = message.raw_text or "GIF"
+            text = text or "GIF"
         elif message.video:
-            text = message.raw_text or "Video"
+            text = text or "Video"
         elif message.audio:
-            text = message.raw_text or "🎵 Audio"
+            text = text or "🎵 Audio"
         elif message.voice:
-            text = message.raw_text or "Voice Message"
+            text = text or "Voice Message"
         else:
-            text = message.raw_text or message.file.name or "📎 Document"
+            text = text or message.file.name or "📎 Document"
 
         if message.document and message.document.thumbs:
             thumb_file = await message.download_media(
