@@ -589,37 +589,8 @@ class Quote:
         index = 0
 
         for char in text:
+
             entity_type = entity_book.get(index) or entity_type
-
-            if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
-                additional_section = Image.new(
-                    mode="RGBA", size=(15, text_image.height), color=Quote.MESSAGE_COLOR
-                )
-
-                text_image = await Quote.merge_images(text_image, additional_section)
-
-                text_drawer = ImageDraw.Draw(text_image)
-
-            if y + Quote.LINE_HEIGHT > text_image.height:
-                additional_section = Image.new(
-                    mode="RGBA",
-                    size=(text_image.width, Quote.LINE_HEIGHT),
-                    color=Quote.MESSAGE_COLOR,
-                )
-
-                text_image = await Quote.merge_images(
-                    text_image, additional_section, vertical=False
-                )
-
-                text_drawer = ImageDraw.Draw(text_image)
-
-
-            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
-                x = x_offset
-                y += Quote.LINE_HEIGHT
-                if char == "\n":
-                    index += 1
-                    continue
 
             if entity_type == "bold":
                 font = Quote.FONT_BOLD
@@ -651,27 +622,54 @@ class Quote:
             if entity_type != "url":
                 kwargs = {"fill": color}
 
+            previous_font = font
+            font = Quote.FONT_EMOJI \
+                if emoji.is_emoji(char) \
+                else Quote.FONT_FALLBACK \
+                if char not in string.printable and char != "\n" \
+                else previous_font
+
+            if text_image.width < x + font.getlength(char) < Quote.MAXIMUM_BOX_WIDTH:
+                additional_section = Image.new(
+                    mode="RGBA", size=(15, text_image.height), color=Quote.MESSAGE_COLOR
+                )
+
+                text_image = await Quote.merge_images(text_image, additional_section)
+
+                text_drawer = ImageDraw.Draw(text_image)
+
+            if y + Quote.LINE_HEIGHT > text_image.height:
+                additional_section = Image.new(
+                    mode="RGBA",
+                    size=(text_image.width, Quote.LINE_HEIGHT),
+                    color=Quote.MESSAGE_COLOR,
+                )
+
+                text_image = await Quote.merge_images(
+                    text_image, additional_section, vertical=False
+                )
+
+                text_drawer = ImageDraw.Draw(text_image)
+
+            if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
+                x = x_offset
+                y += Quote.LINE_HEIGHT
+                if char == "\n":
+                    index += 1
+                    continue
+
             text_drawer.text(
                 xy=(x, y),
                 text=char,
                 embedded_color=True,
-                font=Quote.FONT_EMOJI
-                if emoji.is_emoji(char)
-                else Quote.FONT_FALLBACK
-                if char not in string.printable
-                else font,
+                font=font,
                 **kwargs,
             )
 
-            x += (
-                Quote.FONT_EMOJI.getlength(char)
-                if emoji.is_emoji(char)
-                else Quote.FONT_FALLBACK.getlength(char)
-                if char not in string.printable
-                else font.getlength(char)
-            )
+            x += font.getlength(char)
 
             index += 1 if not emoji.is_emoji(char) else 2
+            font = previous_font
 
         return text_image
 
