@@ -258,6 +258,11 @@ class Quote:
             thumb_file.seek(0)
             thumb_file = Image.open(thumb_file)
 
+            if thumb_file.width > 36:
+                thumb_file = thumb_file.crop(
+                    box=(int(thumb_file.width / 5 * 2), 0, int(thumb_file.width / 5 * 3), thumb_file.height)
+                )
+
             thumb_file = thumb_file.resize((36, 36), Image.NEAREST)
 
         name_image = await Quote.draw_text(
@@ -335,6 +340,12 @@ class Quote:
             thumb_buffer.name = "thumbnail.png"
 
             thumb_image = Image.open(thumb_buffer)
+
+            if thumb_image.width > 45:
+                thumb_image = thumb_image.crop(
+                    box=(int(thumb_image.width / 5 * 2), 0, int(thumb_image.width / 5 * 3), thumb_image.height)
+                )
+
             thumb_image = thumb_image.resize((45, 45))
 
             thumb_image = await Quote.add_radius(image=thumb_image, radius=7)
