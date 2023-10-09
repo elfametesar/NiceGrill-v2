@@ -39,7 +39,7 @@ class Quote:
     FONT_BOLD_ITALIC = ImageFont.truetype(font="fonts/Roboto-Bold.ttf", size=13)
     FONT_MONO = ImageFont.truetype(font="fonts/Roboto-Mono.ttf", size=12)
     FONT_EMOJI = ImageFont.truetype(font="fonts/Apple Color Emoji.ttc",size=20)
-    FONT_FALLBACK = ImageFont.truetype(font="fonts/Unicode.ttf", size=13,encoding="utf-16")
+    FONT_FALLBACK = ImageFont.truetype(font="fonts/Unicode.ttf", size=13)
 
     LINE_HEIGHT = 18
     MAXIMUM_BOX_WIDTH = 350
