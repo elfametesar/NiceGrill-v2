@@ -42,7 +42,6 @@ async def error_handler(message: Message):
     with open('../error.txt', 'w'):
         pass
 
-
 def update_help_data(function, command: str):
     global HELP_MENU_DATA, HELP_MENU
 
@@ -61,7 +60,6 @@ def update_help_data(function, command: str):
             HELP_MENU_DATA.update({result: function.__doc__})
     except:
         pass
-
 
 def return_func(func, command="", prefix=prefix):
     async def wrapper(message: Message, command=command):

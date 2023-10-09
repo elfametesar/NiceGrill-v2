@@ -721,7 +721,7 @@ class Quote:
             max_id=message.reply_to_text.id + 1,
         ):
             i += 1
-            message_object = await get_messages_recursively(message_object)
+            message_object = await get_messages_recursively(message_object, recursion_limit=2)
 
             if message_object.sender.id not in Quote.USER_COLORS:
                 Quote.USER_COLORS.update(

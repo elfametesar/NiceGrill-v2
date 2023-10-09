@@ -56,11 +56,16 @@ class NiceGrill:
         for module in glob.glob("nicegrill/modules/*.py"):
             module = module.replace("/", ".")[:-3]
 
+            if module == "nicegrill.modules.help":
+                continue
+
             try:
                 importlib.import_module(module)
                 print(f"Module is loaded: {module.replace('nicegrill.modules.', '').title()}")
             except Exception as e:
                 print(f"\nModule {module.replace('nicegrill.modules.', '').title()} not loaded: {e}\n")
+
+        importlib.import_module("nicegrill.modules.help")
 
     async def restart_handler(self):
         if restart_info := settingsdb.get_restart_details():

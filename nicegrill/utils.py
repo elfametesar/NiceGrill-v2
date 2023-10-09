@@ -21,7 +21,6 @@ from pprint import pformat
 
 import asyncio
 import html
-import re
 
 class Message(MainMessage):
     
@@ -46,7 +45,7 @@ class fake_user:
         return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
 
 message_counter = 0
-async def get_messages_recursively(message: Message, command=None, prefix=None, recursion_limit: int=4):
+async def get_messages_recursively(message: Message, command=None, prefix=None, recursion_limit: int=0):
 
     if not message:
         return
@@ -67,18 +66,11 @@ async def get_messages_recursively(message: Message, command=None, prefix=None, 
         message.args = message.message
 
     if prefix:
-        get_cmd = re.search(command + r"($| |\n)", message.raw_text)
-        if get_cmd:
-            try:
-                message.cmd = get_cmd.group(0).strip()
-            except Exception:
-                pass
+        message.cmd = message.raw_text.split(" ", maxsplit=1)
+        message.cmd = message.cmd[0]
 
     if not message.sender and not message.fwd_from:
-        try:
-            message._sender = await message.get_sender()
-        except Exception as e:
-            print(e)
+        message._sender = await message.get_sender()
 
     if message.fwd_from:
         user = fake_user()
