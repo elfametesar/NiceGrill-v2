@@ -42,7 +42,7 @@ class Quote:
     FONT_FALLBACK = ImageFont.truetype(font="fonts/Unicode.ttf", size=13)
 
     LINE_HEIGHT = 18
-    MAXIMUM_BOX_WIDTH = 350
+    MAXIMUM_BOX_WIDTH = 300
     MINIMUM_BOX_WIDTH = 80
 
     USER_COLORS = {}
@@ -328,7 +328,7 @@ class Quote:
 
             new_media_image.paste(
                 im=media_image,
-                box=(int(125 - media_image.width/2), 0)
+                box=(int(Quote.MAXIMUM_BOX_WIDTH / 2 - media_image.width/2), 0)
             )
 
             media_image = new_media_image
