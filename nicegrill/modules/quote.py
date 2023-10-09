@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from PIL.Image import Image as ImageType
 from PIL.ImageFont import ImageFont as FontType
 from telethon import TelegramClient as Client
@@ -312,11 +312,31 @@ class Quote:
 
     async def draw_media_type(thumb_buffer: BytesIO, text_image: ImageType):
         media_image = Image.open(thumb_buffer)
+        
+        if media_image.width < Quote.MAXIMUM_BOX_WIDTH:
+            
+            new_media_image = media_image.filter(ImageFilter.BoxBlur(20))
+
+            new_media_image = new_media_image.resize(
+                (
+                    Quote.MAXIMUM_BOX_WIDTH,
+                    media_image.height * int(Quote.MAXIMUM_BOX_WIDTH / media_image.width)
+                )
+            )
+
+            new_media_image = new_media_image.crop((0, 0, new_media_image.width, media_image.height))
+
+            new_media_image.paste(
+                im=media_image,
+                box=(int(125 - media_image.width/2), 0)
+            )
+
+            media_image = new_media_image
 
         media_image = await Quote.merge_images(
             *[image for image in [media_image, text_image] if image],
             vertical=False,
-            spacing=5,
+            spacing=5
         )
 
         media_mask = Image.new(mode="L", size=media_image.size, color=0)
