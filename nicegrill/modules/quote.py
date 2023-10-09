@@ -30,25 +30,16 @@ class FakeMessage:
 
 
 class Quote:
-    FONT_TITLE = ImageFont.truetype(
-        "fonts/Roboto-Medium.ttf", size=14, encoding="utf-16"
-    )
-    FONT_REGULAR = ImageFont.truetype(
-        "fonts/Roboto-Regular.ttf", size=13, encoding="utf-16"
-    )
-    FONT_MEDIUM = ImageFont.truetype(
-        "fonts/Roboto-Medium.ttf", size=13, encoding="utf-16"
-    )
-    FONT_BOLD = ImageFont.truetype("fonts/Roboto-Bold.ttf", size=13, encoding="utf-16")
-    FONT_ITALIC = ImageFont.truetype(
-        "fonts/Roboto-Italic.ttf", size=13, encoding="utf-16"
-    )
-    FONT_BOLD_ITALIC = ImageFont.truetype(
-        "fonts/Roboto-Bold.ttf", size=13, encoding="utf-16"
-    )
-    FONT_MONO = ImageFont.truetype("fonts/Roboto-Mono.ttf", size=12, encoding="utf-16")
-    FONT_EMOJI = ImageFont.truetype("fonts/Apple Color Emoji.ttc", size=20)
-    FONT_FALLBACK = ImageFont.truetype("fonts/Unicode.ttf", size=13, encoding="utf-16")
+
+    FONT_TITLE = ImageFont.truetype(font="fonts/Roboto-Medium.ttf", size=14)
+    FONT_REGULAR = ImageFont.truetype(font="fonts/Roboto-Regular.ttf", size=13)
+    FONT_MEDIUM = ImageFont.truetype(font="fonts/Roboto-Medium.ttf", size=13)
+    FONT_BOLD = ImageFont.truetype(font="fonts/Roboto-Bold.ttf", size=13)
+    FONT_ITALIC = ImageFont.truetype(font="fonts/Roboto-Italic.ttf", size=13)
+    FONT_BOLD_ITALIC = ImageFont.truetype(font="fonts/Roboto-Bold.ttf", size=13)
+    FONT_MONO = ImageFont.truetype(font="fonts/Roboto-Mono.ttf", size=12)
+    FONT_EMOJI = ImageFont.truetype(font="fonts/Apple Color Emoji.ttc",size=20)
+    FONT_FALLBACK = ImageFont.truetype(font="fonts/Unicode.ttf", size=13,encoding="utf-16")
 
     LINE_HEIGHT = 18
     MAXIMUM_BOX_WIDTH = 350
