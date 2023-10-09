@@ -631,22 +631,6 @@ class Quote:
                 font = Quote.FONT_ITALIC
             elif entity_type == "mono":
                 font = Quote.FONT_MONO
-            elif entity_type == "url" or entity_type == "underline":
-                font = Quote.FONT_REGULAR
-
-                width = font.getlength(char)
-                height = font.getbbox("m")[3] + 2
-                entity_color = (
-                    ((166, 216, 245, 255)) if entity_type == "url" else "white"
-                )
-
-                text_drawer.line(
-                    xy=(x + width, y + height, x, y + height),
-                    width=1,
-                    fill=entity_color,
-                )
-
-                kwargs.update({"fill": entity_color})
 
             elif entity_type == "regular":
                 kwargs = {"fill": color}
@@ -687,6 +671,18 @@ class Quote:
                 )
 
                 text_drawer = ImageDraw.Draw(text_image)
+
+            if entity_type == "url" or entity_type == "underline":
+
+                width = font.getlength(char)
+                height = font.getbbox("m")[3] + 2
+                kwargs["fill"] = ((166, 216, 245, 255)) if entity_type == "url" else "white"
+
+                text_drawer.line(
+                    xy=(x + width, y + height, x, y + height),
+                    width=1,
+                    **kwargs,
+                )
 
             if char != "\n":
                 text_drawer.text(
