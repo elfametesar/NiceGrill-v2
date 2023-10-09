@@ -232,7 +232,7 @@ class Quote:
         thumb_file = None
         x_pos = 10
         
-        text = message.raw_text.replace("\n", "    ") if message.raw_text else ""
+        text = message.raw_text.replace("\n", "    ")
 
         if message.photo:
             text = text or "Photo"
