@@ -152,7 +152,7 @@ type their username or use this in their chat"""
             user = int(user)
 
         if message.is_reply:
-            user = message.reply_to_message.sender_id
+            user = message.reply_to_text.sender_id
 
         if not user:
             user = await message.get_chat()

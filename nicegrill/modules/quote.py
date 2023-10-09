@@ -409,7 +409,7 @@ class Quote:
         return link_preview_image
 
     async def draw_media(message: Message, text_image: ImageType = None):
-        if message.is_media_type:
+        if message.is_media_type and not message.web_preview:
             thumb_buffer = BytesIO()
 
             try:
@@ -445,7 +445,7 @@ class Quote:
         for message in message_list:
             image_list = []
 
-            message.is_media_type = message.photo or message.video or message.sticker
+            message.is_media_type = (message.photo or message.video or message.sticker) and not message.web_preview
             is_framed = not message.is_media_type and (
                 message.document or message.raw_text
             )
