@@ -705,7 +705,7 @@ class Quote:
         y = 0
 
         kwargs = {"fill": color}
-        entity_type = "regular"
+        entity_type = ""
         index = 0
 
         for char in text:
