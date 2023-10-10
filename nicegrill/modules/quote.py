@@ -310,10 +310,10 @@ class Quote:
 
         return new_image
 
-    async def draw_media_type(thumb_buffer: BytesIO, text_image: ImageType):
+    async def draw_media_type(thumb_buffer: BytesIO, text_image: ImageType, is_sticker: bool=False):
         media_image = Image.open(thumb_buffer)
         
-        if media_image.width < Quote.MAXIMUM_BOX_WIDTH:
+        if media_image.width < Quote.MAXIMUM_BOX_WIDTH and not is_sticker:
             
             new_media_image = media_image.filter(ImageFilter.BoxBlur(20))
 
@@ -453,7 +453,8 @@ class Quote:
             thumb_buffer.seek(0)
 
             return await Quote.draw_media_type(
-                thumb_buffer=thumb_buffer, text_image=text_image
+                thumb_buffer=thumb_buffer, text_image=text_image,
+                is_sticker=message.sticker
             )
         else:
             if message.web_preview:

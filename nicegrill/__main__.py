@@ -2,13 +2,49 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from config import API_ID, API_HASH, SESSION, MONGO_URI
 from database import settingsdb
-from io import StringIO
 
 import asyncio
 import importlib
 import glob
 import sys
 import os
+
+
+class Stream:
+
+    def __init__(self):
+        self.__buffer = ""
+
+    def read(self) -> str:
+        while not (output := self.__buffer):
+            pass
+
+        self.__buffer = ""
+        print(output, file=sys.__stdout__)
+        return output
+    
+    def readline(self) -> str:
+        self.__buffer = self.__buffer.rstrip()
+        return self.read()
+
+    def write(self, input_value: str) -> int:
+        self.__buffer += input_value
+        print(input_value, end="", file=sys.__stdout__)
+        return len(input_value)
+    
+    def flush(self):
+        self.__buffer += "\n"
+    
+    def input(self, prompt: str) -> str:
+        return prompt + self.read()
+
+    @property
+    def is_empty(self):
+        return not self.__buffer
+    
+    def clear(self):
+        self.__buffer = ""
+
 
 class NiceGrill:
     def __init__(self):
@@ -27,45 +63,20 @@ class NiceGrill:
             func(args)
         return inner
 
-    async def redirect_pipes(self):
-
-        sys.stdout = StringIO()
-        sys.stdout.read = self.read_stdout
-        sys.stdout.write = self.write_stdout(sys.stdout.write)
-        
-        read, write = os.pipe()
-
-        stdin_read = os.fdopen(
-            fd=read,
-            mode="r",
-            buffering=True
-        )
-
-        stdin_write = os.fdopen(
-            fd=write,
-            mode="w",
-            buffering=True
-        )
-
-        stdin_read.write = stdin_write.write
-        stdin_read.writelines = stdin_write.writelines
-
-        sys.stdin = stdin_read
-
     async def import_modules(self):
-        for module in glob.glob("nicegrill/modules/*.py"):
-            module = module.replace("/", ".")[:-3]
+        module_list = glob.glob("nicegrill/modules/*.py")
+        module_list.remove("nicegrill/modules/help.py")
+        module_list.append("nicegrill/modules/help.py")
 
-            if module == "nicegrill.modules.help":
-                continue
+        for module in module_list:
+
+            module = module.replace("/", ".")[:-3]
 
             try:
                 importlib.import_module(module)
                 print(f"Module is loaded: {module.replace('nicegrill.modules.', '').title()}")
             except Exception as e:
                 print(f"\nModule {module.replace('nicegrill.modules.', '').title()} not loaded: {e}\n")
-
-        importlib.import_module("nicegrill.modules.help")
 
     async def restart_handler(self):
         if restart_info := settingsdb.get_restart_details():
@@ -86,7 +97,9 @@ class NiceGrill:
         self.client.me = await self.client.get_me()
         self.client._loop = asyncio.get_event_loop()
 
-        await self.redirect_pipes()
+        sys.stdout = Stream()
+        sys.stdin = sys.stdout
+        __builtins__["input"] = sys.stdout.input
 
         await asyncio.gather(
             self.import_modules(),

@@ -350,7 +350,7 @@ Usage:
         
         #clear buffer
         if message.cmd != "pyr":
-            sys.stdout.read()
+            sys.stdout.clear()
 
         task: asyncio.Task = asyncio.create_task(
             asyncio.to_thread(
@@ -388,9 +388,9 @@ Usage:
 
         res = html.escape(str(res))
 
-        try:
+        if not sys.stdout.is_empty:
             val = html.escape(sys.stdout.read())
-        except AttributeError:
+        else:
             val = ""
 
         res = res + val if res != "None" else val

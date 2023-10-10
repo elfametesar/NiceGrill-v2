@@ -45,7 +45,7 @@ class fake_user:
         return f"User(first_name = {self.first_name}, last_name = {self.last_name})"
 
 message_counter = 0
-async def get_messages_recursively(message: Message, command=None, prefix=None, recursion_limit: int=0):
+async def get_messages_recursively(message: Message, command=None, prefix=None, recursion_limit: int=1):
 
     if not message:
         return
