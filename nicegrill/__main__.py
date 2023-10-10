@@ -35,7 +35,7 @@ class Stream:
     def flush(self):
         self.__buffer += "\n"
     
-    def input(self, prompt: str) -> str:
+    def input(self, prompt: str="") -> str:
         return prompt + self.read()
 
     @property
