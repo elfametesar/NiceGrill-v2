@@ -110,14 +110,18 @@ class Mirror:
             }
 
             media = MediaFileUpload(
-                filename=url_or_file
+                filename=url_or_file,
+                resumable=True,
+                chunksize=4000000
             )
 
             file = service.files().create(
                 body=metadata,
                 media_body=media,
                 fields='id'
-            ).execute()
+            )
+            
+            file = await asyncio.to_thread(file.execute)
 
             service.permissions().create(
                 body=permissions,
