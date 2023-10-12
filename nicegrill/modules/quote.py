@@ -460,7 +460,7 @@ class Quote:
             if message.web_preview:
                 media_image = await Quote.draw_link_preview(message.media.webpage)
                 ordered_images = [text_image, media_image]
-            elif isinstance(message.media.document, types.WebPageEmpty):
+            elif isinstance(message.media.webpage, types.WebPageEmpty):
                 return text_image
             else:
                 media_image = await Quote.draw_document(message)
