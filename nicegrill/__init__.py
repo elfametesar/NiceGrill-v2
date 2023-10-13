@@ -1,3 +1,4 @@
+import telethon
 from nicegrill.utils import get_messages_recursively, Message
 from config import API_ID, API_HASH, SESSION, MONGO_URI
 from database import blacklistdb, settingsdb
@@ -171,17 +172,18 @@ def update_help_data(function, command: str):
     except:
         pass
 
-def return_func(func, command="", prefix=prefix):
+def return_func(func, command="", prefix=prefix, recurse_messages=True):
     async def wrapper(message: Message, command=command):
-        try:
-            message = await get_messages_recursively(
-                message=message.message,
-                command=command,
-                prefix=prefix
-            )
-        except Exception as e:
-            print(e)
-            pass
+        if recurse_messages:
+            try:
+                message = await get_messages_recursively(
+                    message=message.message,
+                    command=command,
+                    prefix=prefix
+                )
+            except Exception as e:
+                print(e)
+                pass
 
         try:
             if command == "blacklist" or command == "whitelist":
@@ -192,7 +194,7 @@ def return_func(func, command="", prefix=prefix):
                 await func(message, nicegrill.client)
 
         except:
-            if message.sender_id == nicegrill.client.me.id:
+            if message.is_private:
                 await error_handler(message)
 
     return wrapper
@@ -230,6 +232,23 @@ def event_watcher(
                 func=custom_event
             )
         )
+        return func
+
+    return inner
+
+def chat_watcher(custom_event=None, chats=None):
+    
+    def inner(func):
+        wrapper = return_func(func, recurse_messages=False)
+
+        nicegrill.client.add_event_handler(
+            callback=wrapper,
+            event=telethon.events.ChatAction(
+                chats=chats,
+                func=custom_event
+            )
+        )
+
         return func
 
     return inner

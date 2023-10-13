@@ -19,6 +19,7 @@ GroupChatEvent = lambda message: message.is_group
 ChannelEvent = lambda message: message.is_channel
 RealUserEvent = lambda message: not (hasattr(message.sender, "bot") and message.sender.bot)
 BotEvent = lambda message: getattr(message.sender, "bot", False)
+ChatJoinEvent = lambda message: message.user_joined
 
 def AndEvent(*args):
     def call_events(message: Message):

@@ -47,16 +47,19 @@ class Admin:
             await message.edit("<i>Cannot find this user</i>")
             return
 
+        if message.cmd == "dban":
+            await message.delete()
+
         try:
             await message.client(
                 EditBannedRequest(
                     channel=message.chat,
                     participant=user,
-                    banned_rights=Admin.BAN if message.cmd == "ban" else Admin.UNBAN,
+                    banned_rights=Admin.BAN if message.cmd == "ban" or message.cmd == "dban" else Admin.UNBAN,
                 )
             )
             await message.edit(f"<i>{message.cmd.title()}ned {user.first_name}</i>")
-        except TypeError:
+        except (TypeError, ValueError):
             await message.edit("<i>You need to be in a chat to do this</i>")
         except UserAdminInvalidError:
             await message.edit("<i>You're either not an admin or that's more admin than you</i>")
@@ -64,9 +67,6 @@ class Admin:
             await message.edit("<i>Specified user is a no go</i>")
         except ChatAdminRequiredError:
             await message.edit(f"<i>Oh honey, I'm not admin enough to {message.cmd} this user</i>")
-        
-        if message.cmd == "dban":
-            await message.delete()
 
     @run(command="kick")
     async def kick_user(message: Message, client: Client):
@@ -78,7 +78,7 @@ class Admin:
             if not user:
                 await message.edit("<i>Who do you want to kick?</i>")
                 return
-            
+
             user = await get_user(user=message.args, client=client)
 
         if not user:
@@ -91,9 +91,8 @@ class Admin:
                 user=user
             )
             await message.edit(f"<i>Kicked {user.first_name}</i>")
-        except TypeError:
+        except (TypeError, ValueError):
             await message.edit("<i>You need to be in a chat to do this</i>")
-            return
         except UserAdminInvalidError:
             await message.edit("<i>You're either not an admin or that's more admin than you</i>")
         except (UserIdInvalidError, ParticipantIdInvalidError):
@@ -130,7 +129,7 @@ class Admin:
                 )
             )
             await message.edit(f"<i>{message.cmd.title()}d {user.first_name}</i>")
-        except TypeError as e:
+        except (TypeError, ValueError):
             await message.edit("<i>You need to be in a chat to do this</i>")
         except UserAdminInvalidError:
             await message.edit("<i>You're either not an admin or that's more admin than you</i>")
