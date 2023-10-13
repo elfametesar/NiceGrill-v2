@@ -5,7 +5,7 @@ import asyncio
 
 class Memes:
 
-    @event_watcher(pattern="yey|oof|://", users='me')
+    @event_watcher(pattern="yay|oof|://", users='me')
     async def meme_watcher(message: Message, client: Client):
         if message.raw_text.lower() == "yey" or message.raw_text.lower() == "oof":
             for i in range(2,13):

@@ -11,7 +11,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
+from httpx import delete
 from database import settingsdb as settings
+from telethon.errors.rpcerrorlist import MessageNotModifiedError
 from nicegrill import Message, run, event_watcher
 from nicegrill import utils
 from telethon import TelegramClient as Client
@@ -30,23 +32,14 @@ class Compiler:
     TERMINAL_EXEC = None
     SHELL_MODE_EXEC = None
 
-    async def process_done(message, res, template, exit_code):
-        if not (res := res.strip()):
-            exit_code = exit_code.strip()
-
-        if len(res) + len(template) < 4000:
-            await message.edit(
-                template +
-                f"<code>{res}</code>" +
-                exit_code
-            )
-        else:
-            await utils.stream(
-                message=message,
-                res=res,
-                template=template,
-                exit_code=exit_code
-            )
+    async def spawn_process(cmd):
+        return await asyncio.subprocess.create_subprocess_shell(
+            cmd=cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            stdin=asyncio.subprocess.PIPE,
+            close_fds=False
+        )
 
     @run(command="term")
     async def terminal(message: Message, client: Client):
@@ -58,6 +51,7 @@ Notes:
 - It asynchronously manages the execution of the command and processes its output.
 - The output is formatted with information about the input command, actual output, and exit code.
 - It provides an option to view the full log if the output exceeds a certain length.
+- It is an interactive-like terminal where you can constantly send inputs until you kill the process.
 
 Usage:
 
@@ -83,7 +77,7 @@ Usage:
 
 <b>⬤ Output:</b>
 
-"""
+<code>"""
         exit_code = """
 
 <code>Process exited with code {}</code>
@@ -95,77 +89,67 @@ Usage:
         else:
             await message.edit(template)
 
-        await asyncio.sleep(.1)
-
         Compiler.PROCESSES.update({message.id: proc})
 
-        flood_control = 0
-        while line := (await proc.stdout.readline()).decode():
-            res += html.escape(line)
+        flood_control = 6
+        while True:
 
-            if not line.strip():
-                continue
+            async for line in proc.stdout:
 
-            if proc.returncode is not None:
-                res += html.escape((await proc.stdout.read()).decode())
+                if message.id not in Compiler.PROCESSES:
+                    break
 
-                if not (res := res.strip()):
-                    exit_code = exit_code.strip()
+                res += html.escape(line.decode())
 
-                exit_code = exit_code.format(proc.returncode)
+                if proc.returncode is not None:
 
-                if message.id in Compiler.PROCESSES:
-                    del Compiler.PROCESSES[message.id]
+                    res += html.escape((await proc.stdout.read()).decode())
+                    exit_code = exit_code.format(proc.returncode)
 
-                await Compiler.process_done(
-                    message,
-                    res,
-                    template,
-                    exit_code
-                )
-                return
+                    try:
+                        await message.edit(
+                            f"{(template.format(message.args) + res[-(4095 - len(template)):])[-4096:]}</code>"
+                        )
+                    except MessageNotModifiedError:
+                        continue
 
-            if flood_control < 3:
-                flood_control += 1
-                continue
-            else:
-                flood_control = 1
-                await asyncio.sleep(2)
+                    break
 
-            try:
-                if len(res) < 4000:
-                    await message.edit(
-                        template +
-                        f"<code>{res}</code>"
-                    )
+                await asyncio.sleep(0)
+
+                if flood_control > 4:
+                    flood_control = 0
                 else:
+                    flood_control += 1
+                    continue
+
+                try:
                     await message.edit(
-                        template +
-                        f"<code>{res[-4000:]}</code>"
+                        f"{(template.format(message.args) + res[-(4095 - len(template)):])[-4096:]}</code>"
                     )
-            except:
-                pass
+                except MessageNotModifiedError:
+                    continue
+
+            flood_control = 6
+
+            if message.id not in Compiler.PROCESSES:
+                break
+
+            proc = await Compiler.spawn_process(cmd='read line; eval "$line"')
+            Compiler.PROCESSES[message.id] = proc
+            res += "\n\n"
 
         log_url = f"""
 
-<b>For full log:</b> {(await utils.full_log(res)).text}
+<b>For full log:</b> https://nekobin.com/{(await utils.full_log(res)).json()['result'].get('key')}
 """ if len(res) > 4000 else ""
-
-        if message.id in Compiler.PROCESSES:
-            exit_code = exit_code.format(
-                proc.returncode if proc.returncode is not None else 0
-            )
-            del Compiler.PROCESSES[message.id]
-        else:
-            exit_code = exit_code.format(-9)
 
         if not res:
             exit_code = exit_code.strip()
 
         await message.edit(
-            template +
-            f"<code>{res[-4000:]}</code>" +
-            exit_code +
+            f"{(template.format(message.args) + res[-(3999 - len(template)):])[-4000:]}</code>" +
+            exit_code.format(proc.returncode) +
             log_url
         )
 
@@ -249,8 +233,8 @@ int main(int argc, char** argv) {{
         Compiler.PROCESSES.update({message.id: proc})
         
         res = ""
-        while line := (await proc.stdout.readline()).decode():
-            res += line
+        async for line in proc.stdout:
+            res += line.decode()
 
         exit_code = f"""
 
@@ -443,9 +427,7 @@ Usage:
         else:
             proc.stdin.write(bytes(args + "\n", encoding="utf-8"))
 
-        await message.edit(
-            "<i>Input has been sent to the terminal</i>"
-        )
+        await message.delete()
 
     @run(command="kill")
     async def kill(message: Message, client: Client):
@@ -477,7 +459,8 @@ Usage:
         else:
             try:
                 Compiler.PROCESSES[process.id].kill()
-            except:
+            except Exception as e:
+                print(e)
                 pass
             del Compiler.PROCESSES[process.id]
             await message.edit("<i>Successfully killed</i>")
