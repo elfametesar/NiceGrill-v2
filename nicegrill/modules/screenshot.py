@@ -49,7 +49,7 @@ class Screenshot:
                 )
                 await message.delete()
             except Exception as e:
-                await message.edit(f"<i>{html.escape(e)}</i>")
+                await message.edit(f"<i>{html.escape(str(e))}</i>")
                 return
             
             return

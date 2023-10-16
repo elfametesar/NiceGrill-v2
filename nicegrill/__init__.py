@@ -206,7 +206,7 @@ def event_watcher(
     ):
     
     def inner(func):
-        wrapper = return_func(func)
+        wrapper = return_func(func, prefix="")
         nicegrill.client.add_event_handler(
             callback=wrapper,
             event=NewMessage(

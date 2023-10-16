@@ -11,6 +11,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
+from datetime import datetime
 from httpx import delete
 from database import settingsdb as settings
 from telethon.errors.rpcerrorlist import MessageNotModifiedError
@@ -27,18 +28,19 @@ import traceback
 
 class Compiler:
 
+    LAST_MSG_TIME = datetime.now()
     PROCESSES = {}
     SHELL_MODE = None
     TERMINAL_EXEC = None
     SHELL_MODE_EXEC = None
 
-    async def spawn_process(cmd):
+    async def spawn_process(cmd, executable):
         return await asyncio.subprocess.create_subprocess_shell(
             cmd=cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             stdin=asyncio.subprocess.PIPE,
-            close_fds=False
+            executable=executable
         )
 
     @run(command="term")
@@ -62,11 +64,8 @@ Usage:
         if not Compiler.TERMINAL_EXEC:
             Compiler.TERMINAL_EXEC = await Compiler.find_shell()
 
-        proc = await asyncio.create_subprocess_shell(
+        proc = await Compiler.spawn_process(
             cmd=cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            stdin=asyncio.subprocess.PIPE,
             executable=Compiler.TERMINAL_EXEC
         )
 
@@ -84,14 +83,15 @@ Usage:
 """
 
         if not message.cmd:
-            template = ""
+            template = "<code>"
             exit_code = ""
         else:
             await message.edit(template)
 
-        Compiler.PROCESSES.update({message.id: proc})
+        Compiler.PROCESSES[message.id] = proc
 
         flood_control = 6
+
         while True:
 
             async for line in proc.stdout:
@@ -132,10 +132,18 @@ Usage:
 
             flood_control = 6
 
+            if not message.cmd:
+                del Compiler.PROCESSES[message.id]
+                break
+
+            if (datetime.now() - Compiler.LAST_MSG_TIME).seconds > 30:
+                del Compiler.PROCESSES[message.id]
+                break
+
             if message.id not in Compiler.PROCESSES:
                 break
 
-            proc = await Compiler.spawn_process(cmd='read line; eval "$line"')
+            proc = await Compiler.spawn_process(cmd=f'read -t 30 line && eval "$line"')
             Compiler.PROCESSES[message.id] = proc
             res += "\n\n"
 
@@ -502,8 +510,11 @@ Usage:
             await message.edit("<i>Shell is set to default executable</i>")
             return
 
+        settings.set_shell_mode(not Compiler.SHELL_MODE)
+
         Compiler.SHELL_MODE = not Compiler.SHELL_MODE
-        settings.set_shell_mode(Compiler.SHELL_MODE)
+        Compiler.LAST_MSG_TIME = datetime.now()
+
         await message.edit(f"<i>Shell mode is set to {Compiler.SHELL_MODE}</i>")
 
     @event_watcher(pattern=r"(\.+$|^[^.].*)+")
@@ -515,10 +526,17 @@ Usage:
         if not Compiler.SHELL_MODE or message.sender_id != client.me.id:
             return
 
+        if (datetime.now() - Compiler.LAST_MSG_TIME).seconds > 120:
+            await settings.set_shell_mode(False)
+            Compiler.SHELL_MODE = False
+            return
+        
+        Compiler.LAST_MSG_TIME = datetime.now()
+
         try:
             if Compiler.SHELL_MODE_EXEC == sys.executable:
                 await Compiler.python(message, client)
             else:
                 await Compiler.terminal(message, client)
-        except:
+        except Exception:
             pass

@@ -68,6 +68,8 @@ async def get_messages_recursively(message: Message, command=None, prefix=None, 
     if prefix:
         message.cmd = message.raw_text.split(" ", maxsplit=1)
         message.cmd = message.cmd[0][1:]
+    else:
+        message.cmd = ""
 
     if not message.sender and not message.fwd_from:
         message._sender = await message.get_sender()
