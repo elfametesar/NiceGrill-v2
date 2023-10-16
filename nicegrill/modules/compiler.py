@@ -527,7 +527,7 @@ Usage:
             return
 
         if (datetime.now() - Compiler.LAST_MSG_TIME).seconds > 120:
-            await settings.set_shell_mode(False)
+            settings.set_shell_mode(False)
             Compiler.SHELL_MODE = False
             return
         
