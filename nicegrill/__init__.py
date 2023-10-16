@@ -202,7 +202,8 @@ def return_func(func, command="", prefix=prefix, recurse_messages=True):
 
 def event_watcher(
         incoming=True, outgoing=True, forwards=False, custom_event=None,
-        pattern=".*", blacklist=None, users=None, chats=None,):
+        pattern=".*", blacklist=None, users=None, chats=None
+    ):
     
     def inner(func):
         wrapper = return_func(func)
@@ -256,7 +257,8 @@ def chat_watcher(custom_event=None, chats=None):
 
 def run(
         command=None, prefix=prefix, incoming=False, outgoing=True,
-        forwards=False, blacklist=None, users=None, chats=None, custom_event=None):
+        forwards=False, blacklist=None, users=None, chats=None, custom_event=None
+    ):
 
     escaped_prefix = re.escape(prefix)
 
