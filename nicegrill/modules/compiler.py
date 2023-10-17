@@ -143,7 +143,7 @@ Usage:
             if message.id not in Compiler.PROCESSES:
                 break
 
-            proc = await Compiler.spawn_process(cmd=f'read -t 30 line && eval "$line"')
+            proc = await Compiler.spawn_process(cmd=f'read -t 30 line && eval "$line"', executable=Compiler.TERMINAL_EXEC)
             Compiler.PROCESSES[message.id] = proc
             res += "\n\n"
 
@@ -156,8 +156,8 @@ Usage:
             exit_code = exit_code.strip()
 
         await message.edit(
-            f"{(template.format(message.args) + res[-(3999 - len(template)):])[-4000:]}</code>" +
-            exit_code.format(proc.returncode) +
+            f"{(template.format(message.args) + res[-(3999 - len(template)):])[-4000:]}</code>".strip() +
+            exit_code.format(proc.returncode).strip() +
             log_url
         )
 
@@ -526,11 +526,11 @@ Usage:
         if not Compiler.SHELL_MODE or message.sender_id != client.me.id:
             return
 
-        if (datetime.now() - Compiler.LAST_MSG_TIME).seconds > 120:
+        if (datetime.now() - Compiler.LAST_MSG_TIME).seconds > 30:
             settings.set_shell_mode(False)
             Compiler.SHELL_MODE = False
             return
-        
+
         Compiler.LAST_MSG_TIME = datetime.now()
 
         try:
