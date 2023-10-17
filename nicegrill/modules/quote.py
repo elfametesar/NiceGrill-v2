@@ -21,12 +21,17 @@ class FakeMessage:
         self.sender = sender
         self.sender_id = sender.id
         self.from_user = sender
-        self.message = message
+        self.raw_text = message
         self.document = None
         self.client = client
         self.entities = entities
         self.is_reply = False
         self.media = None
+        self.photo = None
+        self.video = None
+        self.sticker = None
+        self.audio = None
+        self.voice = None
 
 
 class Quote:
@@ -765,7 +770,7 @@ class Quote:
         user_info.name = f"{user_info.first_name} {user_info.last_name or ''}".strip()
 
         fake_message_object = FakeMessage(
-            id=user_info.id, message=user_text, sender=user_info, client=client
+            message_id=user_info.id, message=user_text, sender=user_info, client=client
         )
 
         if fake_message_object.id not in Quote.USER_COLORS:
