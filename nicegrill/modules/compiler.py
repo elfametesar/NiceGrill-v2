@@ -12,7 +12,6 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from datetime import datetime
-from httpx import delete
 from database import settingsdb as settings
 from telethon.errors.rpcerrorlist import MessageNotModifiedError
 from nicegrill import Message, run, event_watcher
@@ -60,6 +59,8 @@ Usage:
 .term <shellscript code>
 """
         cmd = message.args.strip()
+
+        Compiler.LAST_MSG_TIME = datetime.now()
 
         if not Compiler.TERMINAL_EXEC:
             Compiler.TERMINAL_EXEC = await Compiler.find_shell()
