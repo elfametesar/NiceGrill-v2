@@ -47,7 +47,7 @@ class AntiPM:
         await message.edit(f"<i>AntiPM has been set to {AntiPM.PM_BLOCKER}</i>")
 
 
-    @run(command="approve")
+    @run(command="bless")
     async def approve_user(message: Message, client: Client):
         """Allows that person to PM you, you can either reply to user,
 type their username or use this in their chat"""
@@ -57,22 +57,22 @@ type their username or use this in their chat"""
 
         if user.id == client.me.id:
             await message.edit(
-                "<i>Why would you wanna approve yourself? "
+                "<i>Why would you wanna bless yourself? "
                 "Rhetorical question: Because you're an approval whore</i>"
             )
             return
 
         if user.id in AntiPM.APPROVED_USERS:
-            await message.edit("<i>User is already approved</i>")
+            await message.edit("<i>User is already blessed</i>")
         else:
             AntiPM.APPROVED_USERS.append(user.id)
             antipmdb.approve_user(user.id)
 
             await message.edit(
-                f"<a href=tg://user?id={user.id}><i>{user.first_name}</a> is approved to PM you now</i>")
+                f"<i>Blessed <a href=tg://user?id={user.id}><i>{user.first_name}</a>, they can PM you now</i>")
 
 
-    @run(command="disapprove")
+    @run(command="curse")
     async def disapprove_user(message: Message, client: Client):
         """Prevents that person to PM you, you can either reply to user,
 type their username or use this in their chat"""
@@ -82,19 +82,19 @@ type their username or use this in their chat"""
 
         if user.id == client.me.id:
             await message.edit(
-                "<i>Why would you wanna disapprove yourself? "
+                "<i>Why would you wanna curse yourself? "
                 "Rhetorical question: Because you're a disappointment to everyone</i>"
             )
             return
 
         if user.id not in AntiPM.APPROVED_USERS:
-            await message.edit("<i>User is already disapproved</i>")
+            await message.edit("<i>User is already cursed</i>")
         else:
             AntiPM.APPROVED_USERS.remove(user.id)
             antipmdb.disapprove_user(user.id)
 
             await message.edit(
-                f"<a href=tg://user?id={user.id}><i>{user.first_name}</a> is disapproved to PM you</i>")
+                f"<i>Cursed <a href=tg://user?id={user.id}><i>{user.first_name}</a>, they cannot PM you anymore</i>")
 
 
     @run(command="block")
@@ -178,9 +178,9 @@ a message in your name until that user gets blocked or approved"""
         AntiPM.NOTIFICATIONS = not AntiPM.NOTIFICATIONS
 
         if AntiPM.NOTIFICATIONS:
-            await message.edit("<i>Notifications from unapproved PMs unmuted</i>")
+            await message.edit("<i>Notifications from cursed PMs unmuted</i>")
         else:
-            await message.edit("<i>Notifications from unapproved PMs muted</i>")
+            await message.edit("<i>Notifications from cursed PMs muted</i>")
 
 
     @run(command="setlimit")
@@ -204,9 +204,9 @@ will be deleted when the idiot passes the message limit"""
         AntiPM.SUPER_BLOCK = not AntiPM.SUPER_BLOCK
 
         if AntiPM.SUPER_BLOCK:
-            await message.edit("<i>Chats from unapproved parties will be removed</i>")
+            await message.edit("<i>Chats from cursed parties will be removed</i>")
         else:
-            await message.edit("<i>Chats from unapproved parties will not be removed anymore</i>")
+            await message.edit("<i>Chats from cursed parties will not be removed anymore</i>")
 
 
     @event_watcher(custom_event=AndEvent(UserChatEvent, RealUserEvent))
