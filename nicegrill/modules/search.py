@@ -85,7 +85,7 @@ class TelegramSearch:
             offset = mesg.raw_text.lower().find(query)
             end = offset + len(query)
 
-            found_query = mesg.raw_text[offset: end] if offset > 0 else ""
+            found_query = mesg.raw_text[offset: end] if offset > 0 else "."
             local_mesg_time = mesg.date.astimezone(datetime.now().tzinfo)
             utc_offset = int(local_mesg_time.strftime("%z").strip("0"))
             
