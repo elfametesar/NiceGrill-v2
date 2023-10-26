@@ -14,7 +14,7 @@ class TelegramSearch:
     async def tester(message: Message, client: Client):
 
         kwargs = {
-            "entity": message.chat.id,
+            "entity": message.chat_id,
             "from_user": None if not message.is_reply else message.reply_to_text.from_user
         }
         regex = None
@@ -84,13 +84,26 @@ class TelegramSearch:
 
             offset = mesg.raw_text.lower().find(query)
             end = offset + len(query)
-            found_query = mesg.raw_text[offset: end]
 
-            search_result = f"""<b>From: </b><a href='tg://user?id={mesg.sender_id}'>{mesg.sender.first_name or "Deleted Account"}</a>
-<b>Where: </b><a href=https://t.me/{mesg.chat.username}>{mesg.chat.title if hasattr(mesg.chat, "title") else mesg.chat.first_name}</a>
-<b>When: </b><i>{mesg.date.strftime("%D %T")} GMT {int(time.timezone/3600)}</i>
-<b>Go to </b><a href=https://t.me/c/{mesg.chat.id}/{mesg.id}>Message</a>
-<b>Message:</b>
+            found_query = mesg.raw_text[offset: end] if offset > 0 else ""
+            local_mesg_time = mesg.date.astimezone(datetime.now().tzinfo)
+            utc_offset = int(local_mesg_time.strftime("%z").strip("0"))
+            
+            if not hasattr(mesg.chat, "first_name"):
+                chat_permalink = f"<a href=https://t.me/c/{mesg.chat_id}>{mesg.chat.title}</a>"
+                message_permalink = f"<a href=https://t.me/c/{mesg.chat.id}/{mesg.id}>Message</a>"
+            else:
+                chat_permalink = f"<a href=tg://user?id={mesg.sender_id}>{mesg.sender.first_name}</a>"
+                if mesg.sender.username:
+                    message_permalink = f"<a href=https://t.me/{mesg.sender.username}/{mesg.id}>Message</a>"
+                else:
+                    message_permalink = "User chats with no username set cannot be hyperlinked"
+
+            search_result = f"""• <b>From: </b><a href='tg://user?id={mesg.sender_id}'>{mesg.sender.first_name or "Deleted Account"}</a>
+• <b>Where: </b>{chat_permalink}
+• <b>When: </b><i>{local_mesg_time.strftime("%F %T")} UTC{0 if utc_offset == "+" or not utc_offset else utc_offset}</i>
+• <b>Message link: </b><i>{message_permalink}</i>
+• <b>Message:</b>
 {mesg.raw_text.replace(found_query, f"<b>{found_query}</b>")}
 
 """ + search_result
