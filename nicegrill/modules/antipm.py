@@ -211,6 +211,7 @@ will be deleted when the idiot passes the message limit"""
 
     @event_watcher(custom_event=AndEvent(UserChatEvent, RealUserEvent))
     async def check_personal_messages(message: Message, client: Client):
+        print(1)
         if AntiPM.PM_BLOCKER:
             user = await message.get_chat()
 
