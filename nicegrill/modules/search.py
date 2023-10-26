@@ -60,7 +60,7 @@ class TelegramSearch:
 
         search_result = ""
 
-        await message.edit(f"<i>Searching for messages with </i><b>{query or regex}</b>")
+        await message.edit(f"<i>Searching for messages with </i><b>{query or regex or 'anything'}</b>")
 
         hit_counter = 0
         async for mesg in client.iter_messages(
@@ -71,6 +71,8 @@ class TelegramSearch:
             if month and int(month) != mesg.date.month:
                 continue
             if day and int(day) != mesg.date.day:
+                continue
+            if not mesg.raw_text:
                 continue
 
             if regex:
