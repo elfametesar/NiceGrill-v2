@@ -1,12 +1,9 @@
 from telethon import TelegramClient as Client
 from nicegrill import Message, run
-from requests import get
 
-import json
+import currency
 
 class Currency:
-    
-    API = "https://free.currconv.com/api/v7/convert?q={from_cur}_{to_cur}&compact=ultra&apiKey=6803cf79e6a6376859d0"
     
     @run(command="cur")
     async def convert_currency(message: Message, client: Client):
@@ -32,12 +29,9 @@ class Currency:
 
             amount = float(amount)
 
-        result = get(Currency.API.format(from_cur=source_currency, to_cur=target_currency))
-        result = json.loads(result.text)
+        result = currency.convert(source_currency, target_currency, amount)
 
-        base_amount = result.get(f"{source_currency}_{target_currency}".upper())
-
-        if not base_amount:
+        if not result:
             await message.edit("<i>There is no result for your currency query</i>")
         else:
-            await message.edit(f"<i>{amount} {source_currency} is {round(base_amount * amount, 2):,} {target_currency}</i>")
+            await message.edit(f"<i>{amount} {source_currency} is {round(float(result), 2):,} {target_currency}</i>")

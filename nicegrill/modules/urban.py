@@ -16,7 +16,7 @@
 import asyncio
 from nicegrill import Message, run
 from telethon import TelegramClient as Client
-from urbandictionary_python import UrbanDictionary, exceptions
+from udpy import UrbanClient
 
 class Urban:
 
@@ -30,22 +30,24 @@ class Urban:
 
         await message.edit(f"<i>Searching for a definition for <u>{word}</u></i>")
 
-        try:
-            result = await asyncio.to_thread(UrbanDictionary, word)
-        except exceptions.WordNotFound:
+        urban_client = UrbanClient()
+
+        result = urban_client.get_definition(word)
+
+        if not result:
             await message.edit(f"<i>No definition found for <u>{word}</u></i>")
             return
-        except Exception as e:
-            await message.edit(f"<i>Error: {e}</i>")
-            return
+
+        result = result[0]
 
         await message.edit(
 f"""<b>◍ Word:</b>
-<i>{result.data['word']}</i>
+<i>{word}</i>
 
 <b>◍ Meaning:</b>
-<i>{result.data['meaning']}</i>
+<i>{result.definition}</i>
 
 <b>◍ Example:</b>
-<i>{result.data['example']}</i>"""
+<i>{result.example}</i>"""
         )
+
