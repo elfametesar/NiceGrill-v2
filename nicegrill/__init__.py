@@ -1,5 +1,7 @@
 import telethon
 from nicegrill.utils import get_messages_recursively, Message
+from telethon.tl.functions.channels import CreateChannelRequest
+
 from config import API_ID, API_HASH, SESSION, MONGO_URI
 from database import blacklistdb, settingsdb
 from telethon.events import NewMessage, MessageEdited
@@ -122,6 +124,18 @@ class NiceGrill:
         self.client.parse_mode = 'html'
         self.client.me = await self.client.get_me()
         self.client._loop = asyncio.get_event_loop()
+
+        if not settingsdb.get_storage_channel():
+            created_private_channel = await self.client(
+                CreateChannelRequest(
+                    title="NiceGrill Storage Database",
+                    about="Reserved for bot usage, do not manually edit.",
+                    broadcast=True, megagroup=True
+                )
+            )
+
+            channel_id = created_private_channel.updates[1].channel_id
+            settingsdb.set_storage_channel(channel_id)
 
         sys.stdout = Stream()
         sys.stdin = sys.stdout

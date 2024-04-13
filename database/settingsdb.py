@@ -18,6 +18,12 @@ from database.mongo import Mongo
 Mongo = Mongo["NiceGrill"]["Settings"]
 
 
+def set_storage_channel(channel_id: str):
+    delete_data("Storage Channel")
+    return Mongo.insert_one(
+        {"Storage Channel": channel_id}
+    )
+
 def set_download_path(download_path: str):
     delete_data("Download Path")
     return Mongo.insert_one(
@@ -44,6 +50,10 @@ def set_restart_details(chat_id: int, message_id: int):
             "Message": message_id
         }
     )
+
+def get_storage_channel():
+    if download_path_data := Mongo.find_one({"Storage Channel": {"$exists": True}}):
+        return download_path_data["Storage Channel"]
 
 def get_download_path():
     if download_path_data := Mongo.find_one({"Download Path": {"$exists": True}}):
