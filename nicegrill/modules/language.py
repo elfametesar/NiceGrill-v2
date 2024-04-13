@@ -1,7 +1,9 @@
+from fnmatch import translate
 from nicegrill import Message, run
 from telethon import TelegramClient as Client
 from gtts import gTTS
 from io import BytesIO
+from translate import Translator
 
 import asyncio
 import html
@@ -56,3 +58,37 @@ class Language:
             await message.delete()
         except Exception as e:
             await message.edit(f"<i>{html.escape(str(e))}</i>")
+
+    @run(command="trt")
+    async def google_translate(message: Message, client: Client):
+        if not message.args:
+            await message.edit("<i>You are missing arguments</i>")
+            return
+        
+        base_lang = "autodetect"
+
+        await message.edit("<i>Translating..</i>")
+
+        if (start_index := message.args.find("base=")) > -1:
+            end_index = message.args.find(" ", start_index)
+            base_lang = message.args[start_index + 5:end_index]
+            message.args = message.args.replace(message.args[start_index:end_index + 1], "")
+        
+        if message.is_reply:
+            base_text = message.reply_to_text.raw_text
+            target_lang = message.args
+        elif not message.args.count(" "):
+            await message.edit("<i>What am I even translating? Give me the target language and the text to translate</i>")
+            return
+        else:
+            target_lang, base_text = message.args.split(maxsplit=2)
+
+        translator = Translator(from_lang=base_lang, to_lang=target_lang)
+
+        translation = translator.translate(base_text)
+
+        if not translation:
+            await message.edit("<i>No translation found for the provided text</i>")
+            return
+        
+        await message.edit(f"<i>{translation}</i>")
