@@ -17,7 +17,9 @@ PrivateChatEvent = lambda message: message.is_private
 UserChatEvent = lambda message: message.is_private and message.chat_id != nicegrill.client.me.id
 GroupChatEvent = lambda message: message.is_group
 ChannelEvent = lambda message: message.is_channel
-RealUserEvent = lambda message: not (hasattr(message.sender, "bot") and message.sender.bot)
+RealUserEvent = lambda message: (
+    hasattr(message.sender, "bot") and not message.sender.bot and message.sender.id != nicegrill.client.me.id
+)
 BotEvent = lambda message: getattr(message.sender, "bot", False)
 ChatJoinEvent = lambda message: message.user_joined
 
