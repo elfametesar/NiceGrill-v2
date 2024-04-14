@@ -6,6 +6,7 @@
 """ Userbot module containing various sites direct links generators"""
 
 from os import popen
+import os
 from random import choice
 from bs4 import BeautifulSoup
 from nicegrill import run, Message
@@ -107,25 +108,21 @@ class DirectGen:
 
     def mega_dl(url: str) -> str:
         """ MEGA.nz direct links generator
-        Using https://github.com/tonikelope/megadown"""
+        Using https://gist.github.com/zanculmarktum/170b94764bd9a3da31078580ccea8d7e"""
         reply = ''
         try:
             link = re.findall(r'\bhttps?://.*mega.*\.nz\S+', url)[0]
         except IndexError:
             reply = "<code>No MEGA.nz links found</code>\n"
             return reply
-        command = f'./megadown -q -m {link}'
+        
+        if not os.path.exists("megafetch.sh"):
+            os.popen("curl https://gist.githubusercontent.com/zanculmarktum/170b94764bd9a3da31078580ccea8d7e/raw/1adfba71a69ef155c1180ab21e8fb6bead1a6c92/megafetch.sh -o megafetch.sh")
+
+        command = f'bash megafetch.sh {link}'
         result = popen(command).read()
-        try:
-            data = json.loads(result)
-            print(data)
-        except json.JSONDecodeError:
-            reply += "<code>Error: Can't extract the link</code>\n"
-            return reply
-        dl_url = data['url']
-        name = data['file_name']
-        size = humanize(data=int(data['file_size']))
-        reply += f'[{name} ({size})]({dl_url})\n'
+        link, name, _, _ = result.splitlines()
+        reply += f'<a href="{link}">{name}</a>\n'
         return reply
 
 

@@ -17,7 +17,6 @@ import json
 import os
 
 class Media:
-    """this is a test"""
     
     GOOGLE_CLIENT: GoogleImagesSearch = None
     SEARCH_LIMIT = 5

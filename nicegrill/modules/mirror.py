@@ -7,7 +7,8 @@ from googleapiclient.http import MediaFileUpload
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from httpx import post
+from requests import post
+from httpx import post as post2
 
 import asyncio
 import os.path
@@ -150,7 +151,7 @@ class Mirror:
     async def upload_to_pixeldrain(file_data):
 
         return await asyncio.to_thread(
-            post,
+            post2,
             url=Mirror.API,
             files={
                 "file": file_data,
@@ -194,13 +195,13 @@ class Mirror:
             return
 
         await message.edit("<i>Uploading</i>")
-        
+
         with open(url_or_file, "rb+") as fd:
             response = await asyncio.to_thread(
                 post,
                 url=Mirror.FILEIO_API,
                 files={"file": fd},
-                follow_redirects=True
+                allow_redirects=True
             )
 
             if response:
