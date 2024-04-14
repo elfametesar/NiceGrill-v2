@@ -1,5 +1,5 @@
 from nicegrill import Message, run
-from telethon import TelegramClient as Client
+from telethon import Button, TelegramClient as Client
 from nicegrill.modules.downloader import Downloader
 from nicegrill.modules.compiler import Compiler
 from googleapiclient.discovery import build
@@ -17,6 +17,7 @@ import urllib.parse
 class Mirror:
 
     API = "https://pixeldrain.com/api/file/"
+    FILEIO_API = "https://file.io"
     GDRIVE_URL = "https://drive.google.com/file/d/{}/view?usp=sharing"
 
     async def authenticate(message: Message):
@@ -84,7 +85,11 @@ class Mirror:
 
             url_or_file = await Downloader.download_file(message=message, client=client)
 
-            await message.edit("<i>File has been downloaded, uploading to PixelDrain now..</i>")
+            if not url_or_file:
+                await message.edit("<i>Mirroring has been cancelled</i>")
+                return
+
+            await message.edit("<i>File has been downloaded, uploading to mirror host now..</i>")
             await asyncio.sleep(1)
 
         return url_or_file
@@ -93,6 +98,9 @@ class Mirror:
     async def mirror_to_gdrive(message: Message, client: Client):
 
         url_or_file = await Mirror.get_file(message=message, client=client)
+
+        if not url_or_file:
+            return
 
         await message.edit("<i>Uploading...</i>")
 
@@ -154,6 +162,9 @@ class Mirror:
     async def mirror_to_pixeldrain(message: Message, client: Client):
         url_or_file = await Mirror.get_file(message=message, client=client)
 
+        if not url_or_file:
+            return
+
         await message.edit("<i>Uploading</i>")
 
         with open(url_or_file, "rb+") as fd:
@@ -174,3 +185,30 @@ class Mirror:
         else:
             await message.edit(
                 f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>")
+
+    @run(command="fileio")
+    async def mirror_to_anonfiles(message: Message, client: Client):
+        url_or_file = await Mirror.get_file(message=message, client=client)
+
+        if not url_or_file:
+            return
+
+        await message.edit("<i>Uploading</i>")
+        
+        with open(url_or_file, "rb+") as fd:
+            response = await asyncio.to_thread(
+                post,
+                url=Mirror.FILEIO_API,
+                files={"file": fd},
+                follow_redirects=True
+            )
+
+            if response:
+                await message.edit(
+                    "<i>Your file has been uploaded to the mirror host\n"
+                    f"You can access it through: </i>{response.json().get('link')}",
+                    link_preview=False
+                )
+            else:
+                await message.edit(
+                    f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>")

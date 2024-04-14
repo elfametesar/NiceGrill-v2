@@ -1,5 +1,5 @@
 from datetime import datetime
-from telethon.tl.types import MessageEntityUrl
+from telethon.tl.types import MessageEntityUrl, MessageEntityTextUrl
 from telethon import TelegramClient as Client
 from database import settingsdb
 from pyFunloader import Funload
@@ -209,6 +209,9 @@ class Downloader:
             if message.is_reply:
                 urls.extend(
                     [link for _, link in message.reply_to_text.get_entities_text(MessageEntityUrl)]
+                )
+                urls.extend(
+                    [link.url for link, _ in message.reply_to_text.get_entities_text(MessageEntityTextUrl)]
                 )
 
             if not urls:

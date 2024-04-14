@@ -66,7 +66,7 @@ class DirectGen:
 
     def gdrive(url: str) -> str:
         """ GDrive direct links generator """
-        drive = 'https://drive.google.com'
+        drive = 'https://drive.usercontent.google.com/download?id='
         try:
             link = re.findall(r'\bhttps?://drive\.google\.com\S+', url)[0]
         except IndexError:
@@ -75,35 +75,13 @@ class DirectGen:
         file_id = ''
         reply = ''
         if link.find("view") != -1:
-            file_id = link.split('/')[-2]
+            file_id = link.split('/')[-3]
         elif link.find("open?id=") != -1:
             file_id = link.split("open?id=")[1].strip()
         elif link.find("uc?id=") != -1:
             file_id = link.split("uc?id=")[1].strip()
-        url = f'{drive}/uc?export=download&id={file_id}'
-        download = requests.get(url, stream=True, allow_redirects=False)
-        cookies = download.cookies
-        try:
-            # In case of small file size, Google downloads directly
-            dl_url = download.headers["location"]
-            if 'accounts.google.com' in dl_url:  # non-public file
-                reply += '<code>Link is not public!</code>\n'
-                return reply
-            name = 'Direct Download Link'
-        except KeyError:
-            # In case of download warning page
-            page = BeautifulSoup(download.content, 'lxml')
-            export = drive + page.find('form').get('action').replace(drive, "")
-            name = page.find('span', {'class': 'uc-name-size'}).text
-            response = requests.get(export,
-                                    stream=True,
-                                    allow_redirects=False,
-                                    cookies=cookies)
-            dl_url = response.headers['location']
-            if 'accounts.google.com' in dl_url:
-                reply += 'Link is not public!'
-                return reply
-        reply += f"<a href='{dl_url}'>{name}</a>\n"
+        drive += f'{file_id}&export=download&authuser=0&confirm=t&uuid=80cc8705-2238-4fe1-a60a-c87a9f439c63&at=APZUnTX1g3CMlsmMAF6xHVGVycK8%3A1713014570389'
+        reply = f"<a href='{drive}'>Direct Download Link</a>\n"
         return reply
 
 
