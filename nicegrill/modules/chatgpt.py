@@ -16,6 +16,7 @@
 from telethon import TelegramClient as Client
 from nicegrill import Message, run
 from g4f.client import AsyncClient as GPTClient
+from g4f.errors import RateLimitError, RetryProviderError
 
 class ChatGPT:
 
@@ -25,10 +26,17 @@ class ChatGPT:
     async def converse_with_chatgpt(message: Message, client: Client):
         await message.edit("<i>Getting a response</i>")
 
-        response = await ChatGPT.CLIENT.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": message.args}]
-        )
+        try:
+            response = await ChatGPT.CLIENT.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": message.args}]
+            )
+        except (RateLimitError, RetryProviderError):
+            await message.edit("<i>You have reached the limit of free use</i>")
+            return
+        except Exception as e:
+            await message.edit(f"<b>Error: </b><i>{e}</i>")
+            return
 
         await message.edit(
 f"""⚙︎ **Me: **__{message.args}__
