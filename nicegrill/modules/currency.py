@@ -1,7 +1,8 @@
 from telethon import TelegramClient as Client
 from nicegrill import Message, run
+from currency_rate.converter import Converter
 
-import currency
+import asyncio
 
 class Currency:
     
@@ -29,7 +30,12 @@ class Currency:
 
             amount = float(amount)
 
-        result = currency.convert(source_currency, target_currency, amount)
+        result = await asyncio.to_thread(
+            Converter().rate,
+            source_currency,
+            target_currency,
+            amount
+        )
 
         if not result:
             await message.edit("<i>There is no result for your currency query</i>")
