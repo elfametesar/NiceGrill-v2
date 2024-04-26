@@ -91,7 +91,7 @@ Usage:
 
         Compiler.PROCESSES[message.id] = proc
 
-        flood_control = 6
+        flood_control = 51
 
         while True:
 
@@ -118,7 +118,7 @@ Usage:
 
                 await asyncio.sleep(0)
 
-                if flood_control > 4:
+                if flood_control > 50:
                     flood_control = 0
                 else:
                     flood_control += 1
@@ -150,7 +150,7 @@ Usage:
 
         log_url = f"""
 
-<b>For full log:</b> https://nekobin.com/{(await utils.full_log(res)).json()['result'].get('key')}
+<b>For full log:</b> {(await utils.full_log(res)).content.decode()}
 """ if len(res) > 4000 else ""
 
         if not res:

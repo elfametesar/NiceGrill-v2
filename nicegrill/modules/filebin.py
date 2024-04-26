@@ -22,8 +22,7 @@ from io import BytesIO
 
 class FileBin:
 
-    SERVER = "https://nekobin.com"
-    PATH = "/api/documents"
+    SERVER = "https://0x0.st"
 
     @run(command="paste")
     async def write_to_url(message: Message, client: Client):
@@ -48,7 +47,7 @@ class FileBin:
 
         await message.edit(
             f"<i>Your text pasted successfully.\n"
-            f"Here's the link: {FileBin.SERVER}/{link.json()['result'].get('key')}</i>",
+            f"Here's the link: {link.content.decode()}</i>",
             link_preview=False
         )
 
@@ -62,8 +61,7 @@ class FileBin:
             link = ""
             for _, link in message.reply_to_text.get_entities_text(MessageEntityUrl):
                 if link.startswith(FileBin.SERVER):
-                    links.append(link.replace(".com", ".com/api/documents"))
-                    print(link)
+                    links.append(link)
 
         elif arg.startswith(FileBin.SERVER):
             links.append(arg)
@@ -81,7 +79,7 @@ class FileBin:
         )
 
         if raw_text:
-            raw_text = raw_text.json()["result"].get("content")
+            raw_text = raw_text.content.decode()
             try:
                 await message.edit(raw_text)
             except MessageTooLongError:

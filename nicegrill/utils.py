@@ -139,11 +139,11 @@ async def get_full_log(url):
 async def full_log(log):
     async with AsyncClient() as session:
         url = await session.post(
-            url="https://nekobin.com/api/documents",
-            json={
-                "content": html.unescape(log),
-                "title": "None",
-                "Author": "Anon"
+            url="https://0x0.st",
+            files={
+                "file": (
+                    "log", log
+                )
             }
         )
         return url
@@ -183,7 +183,7 @@ async def stream(message: Message, res, template, exit_code="", log=True):
     if log and len(res) > delim:
         log_url = f"""
 
-<b>For full log:</b> https://nekobin.com/{(await full_log(res)).json()['result'].get('key')}
+<b>For full log:</b> {(await full_log(res)).content.decode()}
         """
     else:
         log_url = ""
