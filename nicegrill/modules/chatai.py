@@ -108,7 +108,7 @@ f"""⚙︎ **Me: **__{message.args}__
         
         message.args = message.args.strip()
 
-        with gem_client.start_chat(model="models/gemini-1.5-pro-latest") as chat:
+        with gem_client.start_chat(model=ChatAI.GEMINI_AI_MODEL) as chat:
             if file_path:
                 prompt = [
                     file_path,
