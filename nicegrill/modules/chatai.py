@@ -99,7 +99,7 @@ f"""⏺ **Me: **__{message.args}__
                     return
 
             elif message.reply_to_text.message:
-                message.args += "\n\n" + message.reply_to_text.message
+                message.args = message.reply_to_text.message + "\n\n" + message.args
 
         if not message.args:
             ChatAI.GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest" if ChatAI.GEMINI_AI_MODEL != "models/gemini-1.5-pro-latest" else "models/gemini-1.0-pro"
