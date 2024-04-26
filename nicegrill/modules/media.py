@@ -4,13 +4,14 @@ from config import GOOGLE_DEV_API, GOOGLE_CX_ID
 from telethon import TelegramClient as Client
 from google_images_search import GoogleImagesSearch
 from pytube import YouTube
-from googlesearch.googlesearch import GoogleSearch
+from googlesearch import search
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
 from nicegrill.utils import get_full_log, strip_prefix
 from io import BytesIO
 from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
+from requests import get
 
 import asyncio
 import html
@@ -163,19 +164,32 @@ class Media:
         await message.edit("<i>Searching..</i>")
 
         google_search = await asyncio.to_thread(
-            GoogleSearch().search,
+            search,
             query=message.args,
-            num_results=Media.SEARCH_LIMIT
+            stop=Media.SEARCH_LIMIT
         )
+
+        print("tested")
 
         try:
             result_page = ""
-            for search_result in await asyncio.to_thread(list, google_search):
-                result_page +=  f"""
-<b>◍ {search_result.title}</b>
-<i>{search_result.url}</i>
 
-{search_result.description}
+
+            for link in await asyncio.to_thread(list, google_search):
+                r = get(link)
+                soup = BeautifulSoup(r.content, "lxml")
+
+                title = soup.find("title").text
+                desc = ""
+                desc_tag = soup.find("meta", {"name": "description"})
+
+                if desc_tag:
+                    desc = desc_tag.get("content").strip()
+
+                result_page +=  f"""
+<b>◍ {title}</b>
+<i>{link}</i>
+{desc}
 """
 
         except (ReadTimeout, ConnectTimeout):
@@ -183,11 +197,11 @@ class Media:
             return
 
         except HTTPError:
-            await message.edit("<i>Too</i>")
+            await message.edit("<i>Too many requests</i>")
             return
 
-        except Exception:
-            await message.edit("<i>Google search API is dead</i>")
+        except Exception as e:
+            await message.edit(f"{e}\n\n<i>Google search API is dead</i>")
             return
 
         await message.edit(result_page, link_preview=False)
