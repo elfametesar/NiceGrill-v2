@@ -1,9 +1,10 @@
+from urllib.error import HTTPError
 from nicegrill import Message, run, startup
 from config import GOOGLE_DEV_API, GOOGLE_CX_ID
 from telethon import TelegramClient as Client
 from google_images_search import GoogleImagesSearch
 from pytube import YouTube
-from googlesearch import search
+from googlesearch.googlesearch import GoogleSearch
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
 from nicegrill.utils import get_full_log, strip_prefix
@@ -161,11 +162,10 @@ class Media:
     async def google_regular_search(message: Message, client: Client):
         await message.edit("<i>Searching..</i>")
 
-        google_search = search(
-            message.args,
-            advanced=True,
-            num_results=Media.SEARCH_LIMIT,
-            timeout=10
+        google_search = await asyncio.to_thread(
+            GoogleSearch().search,
+            query=message.args,
+            num_results=Media.SEARCH_LIMIT
         )
 
         try:
@@ -182,10 +182,13 @@ class Media:
             await message.edit("<i>Time has run out for this search</i>")
             return
 
-        except:
-            await message.edit("<i>Google search API is dead</i>")
+        except HTTPError:
+            await message.edit("<i>Too</i>")
             return
 
+        except Exception:
+            await message.edit("<i>Google search API is dead</i>")
+            return
 
         await message.edit(result_page, link_preview=False)
 
@@ -195,9 +198,9 @@ class Media:
         if not message.args:
             await message.edit("<i>Give me a keyword to look for in Bing images</i>")
             return
-        
+
         await message.edit("<i>Retrieving data from image search</i>")
-        
+
         try:
             url_data = await get_full_log(Media.URL + message.args)
         except Exception as e:
@@ -230,9 +233,9 @@ class Media:
         await message.edit("<i>Uploading image files to telegram</i>")
 
         result.clear()
-        
+
         hit_counter = 0
-        
+
         for image_url in image_urls:
             if hit_counter == Media.SEARCH_LIMIT:
                 break
@@ -254,7 +257,7 @@ class Media:
                 )
             )
             hit_counter += 1
-        
+
         if not result:
             await message.edit("<i>No images were downloaded, therefore process has failed</i>")
             return

@@ -47,9 +47,9 @@ class ChatAI:
             return
 
         await message.edit(
-f"""⚙︎ **Me: **__{message.args}__
+f"""⏺ **Me: **__{message.args}__
 
-**⚙︎ ChatGPT: **
+**⏺ ChatGPT: **
 {response.choices[0].message.content}
 """,
             parse_mode="md"
@@ -135,9 +135,9 @@ f"""⚙︎ **Me: **__{message.args}__
                 return
 
             await message.edit(
-                f"""⚙︎ **Me: **__{message.args}__
+                f"""⏺ **Me: **__{message.args}__
 
-**⚙︎ Gemini AI: **
+**⏺ Gemini AI: **
 {response.candidates[0].text}""",
                 parse_mode="md"
             )
