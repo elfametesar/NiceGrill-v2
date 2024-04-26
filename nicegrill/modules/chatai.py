@@ -69,6 +69,8 @@ f"""⚙︎ **Me: **__{message.args}__
                 f"<b>GeminiAI:</b> <i>{html.escape(str(e))}</i>"
             )
             return
+        
+        await message.edit("<i>Asking GeminiAI</i>")
 
         if message.reply_to_text:
             if message.reply_to_text.photo:
@@ -96,7 +98,7 @@ f"""⚙︎ **Me: **__{message.args}__
                     return
 
             elif message.reply_to_text.message:
-                message.args = message.reply_to_text.message
+                message.args += "\n\n" + message.reply_to_text.message
 
         if not message.args:
             await message.edit("<i>You need to input an inquiry for the AI</i>")
