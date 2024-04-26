@@ -171,6 +171,13 @@ f"""⚙︎ **Me: **__{message.args}__
 
         await message.edit(f"<i>Proxy has been set to {proxy_type} type {host}:{port}")
 
+    @run(command="getproxy")
+    async def get_gemini_proxy(message: Message, client: Client):
+        if ChatAI.PROXY:
+            await message.edit(f"<i>{ChatAI.PROXY.type} = {ChatAI.PROXY.host}:{ChatAI.PROXY.port}</i>")
+        else:
+            await message.edit(f"<i>There is no proxy set for GeminiAI</i>")
+
 @startup
 def load_from_database():
     proxy_data = settings.get_ai_proxy()
