@@ -24,6 +24,12 @@ def set_storage_channel(channel_id: str):
         {"Storage Channel": channel_id}
     )
 
+def set_ai_proxy(proxy_info: str):
+    delete_data("AI Proxy")
+    return Mongo.insert_one(
+        ({"AI Proxy": proxy_info})
+    )
+
 def set_download_path(download_path: str):
     delete_data("Download Path")
     return Mongo.insert_one(
@@ -54,6 +60,10 @@ def set_restart_details(chat_id: int, message_id: int):
 def get_storage_channel():
     if download_path_data := Mongo.find_one({"Storage Channel": {"$exists": True}}):
         return download_path_data["Storage Channel"]
+
+def get_ai_proxy():
+    if proxy_info_data := Mongo.find_one({"AI Proxy": {"$exists": True}}):
+        return proxy_info_data["AI Proxy"]
 
 def get_download_path():
     if download_path_data := Mongo.find_one({"Download Path": {"$exists": True}}):
