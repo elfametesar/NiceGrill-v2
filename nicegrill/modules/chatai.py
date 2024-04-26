@@ -27,6 +27,7 @@ import html
 class ChatAI:
 
     CLIENT = GPTClient()
+    GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest"
     PROXY = None
 
     @run(command="gpt")
@@ -101,8 +102,11 @@ f"""⚙︎ **Me: **__{message.args}__
                 message.args += "\n\n" + message.reply_to_text.message
 
         if not message.args:
-            await message.edit("<i>You need to input an inquiry for the AI</i>")
+            ChatAI.GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest" if ChatAI.GEMINI_AI_MODEL != "models/gemini-1.5-pro-latest" else "models/gemini-1.0-pro"
+            await message.edit(f"<i>Gemini version has been set to {ChatAI.GEMINI_AI_MODEL[7:]}</i>")
             return
+        
+        message.args = message.args.strip()
 
         with gem_client.start_chat(model="models/gemini-1.5-pro-latest") as chat:
             if file_path:
@@ -122,7 +126,12 @@ f"""⚙︎ **Me: **__{message.args}__
                     message=f"<i>{html.escape(str(e))}</i>",
                     entity=client.me
                 )
-                await message.edit("<i>Error message is in saved messages for privacy</i>")
+
+                if message.chat_id != client.me.id:
+                    await message.edit("<i>Error message is in saved messages for privacy</i>")
+                else:
+                    await message.delete()
+
                 return
 
             await message.edit(
