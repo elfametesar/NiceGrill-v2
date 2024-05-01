@@ -13,21 +13,26 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
+from io import BytesIO
 from telethon import TelegramClient as Client
 from nicegrill import Message, run, startup
 from config import GEMINI_API
 from database import settingsdb as settings
 from g4f.client import AsyncClient as GPTClient
 from g4f.errors import RateLimitError, RetryProviderError
-from gemini_ng import GeminiClient
+from gemini_ng import GeminiClient as GeminiAPIClient
 from gemini_ng.schemas.proxy import ProxyInfo
+from gemini_webapi import GeminiClient
+from gemini_webapi.exceptions import AuthError
 
 import html
+
 
 class ChatAI:
 
     CLIENT = GPTClient()
     GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest"
+    GEMINI_METADATA = None
     PROXY = None
 
     @run(command="gpt")
@@ -54,13 +59,80 @@ f"""⏺ **Me: **__{message.args}__
 """,
             parse_mode="md"
         )
-    
+
     @run(command="gem")
-    async def converse_with_gemini(message: Message, client: Client):
-        file_path = None
+    async def converse_with_gemini_via_cookies(message: Message, client: Client):
+        file = None
+
+        proxies = None
+        if ChatAI.PROXY:
+            proxies = {
+                "http://": f"{ChatAI.PROXY.type}://{ChatAI.PROXY.host}:{ChatAI.PROXY.port}",
+                "https://": f"{ChatAI.PROXY.type}://{ChatAI.PROXY.host}:{ChatAI.PROXY.port}",
+            }
 
         try:
             gem_client = GeminiClient(
+                proxies=proxies
+            )
+
+            await gem_client.init(timeout=30, auto_close=False, close_delay=300, auto_refresh=True)
+
+        except ValueError:
+            await message.edit(
+                f"<i>Failed to load cookies from local browser. Please pass cookie values manually</i>"
+            )
+            return
+
+        except AuthError:
+            await message.edit(
+                f"<i>SECURE_1PSIDTS could get expired frequently, please make sure cookie values are up to date</i>"
+            )
+            return
+        
+        await message.edit("<i>Asking GeminiAI</i>")
+
+        if message.reply_to_text:
+            if message.reply_to_text.photo:
+                file: BytesIO = await message.reply_to_text.download_media(BytesIO())
+                file.seek(0)
+                file = file.getvalue()
+
+            elif message.reply_to_text.message:
+                message.args = message.reply_to_text.message + "\n\n" + message.args
+        
+        message.args = message.args.strip()
+
+        chat = gem_client.start_chat(metadata=ChatAI.GEMINI_METADATA)
+
+        try:
+            response = await chat.send_message(message.args, image=file)
+        except Exception as e:
+            await message.edit(f"<b>GeminiAI: </b><i>{e}</i>")
+            return
+
+        ChatAI.GEMINI_METADATA = chat.metadata
+        settings.set_ai_metadata(",".join(chat.metadata)) 
+
+        image_urls = ""
+        if response.images:
+            for image in response.images:
+                image_urls += f"\n\n* {image.title}({image.url})"
+
+        await message.edit(
+                f"""⏺ **Me: **__{message.args}__
+
+**⏺ Gemini AI: **
+{response}{image_urls}""",
+                parse_mode="md"
+            )
+
+    @run(command="gemapi")
+    async def converse_with_gemini_via_api(message: Message, client: Client):
+        file_path = None
+
+        try:
+            gem_client = GeminiAPIClient(
                 api_key=GEMINI_API,
                 timeout=5,
                 proxy_info=ChatAI.PROXY
@@ -192,3 +264,7 @@ def load_from_database():
         )
     else:
         ChatAI.PROXY = None
+
+    metadata = settings.get_ai_metadata()
+
+    ChatAI.GEMINI_METADATA = metadata.split(",")

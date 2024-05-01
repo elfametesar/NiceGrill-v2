@@ -24,3 +24,8 @@ google-auth-oauthlib
 emoji
 currency-rate
 translate
+gemini-ng
+gemini-webapi
+httpcore[socks]
+socksio
+httpx[socks]
