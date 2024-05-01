@@ -30,6 +30,12 @@ def set_ai_proxy(proxy_info: str):
         ({"AI Proxy": proxy_info})
     )
 
+def set_ai_metadata(metadata: str):
+    delete_data("AI Metadata")
+    return Mongo.insert_one(
+        ({"AI Metadata": metadata})
+    )
+
 def set_download_path(download_path: str):
     delete_data("Download Path")
     return Mongo.insert_one(
@@ -64,6 +70,10 @@ def get_storage_channel():
 def get_ai_proxy():
     if proxy_info_data := Mongo.find_one({"AI Proxy": {"$exists": True}}):
         return proxy_info_data["AI Proxy"]
+
+def get_ai_metadata():
+    if proxy_info_data := Mongo.find_one({"AI Metadata": {"$exists": True}}):
+        return proxy_info_data["AI Metadata"]
 
 def get_download_path():
     if download_path_data := Mongo.find_one({"Download Path": {"$exists": True}}):
