@@ -100,7 +100,7 @@ class Snippets:
         snip_menu = "<b>Snippets: </b>\n\n"
 
         for snip in Snippets.SAVED_SNIPPETS.keys():
-            snip_menu += f"<i> - {snip}\n"
+            snip_menu += f"<i> · {snip}\n"
         
         await message.edit(snip_menu + "</i>")
 

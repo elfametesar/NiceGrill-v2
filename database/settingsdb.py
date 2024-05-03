@@ -30,6 +30,12 @@ def set_ai_proxy(proxy_info: str):
         ({"AI Proxy": proxy_info})
     )
 
+def set_sticker_pack(sticker_pack: str):
+    delete_data("Sticker Pack")
+    return Mongo.insert_one(
+        ({"Sticker Pack": sticker_pack})
+    )
+
 def set_ai_metadata(metadata: str):
     delete_data("AI Metadata")
     return Mongo.insert_one(
@@ -66,6 +72,10 @@ def set_restart_details(chat_id: int, message_id: int):
 def get_storage_channel():
     if download_path_data := Mongo.find_one({"Storage Channel": {"$exists": True}}):
         return download_path_data["Storage Channel"]
+
+def get_sticker_pack():
+    if download_path_data := Mongo.find_one({"Sticker Pack": {"$exists": True}}):
+        return download_path_data["Sticker Pack"]
 
 def get_ai_proxy():
     if proxy_info_data := Mongo.find_one({"AI Proxy": {"$exists": True}}):
