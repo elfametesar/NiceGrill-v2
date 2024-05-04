@@ -22,7 +22,7 @@ from telethon.functions import stickers, messages
 from telethon import types
 from telethon.utils import get_attributes
 from telethon.tl.functions.messages import GetStickerSetRequest
-from telethon.tl.types import InputStickerSetShortName, InputDocument, InputStickerSetID
+from telethon.tl.types import InputStickerSetShortName, InputDocument, InputStickerSetID 
 
 import math
 import emoji

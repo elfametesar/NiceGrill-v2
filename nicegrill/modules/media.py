@@ -8,6 +8,7 @@ from googlesearch import search
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
 from nicegrill.utils import get_full_log, strip_prefix
+from remove_bg_python.remove import remove
 from io import BytesIO
 from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
@@ -36,6 +37,36 @@ class Media:
 
         except:
             pass
+
+    @run(command="rembg")
+    async def remove_photo_background(message: Message, client: Client):
+        if not message.is_reply or (message.is_reply and not any([message.reply_to_text.photo, message.reply_to_text.sticker])):
+            await message.edit("<i>You need to reply to an image</i>")
+            return
+        
+        if message.reply_to_text.sticker and "image" not in message.reply_to_text.sticker.mime_type:
+            await message.edit("<i>You need to reply to an inanimate sticker</i>")
+            return
+        
+        await message.edit("<i>Removing background from the image</i>")
+
+        image_file: BytesIO = await message.reply_to_text.download_media(BytesIO())
+        image_file.name = message.reply_to_text.file.name or "file.png"
+
+        image_file = BytesIO(
+            initial_bytes=remove(
+                data=image_file.getvalue()
+            )
+        )
+
+        image_file.seek(0)
+        image_file.name = message.reply_to_text.file.name or "file.png"
+
+        await message.delete()
+        await message.respond(
+            file=image_file,
+            force_document=True
+        )
 
     @run(command="yt")
     async def youtube_search(message: Message, client: Client, only_url=False):
