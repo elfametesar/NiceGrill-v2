@@ -22,7 +22,6 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 emoji
-currency-rate
 translate
 gemini-ng
 gemini-webapi
