@@ -55,7 +55,7 @@ class Media:
 
         image_file = BytesIO(
             initial_bytes=remove(
-                data=image_file.getvalue()
+                data=image_file.getvalue(),
             )
         )
 
