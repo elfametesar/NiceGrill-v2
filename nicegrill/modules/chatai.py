@@ -34,6 +34,7 @@ class ChatAI:
     CLIENT = GPTClient()
     GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest"
     GEMINI_METADATA = None
+    GEMINI_BEHAVIOR = "Act professionally and reply helpfully."
     PROXY = None
 
     @run(command="gpt")
@@ -107,7 +108,11 @@ f"""⏺ **Me: **__{message.args}__
         chat = gem_client.start_chat(metadata=ChatAI.GEMINI_METADATA)
 
         try:
-            response = await chat.send_message(message.args, image=file)
+            response = await chat.send_message(
+                prompt=f"""{ChatAI.GEMINI_BEHAVIOR}
+Query: {message.args}""",
+                image=file
+            )
         except Exception as e:
             await message.edit(f"<b>GeminiAI: </b><i>{e}</i>")
             return
@@ -199,11 +204,13 @@ f"""⏺ **Me: **__{message.args}__
             if file_path:
                 prompt = [
                     file_path,
-                    message.args
+                    f"""{ChatAI.GEMINI_BEHAVIOR}
+Query: {message.args}"""
                 ]
             else:
                 prompt = [
-                    message.args
+                    f"""{ChatAI.GEMINI_BEHAVIOR}
+Query: {message.args}"""
                 ]
 
             try:
@@ -265,6 +272,19 @@ f"""⏺ **Me: **__{message.args}__
         else:
             await message.edit(f"<i>There is no proxy set for GeminiAI</i>")
 
+    @run(command="gembehavior")
+    async def set_gemini_behavior(message: Message, client: Client):
+        if not message.args:
+            ChatAI.GEMINI_BEHAVIOR = "Act professionally and reply helpfully."
+            settings.set_ai_behavior("Act professionally and reply helpfully.")
+            await message.edit("<i>Gemini behavior setting has been reset</i>")
+            return
+        
+        ChatAI.GEMINI_BEHAVIOR = message.args
+        settings.set_ai_behavior(message.args)
+
+        await message.edit("<i>A new behavior set for Gemini AI</i>")
+
 @startup
 def load_from_database():
     proxy_data = settings.get_ai_proxy()
@@ -283,3 +303,5 @@ def load_from_database():
     metadata = settings.get_ai_metadata()
 
     ChatAI.GEMINI_METADATA = metadata.split(",")
+
+    ChatAI.GEMINI_BEHAVIOR = settings.get_ai_behavior()

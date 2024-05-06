@@ -30,6 +30,12 @@ def set_ai_proxy(proxy_info: str):
         ({"AI Proxy": proxy_info})
     )
 
+def set_ai_behavior(behavior: str):
+    delete_data("Gemini Behavior")
+    return Mongo.insert_one(
+        ({"Gemini Behavior": behavior})
+    )
+
 def set_sticker_pack(sticker_pack: str):
     delete_data("Sticker Pack")
     return Mongo.insert_one(
@@ -84,6 +90,10 @@ def get_ai_proxy():
 def get_ai_metadata():
     if proxy_info_data := Mongo.find_one({"AI Metadata": {"$exists": True}}):
         return proxy_info_data["AI Metadata"]
+
+def get_ai_behavior():
+    if proxy_info_data := Mongo.find_one({"Gemini Behavior": {"$exists": True}}):
+        return proxy_info_data["Gemini Behavior"]
 
 def get_download_path():
     if download_path_data := Mongo.find_one({"Download Path": {"$exists": True}}):
