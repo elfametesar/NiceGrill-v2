@@ -13,51 +13,162 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from io import BytesIO
+import asyncio
+from base64 import b64encode
+from io import BytesIO, StringIO
+import json
+import os
+from httpx import delete
 from requests import get
 from telethon import TelegramClient as Client
 from nicegrill import Message, run, startup
 from config import GEMINI_API
 from database import settingsdb as settings
-from g4f.client import AsyncClient as GPTClient
-from g4f.errors import RateLimitError, RetryProviderError
 from gemini_ng import GeminiClient as GeminiAPIClient
 from gemini_ng.schemas.proxy import ProxyInfo
 from gemini_webapi import GeminiClient
 from gemini_webapi.exceptions import AuthError
 
 import html
-
+import requests
 
 class ChatAI:
 
-    CLIENT = GPTClient()
-    GEMINI_AI_MODEL = "models/gemini-1.5-pro-latest"
     GEMINI_METADATA = None
     GEMINI_BEHAVIOR = "Act professionally and reply helpfully."
     PROXY = None
 
-    @run(command="gpt")
-    async def converse_with_chatgpt(message: Message, client: Client):
+    @run(command="bbox")
+    async def converse_with_blackbox(message: Message, client: Client):
+
+        headers = { 
+            'accept': '*/*', 
+            'accept-language': 'en-US,en;q=0.9', 
+            'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary7vTTkk8Ugo0X9Dio', 
+            'origin': 'https://www.blackbox.ai', 
+            'priority': 'u=1, i', 
+            'referer': 'https://www.blackbox.ai/', 
+            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"', 
+            'sec-ch-ua-mobile': '?0', 
+            'sec-ch-ua-platform': '"macOS"', 
+            'sec-fetch-dest': 'empty', 
+            'sec-fetch-mode': 'cors', 
+            'sec-fetch-site': 'same-origin', 
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 
+        }
+
+        description = None
+        kwargs = {}
+        if message.is_reply:
+            if message.reply_to_text.file:
+                await message.edit("<i>Uploading media to BlackBoxAI</i>")
+                file: BytesIO = await message.reply_to_text.download_media(BytesIO())
+                file = file.getvalue()
+
+                try:
+                    response = requests.post( 
+                        "https://www.blackbox.ai/api/upload", 
+                        data=f'------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="image"; filename="{message.reply_to_text.file.name or "photo.jpg"}"\r\nContent-Type: {message.reply_to_text.file.mime_type}\r\n\r\n{file.decode("latin1")}------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n{message.reply_to_text.file.name or "photo.jpg"}\r\n------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="userId"\r\n\r\n405dd035-2f02-4a10-8be8-2603097d954d\r\n------WebKitFormBoundary7vTTkk8Ugo0X9Dio--\r\n',
+                        headers=headers
+                    )
+                except Exception as e:
+                    await message.edit(f"<i>{e}</i>")
+                    return
+
+                description = json.loads(response.text or "{}").get("response")
+
+                kwargs = {
+                    'data': {
+                        'imageBase64': f'data:image/webp;base64,{b64encode(file).decode("latin1")}',
+                        'fileText': description,
+                    }
+                }
+
+            elif message.reply_to_text.message:
+                message.args = message.reply_to_text.message + "\n\n" + message.args
+        
+        message.args = message.args.strip()
+
+        if not message.args:
+            await message.edit("<i>You need to enter a query</i>")
+            return
+
         await message.edit("<i>Getting a response</i>")
 
-        try:
-            response = await ChatAI.CLIENT.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": message.args}]
-            )
-        except (RateLimitError, RetryProviderError):
-            await message.edit("<i>You have reached the limit of free use</i>")
+        json_data = {
+            'messages': [
+                {
+                    'id': 'uUXiujU',
+                    'content': f'{message.args}',
+                    'role': 'user',
+                    **kwargs
+                },
+            ],
+            'id': 'uUXiujU',
+            'previewToken': None,
+            'userId': '405dd035-2f02-4a10-8be8-2603097d954d',
+            'codeModelMode': True,
+            'agentMode': {},
+            'trendingAgentMode': {},
+            'isMicMode': False,
+            'isChromeExt': False,
+            'githubToken': None,
+            'clickedAnswer2': False,
+            'clickedAnswer3': False,
+            'visitFromURL': None,
+        }
+
+        response = requests.post('https://www.blackbox.ai/api/chat', headers=headers, json=json_data)
+    
+        await message.edit(
+            f"""⏺ **Me: **__{message.args}__
+
+**⏺ BlackBoxAI: **
+__{response.text}__""",
+            parse_mode="md"
+        )
+
+    @run(command="gpt")
+    async def converse_with_chatgpt(message: Message, client: Client):
+
+        if message.is_reply and message.reply_to_text.message:
+                message.args = message.reply_to_text.message + "\n\n" + message.args
+        
+        message.args = message.args.strip()
+
+        if not message.args:
+            await message.edit("<i>You need to enter a query</i>")
             return
-        except Exception as e:
-            await message.edit(f"<b>Error: </b><i>{e}</i>")
-            return
+
+        await message.edit("<i>Getting a response</i>")
+
+        headers = {
+            'content-type': 'application/json',
+            'origin': 'https://chat10.aichatos.xyz',
+            'referer': 'https://chat10.aichatos.xyz/',
+            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'cross-site',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        }
+
+        json_data = {
+            'prompt': message.args,
+            'network': True,
+            'withoutContext': False,
+            'stream': True,
+        }
+
+        response = requests.post('https://api.binjie.fun/api/generateStream', headers=headers, json=json_data)
 
         await message.edit(
 f"""⏺ **Me: **__{message.args}__
 
 **⏺ ChatGPT: **
-{response.choices[0].message.content}
+{response.text}
 """,
             parse_mode="md"
         )
@@ -65,8 +176,6 @@ f"""⏺ **Me: **__{message.args}__
     @run(command="gem")
     async def converse_with_gemini_via_cookies(message: Message, client: Client):
         file = None
-
-        await message.edit("<i>Asking GeminiAI</i>")
 
         proxies = None
         if ChatAI.PROXY:
@@ -96,6 +205,7 @@ f"""⏺ **Me: **__{message.args}__
 
         if message.reply_to_text:
             if message.reply_to_text.photo:
+                await message.edit("<i>Downloading media for GeminiAI</i>")
                 file: BytesIO = await message.reply_to_text.download_media(BytesIO())
                 file.seek(0)
                 file = file.getvalue()
@@ -104,6 +214,12 @@ f"""⏺ **Me: **__{message.args}__
                 message.args = message.reply_to_text.message + "\n\n" + message.args
         
         message.args = message.args.strip()
+
+        if not message.args:
+            await message.edit("<i>You need to enter a query</i>")
+            return
+
+        await message.edit("<i>Asking GeminiAI</i>")
 
         chat = gem_client.start_chat(metadata=ChatAI.GEMINI_METADATA)
 

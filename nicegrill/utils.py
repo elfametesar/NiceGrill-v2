@@ -20,7 +20,6 @@ from httpx import AsyncClient
 from pprint import pformat
 
 import asyncio
-import html
 
 class Message(MainMessage):
     
