@@ -28,3 +28,4 @@ gemini-webapi
 httpcore[socks]
 socksio
 httpx[socks]
+playwright

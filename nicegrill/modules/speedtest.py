@@ -19,8 +19,8 @@ class Speedtest:
                 args=["--start-maximized"],
                 viewport=None,
                 no_viewport=True
-
             )
+
             browser = await browser.new_page()
 
             await browser.goto(

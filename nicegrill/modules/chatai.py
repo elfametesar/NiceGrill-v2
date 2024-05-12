@@ -13,12 +13,8 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 from base64 import b64encode
-from io import BytesIO, StringIO
-import json
-import os
-from httpx import delete
+from io import BytesIO
 from requests import get
 from telethon import TelegramClient as Client
 from nicegrill import Message, run, startup
@@ -29,13 +25,14 @@ from gemini_ng.schemas.proxy import ProxyInfo
 from gemini_webapi import GeminiClient
 from gemini_webapi.exceptions import AuthError
 
+import json
 import html
 import requests
 
 class ChatAI:
 
     GEMINI_METADATA = None
-    GEMINI_BEHAVIOR = "Act professionally and reply helpfully."
+    AI_BEHAVIOR = "Act professionally and reply helpfully."
     PROXY = None
 
     @run(command="bbox")
@@ -99,7 +96,7 @@ class ChatAI:
             'messages': [
                 {
                     'id': 'uUXiujU',
-                    'content': f'{message.args}',
+                    'content': f'{ChatAI.AI_BEHAVIOR}\nQuery:{message.args}',
                     'role': 'user',
                     **kwargs
                 },
@@ -144,8 +141,8 @@ __{response.text}__""",
 
         headers = {
             'content-type': 'application/json',
-            'origin': 'https://chat10.aichatos.xyz',
-            'referer': 'https://chat10.aichatos.xyz/',
+            'origin': 'https://chat18.aichatos.xyz',
+            'referer': 'https://chat18.aichatos.xyz/',
             'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"macOS"',
@@ -156,10 +153,11 @@ __{response.text}__""",
         }
 
         json_data = {
-            'prompt': message.args,
+            'prompt': f"{ChatAI.AI_BEHAVIOR}\nQuery: {message.args}",
             'network': True,
+            'system': ChatAI.AI_BEHAVIOR,
             'withoutContext': False,
-            'stream': True,
+            'stream': False,
         }
 
         response = requests.post('https://api.binjie.fun/api/generateStream', headers=headers, json=json_data)
@@ -225,7 +223,7 @@ f"""⏺ **Me: **__{message.args}__
 
         try:
             response = await chat.send_message(
-                prompt=f"""{ChatAI.GEMINI_BEHAVIOR}
+                prompt=f"""{ChatAI.AI_BEHAVIOR}
 Query: {message.args}""",
                 image=file
             )
@@ -320,12 +318,12 @@ Query: {message.args}""",
             if file_path:
                 prompt = [
                     file_path,
-                    f"""{ChatAI.GEMINI_BEHAVIOR}
+                    f"""{ChatAI.AI_BEHAVIOR}
 Query: {message.args}"""
                 ]
             else:
                 prompt = [
-                    f"""{ChatAI.GEMINI_BEHAVIOR}
+                    f"""{ChatAI.AI_BEHAVIOR}
 Query: {message.args}"""
                 ]
 
@@ -389,14 +387,14 @@ Query: {message.args}"""
             await message.edit(f"<i>There is no proxy set for GeminiAI</i>")
 
     @run(command="gembehavior")
-    async def set_gemini_behavior(message: Message, client: Client):
+    async def set_AI_BEHAVIOR(message: Message, client: Client):
         if not message.args:
-            ChatAI.GEMINI_BEHAVIOR = "Act professionally and reply helpfully."
+            ChatAI.AI_BEHAVIOR = "Act professionally and reply helpfully."
             settings.set_ai_behavior("Act professionally and reply helpfully.")
             await message.edit("<i>Gemini behavior setting has been reset</i>")
             return
         
-        ChatAI.GEMINI_BEHAVIOR = message.args
+        ChatAI.AI_BEHAVIOR = message.args
         settings.set_ai_behavior(message.args)
 
         await message.edit("<i>A new behavior set for Gemini AI</i>")
@@ -420,4 +418,4 @@ def load_from_database():
 
     ChatAI.GEMINI_METADATA = metadata.split(",")
 
-    ChatAI.GEMINI_BEHAVIOR = settings.get_ai_behavior()
+    ChatAI.AI_BEHAVIOR = settings.get_ai_behavior()
