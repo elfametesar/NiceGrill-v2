@@ -287,7 +287,7 @@ Usage:
                 await message.edit("<i>No python code provided</i>")
                 return
             else:
-                args = html.escape(message.reply_to_text.message.strip())
+                args = message.reply_to_text.raw_text.strip()
 
         caption = """<b>⬤ {}:</b>
 

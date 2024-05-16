@@ -7,13 +7,14 @@ from pytube import YouTube
 from googlesearch import search
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
-from nicegrill.utils import get_full_log, strip_prefix
+from nicegrill.utils import full_log, get_full_log, strip_prefix
 from remove_bg_python.remove import remove
 from io import BytesIO
 from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
 from requests import get
 
+import requests
 import asyncio
 import html
 import json
@@ -150,45 +151,67 @@ class Media:
             await message.edit("<i>Enter in a valid URL first</i>")
             return
 
-        try:
-            await message.edit("<i>Searching in YouTube for a downloadable media in the link</i>")
-            youtube_search = YouTube(message.args).streams.filter()
-        except Exception as e:
-            await message.edit("<i>Video is unavailable</i>")
-            return
-        
 
-        result = youtube_search.get_highest_resolution()
-        
-        if not result:
-            await message.edit("<i>There is no downloadable media found in this link</i>")
+        headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'en-US,en;q=0.9',
+            'content-type': 'application/json',
+            'origin': 'https://ssyoutube.com',
+            'priority': 'u=1, i',
+            'referer': 'https://ssyoutube.com/',
+            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'x-requested-with': 'XMLHttpRequest',
+        }
+
+        json_data = {
+            'url': message.args,
+            'ts': requests.get("https://ssyoutube.com/msec").json().get("msec"),
+            '_ts': 1715778806518,
+            '_tsc': 0,
+            '_s': '5d9ff383d1c43ca0ebd95475f718dde014443dec86950d088f2389d80077b3b6',
+        }
+
+        await message.edit("<i>Searching in YouTube for a downloadable media in the link</i>")
+
+        try:
+            response = requests.post('https://api.ssyoutube.com/api/convert', headers=headers, json=json_data)
+        except Exception as e:
+            await message.edit(f"<i>Video cannot be fetched</i>\n<b>Error: </b><i>{e}</i>")
             return
         
+        if not response.ok:
+            await message.edit(f"<i>There is no downloadable media found in this link</i>\n<b>Reason: </b><i>{response.reason}</i>")
+            return
+
         await message.edit("<i>Downloading the video into buffer</i>")
 
-        video_buffer = BytesIO()
-        result.stream_to_buffer(video_buffer)
+        menu = ""
+        url = ""
+        quality = 0
+        for item in response.json().get("url"):
+            if item.get("qualityNumber") > quality and not item.get("no_audio"):
+                url = item.get("url")
+
+            menu += f'<a href={item.get("url")}>{item.get("subname")}.{item.get("ext")} - {item.get("attr").get("title")}</a>\n'
+
+        menu = await full_log(menu)
+
+        video_buffer = BytesIO(requests.get(url).content)
         video_buffer.seek(0)
-        video_buffer.name = result.default_filename
-        Media.CURRENT_MESSAGE = message
+        video_buffer.name = "video.mp4"
 
         await message.edit("<i>Uploading the video into telegram</i>")
-
-        video_handle = await message.respond(
-            file=video_buffer,
-            progress_callback=lambda received_bytes, total_bytes: 
-                asyncio.get_event_loop().create_task(
-                    Media.simple_progress_tracker(
-                        url=message.args,
-                        progress=round((received_bytes/total_bytes) * 100, 2),
-                        message=f"<i>Here's the downloaded video for the input link {message.args}</i>",
-                        supports_streaming=True
-                    )
-                )
-        )
-
         await message.delete()
-        
+        await message.respond(
+            message=f"<i>All Qualities:\n{menu.text}</i>",
+            file=video_buffer
+        )
 
     @run(command="google")
     async def google_regular_search(message: Message, client: Client):

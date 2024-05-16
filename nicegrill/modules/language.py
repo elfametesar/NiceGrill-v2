@@ -1,4 +1,3 @@
-from fnmatch import translate
 from nicegrill import Message, run
 from telethon import TelegramClient as Client
 from gtts import gTTS
