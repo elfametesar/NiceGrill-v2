@@ -158,7 +158,10 @@ Selected Element:</b>
             browser = await playwright.firefox.launch_persistent_context(
                 user_data_dir=f"{os.getenv('HOME')}/.config/ffox",
                 java_script_enabled=True,
-                headless=True
+                headless=True,
+                no_viewport=True,
+                viewport={"width": 1920, "height": 1080},
+                args=["--start-maximized"]
             )
 
             browser = await browser.new_page()
@@ -204,7 +207,7 @@ Selected Element:</b>
                         continue
 
                     elif command.startswith("2") or command.startswith("goto "):
-                        await browser.goto(command.split()[-1], wait_until="networkidle")
+                        await browser.goto(command.split()[-1], wait_until="domcontentloaded")
                         await Browser.LAST_MESSAGE.delete()
                         Browser.LAST_MESSAGE = None
                         continue
