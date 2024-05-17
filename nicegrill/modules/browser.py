@@ -1,4 +1,5 @@
 from datetime import datetime
+from httpx import delete
 from playwright.async_api import async_playwright
 from playwright.async_api import Page, Locator
 from telethon import TelegramClient as Client
@@ -165,10 +166,11 @@ Selected Element:</b>
             )
 
             browser = await browser.new_page()
-            await message.delete()
+
             await browser.goto(message.args or "https://www.google.com", wait_until="domcontentloaded")
+            await message.delete()
             sys.stdin.clear()
-            
+
             selected_obj = None
             while True:
                 menu = f"""<b>Command List
@@ -188,14 +190,18 @@ Selected Element:</b>
 <b>Select an action:</b> 
 {sys.stdin.read() if not sys.stdin.is_empty else ""}"""
 
+                screenshot = BytesIO(await browser.screenshot())
+                screenshot.name = "ss.jpg"
+
+                if Browser.LAST_MESSAGE:
+                    Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+                        text=menu,
+                        file=await client.upload_file(file=screenshot, file_name="ss.jpg")
+                    )
+                else:
+                    Browser.LAST_MESSAGE = await message.respond(file=screenshot, message=menu)
+
                 try:
-                    if not Browser.LAST_MESSAGE:
-                        screenshot = BytesIO(await browser.screenshot())
-                        screenshot.name = "ss.jpg"
-                        Browser.LAST_MESSAGE = await message.respond(menu, file=screenshot)
-                    else:
-                        if Browser.LAST_MESSAGE.text != menu:
-                            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(menu)
 
                     sys.stdin.clear()
                     command = await asyncio.to_thread(input)
@@ -208,8 +214,6 @@ Selected Element:</b>
 
                     elif command.startswith("2") or command.startswith("goto "):
                         await browser.goto(command.split()[-1], wait_until="domcontentloaded")
-                        await Browser.LAST_MESSAGE.delete()
-                        Browser.LAST_MESSAGE = None
                         continue
                     
                     elif command.startswith("3") or command.startswith("find "):
@@ -236,19 +240,20 @@ Selected Element:</b>
                         await Browser.select_action(selected_obj=selected_obj, action=int(action) if action else "")
                     
                     elif command == "5" or command == "reload":
-                        await browser.reload(wait_until="networkidle")
-                        await Browser.LAST_MESSAGE.delete()
-                        Browser.LAST_MESSAGE = None
+                        await browser.reload(wait_until="domcontentloaded")
 
                     elif command == "6" or command == "refresh":
-                        await Browser.LAST_MESSAGE.delete()
-                        Browser.LAST_MESSAGE = None
+                        continue
 
                     elif command == "7" or command == "exit":
                         await Browser.LAST_MESSAGE.delete()
                         Browser.LAST_MESSAGE = None
                         return
                 
+                except ValueError:
+                    print(f"\n<b>Error:</b> <i>Invalid selection</i>")
+                    await asyncio.sleep(2)
+
                 except Exception as e:
                     print(f"\n<b>Error:</b> <i>{e}</i>")
                     await asyncio.sleep(2)
