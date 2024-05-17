@@ -39,7 +39,8 @@ class Browser:
 
 Selected Element:</b>
 <blockquote>{html.escape(str(selected_obj)[:200])}</blockquote>
-{datetime.now()}
+
+<b>Time:<b> <i>{datetime.now().strftime("%c")}
 <i>
 1 - Click
 2 - Tap
@@ -177,15 +178,15 @@ Selected Element:</b>
 
 Selected Element:</b>
 <blockquote>{html.escape(str(selected_obj)[:200])}</blockquote>
-{datetime.now()}
-<i>
+
+<b>Time:<b> <i>{datetime.now().strftime("%c")}
+
 1 - press <keyboard-key>
 2 - goto <url> (starting with http, https, ftp...)
 3 - find <html-element>
 4 - actions
-5 - reload (the page)
-6 - refresh (the image)
-7 - exit
+5 - reload
+6 - exit
 </i>
 <b>Select an action:</b> 
 {sys.stdin.read() if not sys.stdin.is_empty else ""}"""
@@ -202,7 +203,6 @@ Selected Element:</b>
                     Browser.LAST_MESSAGE = await message.respond(file=screenshot, message=menu)
 
                 try:
-
                     sys.stdin.clear()
                     command = await asyncio.to_thread(input)
 
@@ -242,10 +242,7 @@ Selected Element:</b>
                     elif command == "5" or command == "reload":
                         await browser.reload(wait_until="domcontentloaded")
 
-                    elif command == "6" or command == "refresh":
-                        continue
-
-                    elif command == "7" or command == "exit":
+                    elif command == "6" or command == "exit":
                         await Browser.LAST_MESSAGE.delete()
                         Browser.LAST_MESSAGE = None
                         return
