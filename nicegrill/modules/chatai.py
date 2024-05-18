@@ -13,31 +13,38 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 from base64 import b64encode
+from datetime import datetime
+from hashlib import sha3_512
 from io import BytesIO
-import os
+from random import choice
 from urllib.parse import urlencode
+from uuid import uuid4
 from requests import get
 from telethon import TelegramClient as Client
 from nicegrill import Message, run, startup
-from config import GEMINI_API, OPENROUTER_COOKIE
+from config import GEMINI_API, OPENROUTER_COOKIE, CHATGPT_BEARER_KEY
 from database import settingsdb as settings
 from gemini_ng import GeminiClient as GeminiAPIClient
 from gemini_ng.schemas.proxy import ProxyInfo
 from gemini_webapi import GeminiClient
 from gemini_webapi.exceptions import AuthError
-from playwright.async_api import async_playwright
+from fake_useragent import UserAgent
 
 import json
+import logging
 import html
-import requests
+import asyncio
+import httpx
 
 class ChatAI:
 
     GEMINI_METADATA = None
+    GPT_CONVERSATION_ID = None
     AI_BEHAVIOR = "Act professionally and reply helpfully."
-    PROXY = None
+    CLIENT: httpx.Client = None
+
+    LOG = logging.getLogger(__name__)
 
     @run(command="genimg")
     async def generate_image_from_input(message: Message, client: Client):
@@ -50,15 +57,13 @@ class ChatAI:
 
         await message.edit(f"<i>Generating image for {message.args}</i>")
 
-        session = requests.session()
-
-        response = requests.get(
+        response = ChatAI.CLIENT.get(
             'https://perchance.org/api/getAccessCodeForAdPoweredStuff'
         )
 
         access_code = response.text
 
-        user_key = session.get('https://image-generation.perchance.org/api/verifyUser').json()
+        user_key = ChatAI.CLIENT.get('https://image-generation.perchance.org/api/verifyUser').json()
         if not (user_key := user_key.get("userKey")):
             await message.edit("<i>Cannot fetch user key, you need to go to https://perchance.org/ai-text-to-image-generator and click on generate manually</i>")
             return
@@ -79,14 +84,15 @@ class ChatAI:
 
         image_list = []
         for _ in range(6):
-            response = requests.post(
+            response = await asyncio.to_thread(
+                ChatAI.CLIENT.post,
                 url='https://image-generation.perchance.org/api/generate?' + urlencode(params, doseq=True)
             )
 
             try:
                 image_id = response.json()["imageId"]
                 data = BytesIO((await asyncio.to_thread(
-                    requests.get,
+                    ChatAI.CLIENT.get,
                         url='https://image-generation.perchance.org/api/downloadTemporaryImage',
                         params={
                             "imageId": image_id
@@ -156,7 +162,8 @@ All of these seems to be fake, i just added them anyway, more the merrier I took
             ]
         }
 
-        response = requests.post(
+        response = await asyncio.to_thread(
+            ChatAI.CLIENT.post,
             url='https://openrouter.ai/api/v1/chat/completions',
             cookies={
                 '__session': OPENROUTER_COOKIE
@@ -194,8 +201,7 @@ __{response}__""",
             'sec-ch-ua-platform': '"macOS"', 
             'sec-fetch-dest': 'empty', 
             'sec-fetch-mode': 'cors', 
-            'sec-fetch-site': 'same-origin', 
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 
+            'sec-fetch-site': 'same-origin'
         }
 
         description = None
@@ -207,8 +213,9 @@ __{response}__""",
                 file = file.getvalue()
 
                 try:
-                    response = requests.post( 
-                        "https://www.blackbox.ai/api/upload", 
+                    response = await asyncio.to_thread(
+                        ChatAI.CLIENT.post,
+                        url="https://www.blackbox.ai/api/upload", 
                         data=f'------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="image"; filename="{message.reply_to_text.file.name or "photo.jpg"}"\r\nContent-Type: {message.reply_to_text.file.mime_type}\r\n\r\n{file.decode("latin1")}------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="fileName"\r\n\r\n{message.reply_to_text.file.name or "photo.jpg"}\r\n------WebKitFormBoundary7vTTkk8Ugo0X9Dio\r\nContent-Disposition: form-data; name="userId"\r\n\r\n405dd035-2f02-4a10-8be8-2603097d954d\r\n------WebKitFormBoundary7vTTkk8Ugo0X9Dio--\r\n',
                         headers=headers
                     )
@@ -259,7 +266,7 @@ __{response}__""",
             'visitFromURL': None,
         }
 
-        response = requests.post('https://www.blackbox.ai/api/chat', headers=headers, json=json_data)
+        response = await asyncio.to_thread(ChatAI.CLIENT.post, 'https://www.blackbox.ai/api/chat', headers=headers, json=json_data)
     
         await message.edit(
             f"""⏺ **Me: **__{message.args}__
@@ -268,6 +275,55 @@ __{response}__""",
 __{response.text}__""",
             parse_mode="md"
         )
+
+    # https://github.com/josStorer/chatGPTBox/blob/487e1f88c27356a1d5f4629cdb9e55b6c1b5af8b/src/services/apis/chatgpt-web.mjs#L97
+    def generate_proof_token(seed, diff, user_agent=str(UserAgent.chrome)):
+        """
+        Generates a proof token based on the provided seed, difficulty, and user agent.
+
+        Args:
+            seed: The seed value used for hashing.
+            diff: The difficulty level represented by a hexadecimal string.
+            user_agent: The user agent string.
+
+        Returns:
+            A proof token string or a fallback token if no match is found within 100000 iterations.
+        """
+
+        cores = [8, 12, 16, 24]
+        screens = [3000, 4000, 6000]
+
+        core = choice(cores)
+        screen = choice(screens)
+
+        current_time = str(datetime.now())
+
+        config = [core + screen, current_time, 4294705152, 0, user_agent]
+
+        diff_length = int(len(diff) / 2)
+
+        for _ in range(100000):
+            config[3] = _
+            json_data = json.dumps(config)
+            base64_data = b64encode(json_data.encode('utf-8')).decode('utf-8')
+            hash_value = sha3_512(seed.encode('utf-8') + base64_data.encode('utf-8')).hexdigest()
+
+            if hash_value[:diff_length] <= diff:
+                return 'gAAAAAB' + base64_data
+
+        fallback_base64 = b64encode(f'"{seed}"'.encode('utf-8')).decode('utf-8')
+        return 'gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D' + fallback_base64
+
+    @run(command="setgptchat")
+    async def set_chat_id(message: Message, client: Client):
+        if not message.args:
+            await message.edit("<i>Give me a chat ID</i>")
+            return
+        
+        ChatAI.GPT_CONVERSATION_ID = message.args
+        settings.set_gpt_chat(message.args)
+
+        await message.edit("<i>Chat ID has been set</i>")
 
     @run(command="gpt")
     async def converse_with_chatgpt(message: Message, client: Client):
@@ -281,36 +337,107 @@ __{response.text}__""",
             await message.edit("<i>You need to enter a query</i>")
             return
 
+        if not ChatAI.GPT_CONVERSATION_ID:
+            await message.edit("<i>I need you to set a conversation ID first, you can find it in the in the URL in ChatGPT chat page<i>")
+            return
+
         await message.edit("<i>Getting a response</i>")
 
+        cookies = {
+            "__Secure-next-auth.session-token": CHATGPT_BEARER_KEY
+        }
+
         headers = {
+            'authorization': f'Bearer {CHATGPT_BEARER_KEY}',
             'content-type': 'application/json',
-            'origin': 'https://chat18.aichatos.xyz',
-            'referer': 'https://chat18.aichatos.xyz/',
-            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'oai-language': 'en-US',
+            'priority': 'u=1, i',
             'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'cross-site',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': str(UserAgent.chrome)
         }
+
+        try:
+            response = await asyncio.to_thread(
+                ChatAI.CLIENT.post,
+                url='https://chatgpt.com/backend-api/sentinel/chat-requirements',
+                cookies=cookies,
+                headers=headers
+            )
+
+            if response.status_code != 200:
+                ChatAI.LOG.error(response.text)
+                raise ConnectionAbortedError(f"Connection to requirements API received {response.status_code}. Check logs for details...")
+
+            headers["openai-sentinel-chat-requirements-token"] = response.json().get("token")
+
+            seed = response.json().get("proofofwork").get("seed")
+            difficulty = response.json().get("proofofwork").get("difficulty")
+        except Exception as e:
+            await message.edit(f"<i>Token cannot be fetched</i>\n<b>Reason: </b><i>{e}</i>")
+            return
+
+        headers["openai-sentinel-proof-token"] = ChatAI.generate_proof_token(seed, difficulty)
 
         json_data = {
-            'prompt': f"{ChatAI.AI_BEHAVIOR}\nQuery: {message.args}",
-            'network': True,
-            'system': ChatAI.AI_BEHAVIOR,
-            'withoutContext': False,
-            'stream': False,
+            'action': 'next',
+            'messages': [
+                {
+                    'id': str(uuid4()),
+                    'author': {
+                        'role': 'user',
+                    },
+                    'content': {
+                        'content_type': 'text',
+                        'parts': [
+                            message.args,
+                        ],
+                    },
+                },
+            ],
+            'conversation_id': ChatAI.GPT_CONVERSATION_ID,
+            'model': 'auto',
+            'history_and_training_disabled': False,
+            'force_paragen': False,
+            'force_paragen_model_slug': '',
+            'force_nulligen': False,
+            'force_rate_limit': False,
+            'reset_rate_limits': False,
+            'force_use_sse': True
         }
 
-        response = requests.post('https://api.binjie.fun/api/generateStream', headers=headers, json=json_data)
+        try:
+            response = await asyncio.to_thread(
+                ChatAI.CLIENT.post,
+                url='https://chatgpt.com/backend-api/conversation',
+                cookies=cookies,
+                headers=headers,
+                json=json_data
+            )
+        except Exception as e:
+            await message.edit(f"<i>Connection to ChatGPT failed<i>\n<b>Reason:</b> <i>{e}</i>")
+            return
+
+        if response.status_code != 200:
+            ChatAI.LOG.error(response.text)
+            await message.edit(f"<i>Connection to ChatGPT backend api received {response.status_code}. Check logs for details...</i>")
+            return
+        
+        response = [line[6:] for line in response.text.splitlines() if line.startswith("data: {\"message")][-1]
+        if not response:
+            ChatAI.LOG.error(f"Received and processed data from ChatGPT:\n\n {response}")
+            await message.edit("<i>There seems to be a problem with the response from ChatGPT. Check logs for details...</i>")
+            return
+
+        response = "".join(json.loads(response).get("message").get("content").get("parts"))
 
         await message.edit(
 f"""⏺ **Me: **__{message.args}__
 
 **⏺ ChatGPT: **
-{response.text}
+{response}
 """,
             parse_mode="md"
         )
@@ -319,16 +446,9 @@ f"""⏺ **Me: **__{message.args}__
     async def converse_with_gemini_via_cookies(message: Message, client: Client):
         file = None
 
-        proxies = None
-        if ChatAI.PROXY:
-            proxies = {
-                "http://": f"{ChatAI.PROXY.type}://{ChatAI.PROXY.host}:{ChatAI.PROXY.port}",
-                "https://": f"{ChatAI.PROXY.type}://{ChatAI.PROXY.host}:{ChatAI.PROXY.port}",
-            }
-
         try:
             gem_client = GeminiClient(
-                proxies=proxies
+                proxies=":".join(ChatAI.CLIENT.proxy).replace(":", "://", 1)
             )
 
             await gem_client.init(timeout=30, auto_close=False, close_delay=300, auto_refresh=True)
@@ -413,7 +533,11 @@ Query: {message.args}""",
             gem_client = GeminiAPIClient(
                 api_key=GEMINI_API,
                 timeout=5,
-                proxy_info=ChatAI.PROXY
+                proxy_info={
+                    "proxy_type": ChatAI.CLIENT.proxy[0],
+                    "host": ChatAI.CLIENT.proxy[1],
+                    "port": int(ChatAI.CLIENT.proxy[2])
+                }
             )
         except Exception as e:
             await message.edit(
@@ -494,10 +618,11 @@ Query: {message.args}"""
                 parse_mode="md"
             )
 
-    @run(command="gemproxy")
+    @run(command="proxy")
     async def set_gemini_proxy(message: Message, client: Client):
         if not message.args:
-            ChatAI.PROXY = None
+            ChatAI.CLIENT = httpx.Client(follow_redirects=True, proxies=None)
+            ChatAI.CLIENT.proxy = None
             settings.set_ai_proxy("")
 
             await message.edit("<i>Proxy has been reset</i>")
@@ -509,26 +634,24 @@ Query: {message.args}"""
         
         proxy_type, host, port = message.args.split(maxsplit=3)
 
-        try:    
-            ChatAI.PROXY = ProxyInfo(
-                type=proxy_type,
-                host=host,
-                port=port
-            )
-
-            settings.set_ai_proxy(f"{proxy_type} {host} {port}")
-        except Exception:
-            await message.edit("<i>Entered proxy configuration is invalid</i>")
+        try:
+            ChatAI.CLIENT = httpx.Client(follow_redirects=True, proxies=f"{proxy_type}://{host}:{port}")
+        except Exception as e:
+            await message.edit(f"<i>{e}</i>")
             return
+
+        ChatAI.CLIENT.proxy = [proxy_type, host, port]
+
+        settings.set_ai_proxy(f"{proxy_type} {host} {port}")
 
         await message.edit(f"<i>Proxy has been set to {proxy_type} type {host}:{port}")
 
     @run(command="getproxy")
     async def get_gemini_proxy(message: Message, client: Client):
-        if ChatAI.PROXY:
-            await message.edit(f"<i>{ChatAI.PROXY.type} = {ChatAI.PROXY.host}:{ChatAI.PROXY.port}</i>")
+        if ChatAI.CLIENT.proxy:
+            await message.edit(f"<i>{ChatAI.CLIENT.proxy[0]} = {ChatAI.CLIENT.proxy[1]}:{ChatAI.CLIENT.proxy[2]}</i>")
         else:
-            await message.edit(f"<i>There is no proxy set for GeminiAI</i>")
+            await message.edit(f"<i>There is no proxy set for AI</i>")
 
     @run(command="gembehavior")
     async def set_AI_BEHAVIOR(message: Message, client: Client):
@@ -547,19 +670,17 @@ Query: {message.args}"""
 def load_from_database():
     proxy_data = settings.get_ai_proxy()
 
-    if proxy_data != "":
+    if proxy_data:
         proxy_type, host, port = proxy_data.split(maxsplit=3)
-
-        ChatAI.PROXY = ProxyInfo(
-            type=proxy_type,
-            host=host,
-            port=port
-        )
+        proxy = f"{proxy_type}://{host}:{port}"
     else:
-        ChatAI.PROXY = None
+        proxy = None
+
+    ChatAI.CLIENT = httpx.Client(follow_redirects=True, proxies=proxy)
+    ChatAI.CLIENT.proxy = proxy_data.split(maxsplit=3)
+    ChatAI.GPT_CONVERSATION_ID = settings.get_gpt_chat()
 
     metadata = settings.get_ai_metadata()
-
     ChatAI.GEMINI_METADATA = metadata.split(",")
-
     ChatAI.AI_BEHAVIOR = settings.get_ai_behavior()
+

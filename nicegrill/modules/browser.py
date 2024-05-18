@@ -1,7 +1,9 @@
 from datetime import datetime
 from httpx import delete
+import playwright
 from playwright.async_api import async_playwright
 from playwright.async_api import Page, Locator
+import playwright.async_api
 from telethon import TelegramClient as Client
 from nicegrill import Message, run
 from io import BytesIO
@@ -72,7 +74,7 @@ Selected Element:</b>
             for line in (await asyncio.to_thread(input)).splitlines():
                 text += f"""{line.strip()}\n"""
 
-            await selected_obj.type(text=text, timeout=2000)
+            await selected_obj.type(text=text.strip(), timeout=2000)
         elif action == 6:
             await selected_obj.press("Control+KeyA", timeout=2000)
             await selected_obj.press("Backspace", timeout=2000)
@@ -146,6 +148,16 @@ Selected Element:</b>
 
     async def key_parser(key: str):
         key = key.replace(" ", "").title()
+
+        if "up" in key.lower():
+            key = "ArrowUp"
+        elif "down" in key.lower():
+            key = "ArrowDown"
+        elif "left" in key.lower():
+            key = "ArrowLeft"
+        elif "right" in key.lower():
+            key = "ArrowRight"
+
         if key.count("+") > 0:
             key_list = [key_item.title() for key_item in key.split("+")]
             key = "+".join(key_list)
@@ -154,19 +166,18 @@ Selected Element:</b>
 
     @run("browser")
     async def launch_firefox(message: Message, client: Client):
-
         await message.edit("<i>Launching browser...</i>")
         async with async_playwright() as playwright:
             browser = await playwright.firefox.launch_persistent_context(
-                user_data_dir=f"{os.getenv('HOME')}/.config/ffox",
+                user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
                 java_script_enabled=True,
-                headless=True,
                 no_viewport=True,
                 viewport={"width": 1920, "height": 1080},
                 args=["--start-maximized"]
             )
 
-            browser = await browser.new_page()
+            browser = browser.pages[0]
+            asyncio.create_task(Browser.test(browser))
 
             await browser.goto(message.args or "https://www.google.com", wait_until="domcontentloaded")
             await message.delete()
@@ -181,12 +192,13 @@ Selected Element:</b>
 
 <b>Time:<b> <i>{datetime.now().strftime("%c")}
 
-1 - press <keyboard-key>
-2 - goto <url> (starting with http, https, ftp...)
+1 - press [keyboard-key]
+2 - goto [url] (starting with http, https, ftp...)
 3 - find <html-element>
 4 - actions
-5 - reload
-6 - exit
+5 - reload - the page
+6 - refresh - the screenshot
+7 - exit
 </i>
 <b>Select an action:</b> 
 {sys.stdin.read() if not sys.stdin.is_empty else ""}"""
@@ -241,6 +253,9 @@ Selected Element:</b>
                     
                     elif command == "5" or command == "reload":
                         await browser.reload(wait_until="domcontentloaded")
+
+                    elif command == "6" or command == "refresh":
+                        continue
 
                     elif command == "6" or command == "exit":
                         await Browser.LAST_MESSAGE.delete()

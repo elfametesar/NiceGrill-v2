@@ -30,6 +30,12 @@ def set_ai_proxy(proxy_info: str):
         ({"AI Proxy": proxy_info})
     )
 
+def set_gpt_chat(chat_id: str):
+    delete_data("GPTChat")
+    return Mongo.insert_one(
+        ({"GPTChat": chat_id})
+    )
+
 def set_ai_behavior(behavior: str):
     delete_data("Gemini Behavior")
     return Mongo.insert_one(
@@ -86,6 +92,10 @@ def get_sticker_pack():
 def get_ai_proxy():
     if proxy_info_data := Mongo.find_one({"AI Proxy": {"$exists": True}}):
         return proxy_info_data["AI Proxy"]
+
+def get_gpt_chat():
+    if proxy_info_data := Mongo.find_one({"GPTChat": {"$exists": True}}):
+        return proxy_info_data["GPTChat"]
 
 def get_ai_metadata():
     if proxy_info_data := Mongo.find_one({"AI Metadata": {"$exists": True}}):

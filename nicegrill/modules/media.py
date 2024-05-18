@@ -1,3 +1,5 @@
+from datetime import datetime
+import time
 from urllib.error import HTTPError
 from nicegrill import Message, run, startup
 from config import GOOGLE_DEV_API, GOOGLE_CX_ID
@@ -7,14 +9,13 @@ from pytube import YouTube
 from googlesearch import search
 from youtube_search import YoutubeSearch
 from requests.exceptions import ReadTimeout, ConnectTimeout
-from nicegrill.utils import full_log, get_full_log, strip_prefix
+from nicegrill.utils import get_full_log, strip_prefix
 from remove_bg_python.remove import remove
 from io import BytesIO
 from bs4 import BeautifulSoup
 from yt_dlp import YoutubeDL
-from requests import get
+from requests import get, post
 
-import requests
 import asyncio
 import html
 import json
@@ -151,66 +152,49 @@ class Media:
             await message.edit("<i>Enter in a valid URL first</i>")
             return
 
-
         headers = {
-            'accept': 'application/json, text/plain, */*',
-            'accept-language': 'en-US,en;q=0.9',
-            'content-type': 'application/json',
-            'origin': 'https://ssyoutube.com',
+            'next-action': '471020c2dbefc5c2bc0360aa22dff3a58efa53e7',
+            'next-url': '/en/free-tools/youtube-video-downloader',
+            'origin': 'https://quicktok.ai',
             'priority': 'u=1, i',
-            'referer': 'https://ssyoutube.com/',
+            'referer': 'https://quicktok.ai/free-tools/youtube-video-downloader/',
             'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"macOS"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-site',
+            'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'x-requested-with': 'XMLHttpRequest',
         }
 
-        json_data = {
-            'url': message.args,
-            'ts': requests.get("https://ssyoutube.com/msec").json().get("msec"),
-            '_ts': 1715778806518,
-            '_tsc': 0,
-            '_s': '5d9ff383d1c43ca0ebd95475f718dde014443dec86950d088f2389d80077b3b6',
-        }
 
         await message.edit("<i>Searching in YouTube for a downloadable media in the link</i>")
 
         try:
-            response = requests.post('https://api.ssyoutube.com/api/convert', headers=headers, json=json_data)
+            response = await asyncio.to_thread(post, url='https://quicktok.ai/free-tools/youtube-video-downloader/', headers=headers, data=f'["{message.args}"]')
         except Exception as e:
             await message.edit(f"<i>Video cannot be fetched</i>\n<b>Error: </b><i>{e}</i>")
             return
-        
+
         if not response.ok:
             await message.edit(f"<i>There is no downloadable media found in this link</i>\n<b>Reason: </b><i>{response.reason}</i>")
             return
 
+        url = response.text.find("https://")
+        url = response.text[url: -3]
+
         await message.edit("<i>Downloading the video into buffer</i>")
 
-        menu = ""
-        url = ""
-        quality = 0
-        for item in response.json().get("url"):
-            if item.get("qualityNumber") > quality and not item.get("no_audio"):
-                url = item.get("url")
-
-            menu += f'<a href={item.get("url")}>{item.get("subname")}.{item.get("ext")} - {item.get("attr").get("title")}</a>\n'
-
-        menu = await full_log(menu)
-
-        video_buffer = BytesIO(requests.get(url).content)
+        video_buffer = BytesIO((await asyncio.to_thread(get, url=url)).content)
         video_buffer.seek(0)
-        video_buffer.name = "video.mp4"
 
         await message.edit("<i>Uploading the video into telegram</i>")
+        video_buffer = await client.upload_file(file=video_buffer, file_name="video.mp4")
+
         await message.delete()
         await message.respond(
-            message=f"<i>All Qualities:\n{menu.text}</i>",
-            file=video_buffer
+            file=video_buffer,
+            supports_streaming=True
         )
 
     @run(command="google")
