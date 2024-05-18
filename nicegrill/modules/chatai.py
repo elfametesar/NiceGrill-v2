@@ -448,7 +448,9 @@ f"""⏺ **Me: **__{message.args}__
 
         try:
             gem_client = GeminiClient(
-                proxies=":".join(ChatAI.CLIENT.proxy).replace(":", "://", 1)
+                proxies={
+                    "https://": ":".join(ChatAI.CLIENT.proxy).replace(":", "://", 1)
+                }
             )
 
             await gem_client.init(timeout=30, auto_close=False, close_delay=300, auto_refresh=True)
@@ -618,7 +620,7 @@ Query: {message.args}"""
                 parse_mode="md"
             )
 
-    @run(command="proxy")
+    @run(command="setproxy")
     async def set_gemini_proxy(message: Message, client: Client):
         if not message.args:
             ChatAI.CLIENT = httpx.Client(follow_redirects=True, proxies=None)
@@ -653,7 +655,7 @@ Query: {message.args}"""
         else:
             await message.edit(f"<i>There is no proxy set for AI</i>")
 
-    @run(command="gembehavior")
+    @run(command="aibehavior")
     async def set_AI_BEHAVIOR(message: Message, client: Client):
         if not message.args:
             ChatAI.AI_BEHAVIOR = "Act professionally and reply helpfully."
