@@ -9,7 +9,6 @@ meval
 pillow
 pymongo
 telethon
-pytube3
 requests
 udpy
 youtube_search
