@@ -177,7 +177,6 @@ Selected Element:</b>
             )
 
             browser = browser.pages[0]
-            asyncio.create_task(Browser.test(browser))
 
             await browser.goto(message.args or "https://www.google.com", wait_until="domcontentloaded")
             await message.delete()
