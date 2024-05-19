@@ -146,24 +146,6 @@ Selected Element:</b>
 
         return obj_list[int(await asyncio.to_thread(input))][1]
 
-    async def key_parser(key: str):
-        key = key.replace(" ", "").title()
-
-        if "up" in key.lower():
-            key = "ArrowUp"
-        elif "down" in key.lower():
-            key = "ArrowDown"
-        elif "left" in key.lower():
-            key = "ArrowLeft"
-        elif "right" in key.lower():
-            key = "ArrowRight"
-
-        if key.count("+") > 0:
-            key_list = [key_item.title() for key_item in key.split("+")]
-            key = "+".join(key_list)
-        
-        return key
-
     @run("browser")
     async def launch_firefox(message: Message, client: Client):
         await message.edit("<i>Launching browser...</i>")
@@ -218,9 +200,9 @@ Selected Element:</b>
                     command = await asyncio.to_thread(input)
 
                     if command.startswith("1") or command.lower().startswith("press "):
-                        await browser.keyboard.press(
-                            await Browser.key_parser(command.split()[-1])
-                        )
+                        for key in command.split()[1:]:
+                            await browser.keyboard.press(key)
+
                         continue
 
                     elif command.startswith("2") or command.startswith("goto "):
