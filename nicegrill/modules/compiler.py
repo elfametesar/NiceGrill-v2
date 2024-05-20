@@ -95,43 +95,23 @@ Usage:
 
         while True:
 
-            async for line in proc.stdout:
+            if message.id not in Compiler.PROCESSES:
+                break
 
-                if message.id not in Compiler.PROCESSES:
-                    break
-
-                res += html.escape(line.decode())
-
-                if proc.returncode is not None:
-
-                    res += html.escape((await proc.stdout.read()).decode())
-                    exit_code = exit_code.format(proc.returncode)
-
-                    try:
-                        await message.edit(
-                            f"{(template.format(message.args) + res[-(4095 - len(template)):])[-4096:]}</code>"
-                        )
-                    except MessageNotModifiedError:
-                        continue
-
-                    break
-
+            try:
+                res += html.escape((await proc.stdout.readuntil()).decode())
+            except Exception as e:
                 await asyncio.sleep(0)
 
-                if flood_control > 50:
-                    flood_control = 0
-                else:
-                    flood_control += 1
-                    continue
-
+            if len(res) % 40 == 0:
                 try:
                     await message.edit(
                         f"{(template.format(message.args) + res[-(4095 - len(template)):])[-4096:]}</code>"
                     )
-                except MessageNotModifiedError:
-                    continue
+                except Exception:
+                    pass
 
-            flood_control = 6
+                await asyncio.sleep(1)
 
             if not message.cmd:
                 del Compiler.PROCESSES[message.id]
@@ -144,9 +124,18 @@ Usage:
             if message.id not in Compiler.PROCESSES:
                 break
 
-            proc = await Compiler.spawn_process(cmd=f'read -t 30 line && eval "$line"', executable=Compiler.TERMINAL_EXEC)
-            Compiler.PROCESSES[message.id] = proc
-            res += "\n\n"
+            if proc.returncode != None:
+                res += (await proc.stdout.read()).decode()[-(4095 - len(template)):]
+                try:
+                    await message.edit(
+                        f"{(template.format(message.args) + res)}</code>"
+                    )
+                except Exception:
+                    pass
+
+                proc = await Compiler.spawn_process(cmd=f'read -t 30 line && eval "$line"', executable=Compiler.TERMINAL_EXEC)
+                Compiler.PROCESSES[message.id] = proc
+                res += "\n\n"
 
         log_url = f"""
 
