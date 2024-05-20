@@ -13,7 +13,6 @@
 
 from datetime import datetime
 from database import settingsdb as settings
-from telethon.errors.rpcerrorlist import MessageNotModifiedError
 from nicegrill import Message, run, event_watcher
 from nicegrill import utils
 from telethon import TelegramClient as Client
