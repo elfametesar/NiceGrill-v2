@@ -18,7 +18,7 @@ from datetime import datetime
 from hashlib import sha3_512
 from io import BytesIO
 from random import choice
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import urlencode
 from uuid import uuid4
 from requests import get
 from telethon import TelegramClient as Client
@@ -26,7 +26,6 @@ from nicegrill import Message, run, startup
 from config import GEMINI_API, OPENROUTER_COOKIE, CHATGPT_BEARER_KEY
 from database import settingsdb as settings
 from gemini_ng import GeminiClient as GeminiAPIClient
-from gemini_ng.schemas.proxy import ProxyInfo
 from gemini_webapi import GeminiClient
 from gemini_webapi.exceptions import AuthError
 from fake_useragent import UserAgent
