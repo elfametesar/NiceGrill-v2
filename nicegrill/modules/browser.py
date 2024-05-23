@@ -4,14 +4,12 @@ from telethon import TelegramClient as Client
 from quart import Quart, render_template, websocket
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
-from flask_socketio import SocketIO, emit
 from nicegrill import Message, run
 from datetime import datetime
 from base64 import b64encode
 from io import BytesIO
 
 import asyncio
-import json
 import html
 import sys
 import os

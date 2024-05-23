@@ -27,3 +27,5 @@ httpcore[socks]
 socksio
 httpx[socks]
 playwright
+quart
+hypercorn
