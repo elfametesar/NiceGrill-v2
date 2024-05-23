@@ -18,7 +18,7 @@ from datetime import datetime
 from hashlib import sha3_512
 from io import BytesIO
 from random import choice
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 from uuid import uuid4
 from requests import get
 from telethon import TelegramClient as Client
@@ -174,7 +174,7 @@ All of these seems to be fake, i just added them anyway, more the merrier I took
             }
         )
 
-        if response.ok and response.json().get("choices"):
+        if response.is_success and response.json().get("choices"):
             response = response.json().get("choices")[0].get("message").get("content").strip()
             await message.edit(
                 f"""⏺ **Me: **__{message.args}__
@@ -314,6 +314,47 @@ __{response.text}__""",
         fallback_base64 = b64encode(f'"{seed}"'.encode('utf-8')).decode('utf-8')
         return 'gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D' + fallback_base64
 
+    @run(command="gptchats")
+    async def get_gpt_chats(message: Message, client: Client):
+        await message.edit("<i>Requesting for ChatGPT chats</i>")
+        
+        headers = {
+            'authorization': f'Bearer {CHATGPT_BEARER_KEY}',
+            'oai-language': 'en-US',
+            'priority': 'u=1, i',
+            'sec-ch-ua-mobile': '?0',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': str(UserAgent.chrome)
+        }
+
+        params = (
+            ('offset', '0'),
+            ('limit', '28'),
+            ('order', 'updated'),
+        )
+
+        response = await asyncio.to_thread(
+            ChatAI.CLIENT.get,
+            'https://chatgpt.com/backend-api/conversations',
+            headers=headers,
+            cookies={
+                '__Secure-next-auth.session-token': CHATGPT_BEARER_KEY,
+            },
+        )
+
+        if not response.is_success:
+            ChatAI.LOG.error(response.text)
+            await message.edit(f"<i>Cannot request ChatGPT for chat information</i>\n<b>Reason: </b><i>{response.reason_phrase} (Details in the logs)</i>")
+            return
+
+        menu = "<b>Your ChatGPT Chats</b>\n\n"
+        for chat in response.json().get("items"):
+            menu += f'<b>Chat ID:</b> <i>{chat.get("id")}</i>\n<b>Chat Title:</b> {chat.get("title")}</i>\n\n'
+        
+        await message.edit(menu)
+
     @run(command="setgptchat")
     async def set_chat_id(message: Message, client: Client):
         if not message.args:
@@ -341,14 +382,11 @@ __{response.text}__""",
             await message.edit("<i>I need you to set a conversation ID first, you can find it in the in the URL in ChatGPT chat page<i>")
             return
 
-        await message.edit("<i>Getting a response</i>")
-
         cookies = {
             "__Secure-next-auth.session-token": CHATGPT_BEARER_KEY
         }
 
         headers = {
-            'authorization': f'Bearer {CHATGPT_BEARER_KEY}',
             'content-type': 'application/json',
             'oai-language': 'en-US',
             'priority': 'u=1, i',
@@ -359,12 +397,67 @@ __{response.text}__""",
             'user-agent': str(UserAgent.chrome)
         }
 
+        file_id = None
+        if message.reply_to_text:
+            if message.reply_to_text.photo or message.reply_to_text.sticker:
+                await message.edit("<i>Downloading media for ChatGPT</i>")
+                file: BytesIO = await message.reply_to_text.download_media(BytesIO())
+                file.seek(0)
+
+                response = await asyncio.to_thread(
+                    ChatAI.CLIENT.post,
+                    url='https://chatgpt.com/backend-api/files',
+                    cookies=cookies,
+                    headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'},
+                    data=json.dumps({
+                        'file_name': message.reply_to_text.file.name or "photo.jpg",
+                        'file_size': message.reply_to_text.file.size,
+                        'use_case': 'multimodal',
+                        'reset_rate_limits': False,
+                    })
+                )
+
+                if response.json().get("status") != "success":
+                    ChatAI.LOG.error(response.text)
+                    await message.edit(f"<i>Cannot upload media to ChatGPT</i>\n<b>Reason: </b><i>{response.reason_phrase} (Details in the logs)</i>")
+                    return
+
+                file_id = response.json().get("file_id")
+
+                params = response.json().get("upload_url")
+                params = params[params.find("?"):]
+
+                response = await asyncio.to_thread(
+                    ChatAI.CLIENT.put,
+                    url='https://files.oaiusercontent.com/' + file_id + params,
+                    headers={**headers, 'x-ms-blob-type': 'BlockBlob', 'x-ms-version': '2020-04-08', "content-type": message.reply_to_text.file.mime_type},
+                    data=file.getvalue()
+                )
+
+                if not response.is_success:
+                    ChatAI.LOG.error(response.text)
+                    await message.edit(f"<i>Cannot sign media file in ChatGPT</i>\n<b>Reason: </b><i>{response.reason_phrase} (Details in the logs)</i>")
+                    return
+                
+                response = await asyncio.to_thread(
+                    ChatAI.CLIENT.post,
+                    f'https://chatgpt.com/backend-api/files/{file_id}/uploaded',
+                    cookies=cookies,
+                    headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'},
+                    json={},
+                )
+
+            elif message.reply_to_text.message:
+                message.args = message.reply_to_text.message + "\n\n" + message.args
+
+        await message.edit("<i>Getting a response</i>")
+
         try:
             response = await asyncio.to_thread(
                 ChatAI.CLIENT.post,
                 url='https://chatgpt.com/backend-api/sentinel/chat-requirements',
                 cookies=cookies,
-                headers=headers
+                headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'}
             )
 
             if response.status_code != 200:
@@ -395,7 +488,34 @@ __{response.text}__""",
                             message.args,
                         ],
                     },
-                },
+                } if not file_id else {
+                    'id': str(uuid4()),
+                    'author': {
+                        'role': 'user',
+                    },
+                    'content': {
+                        'content_type': 'multimodal_text',
+                        'parts': [{
+                            'content_type': 'image_asset_pointer',
+                            'asset_pointer': f'file-service://{file_id}',
+                            'size_bytes': message.reply_to_text.file.size,
+                            'width': message.reply_to_text.photo.sizes[-1].w,
+                            'height': message.reply_to_text.photo.sizes[-1].h
+                        }, message.args],
+                    },
+                    'metadata': {
+                        'attachments': [
+                            {
+                                'id': file_id,
+                                'size': message.reply_to_text.file.size,
+                                'name': message.reply_to_text.file.name or "photo.jpg",
+                                'mime_type': 'image/jpeg',
+                                'width': message.reply_to_text.photo.sizes[-1].w,
+                                'height': message.reply_to_text.photo.sizes[-1].h,
+                            },
+                        ],
+                    },
+                }
             ],
             'conversation_id': ChatAI.GPT_CONVERSATION_ID,
             'model': 'auto',
@@ -413,7 +533,7 @@ __{response.text}__""",
                 ChatAI.CLIENT.post,
                 url='https://chatgpt.com/backend-api/conversation',
                 cookies=cookies,
-                headers=headers,
+                headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'},
                 json=json_data
             )
         except Exception as e:
