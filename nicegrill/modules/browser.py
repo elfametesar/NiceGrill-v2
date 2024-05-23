@@ -1,19 +1,30 @@
-from datetime import datetime
-from httpx import delete
-import playwright
 from playwright.async_api import async_playwright
 from playwright.async_api import Page, Locator
-import playwright.async_api
 from telethon import TelegramClient as Client
+from quart import Quart, render_template, websocket
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from flask_socketio import SocketIO, emit
 from nicegrill import Message, run
+from datetime import datetime
+from base64 import b64encode
 from io import BytesIO
 
 import asyncio
+import json
 import html
 import sys
 import os
 
 class Browser:
+
+    HOST = Quart(__name__)
+
+    HOST_TASK = None
+    MOUSE = {"x": 0, "y": 0, "act": 0}
+    URL = ""
+    IMAGE_DATA = b""
+    IS_BROWSER_ON = False
 
     TEXT_ELEMENTS = ["input[type='text']", "div[role='textbox']", "textbox", "textarea", "rich-textarea"]
     BUTTON_ELEMENTS = ["button", "input[role='button']", "a", "ui-button", "div[role='button']", "div[jsaction='.*']"]
@@ -103,9 +114,12 @@ Selected Element:</b>
     async def find_item(browser: Page, element: str):
         obj_list = []
 
-        if element.count(" "):
-            pass
-        elif "text" in element:
+        filter_text = ""
+        if (index := element.find("filter=")) != -1:
+            filter_text = element[index + 7:]
+            element = element.replace("filter=" + filter_text, "")
+
+        if "text" in element:
             element = Browser.TEXT_ELEMENTS
         elif "button" in element:
             element = Browser.BUTTON_ELEMENTS
@@ -117,15 +131,12 @@ Selected Element:</b>
             element = [element]
 
         for frame in browser.frames:
-            if element.count(" ") == 0:
-                for item in element:
-                    obj_list.extend(await frame.locator(item).all())
-            else:
-                element, filter_text = element.split(maxsplit=1)
-                obj_list.extend(await frame.locator(element).filter(has_text=filter_text).all())
+            for item in element:
+                obj_list.extend(await frame.locator(item).filter(has_text=filter_text).all())
 
         obj_list = list(enumerate(obj_list))
         menu = ""
+
         for index, obj in obj_list:
             if await obj.is_visible():
                 label = await obj.text_content() or \
@@ -173,7 +184,7 @@ Selected Element:</b>
 
 <b>Time:<b> <i>{datetime.now().strftime("%c")}
 
-1 - press [keyboard-key]
+1 - press <a href=https://playwright.dev/docs/api/class-keyboard>[keyboard-key]</a>
 2 - goto [url] (starting with http, https, ftp...)
 3 - find <html-element>
 4 - actions
@@ -238,7 +249,7 @@ Selected Element:</b>
                     elif command == "6" or command == "refresh":
                         continue
 
-                    elif command == "6" or command == "exit":
+                    elif command == "7" or command == "exit":
                         await Browser.LAST_MESSAGE.delete()
                         Browser.LAST_MESSAGE = None
                         return
@@ -250,3 +261,111 @@ Selected Element:</b>
                 except Exception as e:
                     print(f"\n<b>Error:</b> <i>{e}</i>")
                     await asyncio.sleep(2)
+
+    @HOST.websocket("/ws")
+    async def websocket():
+        while True:
+            await asyncio.sleep(0)
+            await websocket.send_json({'url': Browser.URL})
+            Browser.MOUSE = await websocket.receive_json()
+
+
+    @run(command="stopweb")
+    async def stop_web_server(message: Message, client: Client):
+        if Browser.HOST_TASK:
+            Browser.HOST_TASK.cancel()
+            Browser.HOST_TASK = None
+            await message.edit("<i>Browser server has got closed</i>")
+            await asyncio.sleep(2)
+            await message.delete()
+        else:
+            await message.edit("<i>There is no browser server running</i>")
+
+    @run(command="(browser_web|bweb)")
+    async def start_hosting(message: Message, client: Client):
+        port = 5000
+        if message.args.isdigit():
+            port = int(message.args)
+
+        try:
+            asyncio.create_task(Browser.browser_loop())
+            
+            config = Config()
+            config.bind = [f"127.0.0.1:{port}"]
+            Browser.HOST_TASK = asyncio.create_task(serve(Browser.HOST, config=config))
+
+            await message.edit(f"<i>Browser server started. You can access it through http://127.0.0.1:{port}</i>")
+
+        except Exception as e:
+            await message.edit(f"<i>Failed to start the server</i>\n<b>Reason:</b> <i>{e}</i>")
+
+    async def generate_frame():
+        while True:
+            frame_data = b64encode(Browser.IMAGE_DATA).decode('utf-8')
+            await asyncio.sleep(0)
+            yield frame_data
+
+    @HOST.get('/frame')
+    async def frame():
+        async for data in Browser.generate_frame():
+            return data
+
+
+    @HOST.route('/')
+    async def index():
+        if not Browser.IS_BROWSER_ON:
+            return "You haven't started the browser"
+
+        return await render_template(['index.html'])
+
+    async def browser_loop():
+
+        async with async_playwright() as playwright:
+            browser = await playwright.firefox.launch_persistent_context(
+                user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
+                java_script_enabled=True,
+                headless=True,
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
+            )
+
+            browser = await browser.new_page()
+
+            await browser.goto("https://www.google.com")
+
+            Browser.IS_BROWSER_ON = True
+
+            while True:
+
+                try:
+                    x, y, act = Browser.MOUSE.values()
+                    Browser.URL = browser.url
+
+                    if act == 0:
+                        await browser.mouse.move(x=x,y=y)
+                    if act == 1:
+                        await browser.mouse.click(x=x, y=y)
+                    elif act == 2:
+                        await browser.mouse.dblclick(x=x, y=y)
+                    elif act == 3:
+                        await browser.mouse.wheel(delta_x=x, delta_y=y)
+                    elif act == 4:
+                        await browser.go_back(timeout=4000)
+                    elif act == 5:
+                        await browser.go_forward(timeout=4000)
+                    elif act == 6:
+                        asyncio.create_task(browser.reload(timeout=4000))
+                    elif x < 0 and y < 0:
+                        asyncio.create_task(browser.goto(act, timeout=5))
+                    elif isinstance(act, str):
+                        await browser.keyboard.press(act)
+
+                    await asyncio.sleep(0)
+
+                    Browser.MOUSE["act"] = act = -1
+                except Exception:
+                    pass
+
+                try:
+                    Browser.IMAGE_DATA = await browser.screenshot(type="png", caret="initial", timeout=5000)
+                except Exception as e:
+                    pass
