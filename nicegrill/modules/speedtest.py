@@ -12,26 +12,21 @@ class Speedtest:
 
         async with async_playwright() as playwright:
 
-            browser = await playwright.chromium.launch_persistent_context(
-                user_data_dir=f"{os.environ.get('HOME')}/.config/google-chrome/",
-                java_script_enabled=True,
-                permissions=["geolocation"],
-                args=["--start-maximized"],
-                viewport=None,
-                no_viewport=True
+            browser = await playwright.chromium.launch(
+                args=["--start-maximized"]
             )
 
-            browser = await browser.new_page()
+            browser = await browser.new_page(permissions=["geolocation"])
 
             await browser.goto(
-                url="https://www.speedtest.net/", wait_until="domcontentloaded"
+                url="https://www.speedtest.net/", wait_until="networkidle"
             )
 
             if await (button := browser.get_by_role("button", name="I Accept")).count() == 1:
-                button.click()
+                await button.click()
 
             if await (button := browser.get_by_role("link", name="Back to test results")).count() == 1:
-                button.click()
+                await button.click()
 
             await (browser.get_by_label("start speed test - connection type multi")).click()
 
