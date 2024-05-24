@@ -22,7 +22,7 @@ class Browser:
     MOUSE = {"x": 0, "y": 0, "act": 0}
     URL = ""
     IMAGE_DATA = b""
-    IS_BROWSER_ON = False
+    BROWSER: Page = None
 
     TEXT_ELEMENTS = ["input[type='text']", "div[role='textbox']", "textbox", "textarea", "rich-textarea"]
     BUTTON_ELEMENTS = ["button", "input[role='button']", "a", "ui-button", "div[role='button']", "div[jsaction='.*']"]
@@ -157,9 +157,13 @@ Selected Element:</b>
 
     @run("browser")
     async def launch_firefox(message: Message, client: Client):
+        if Browser.HOST_TASK:
+            await message.edit("<i>There is a running browser server, you can't use this function</i>")
+            return
+
         await message.edit("<i>Launching browser...</i>")
         async with async_playwright() as playwright:
-            browser = await playwright.firefox.launch_persistent_context(
+            Browser.BROWSER = await playwright.firefox.launch_persistent_context(
                 user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
                 java_script_enabled=True,
                 no_viewport=True,
@@ -167,9 +171,9 @@ Selected Element:</b>
                 args=["--start-maximized"]
             )
 
-            browser = browser.pages[0]
+            Browser.BROWSER = Browser.BROWSER.pages[0]
 
-            await browser.goto(message.args or "https://www.google.com", wait_until="domcontentloaded")
+            await Browser.BROWSER.goto(message.args or "https://www.google.com", wait_until="domcontentloaded")
             await message.delete()
             sys.stdin.clear()
 
@@ -193,7 +197,11 @@ Selected Element:</b>
 <b>Select an action:</b> 
 {sys.stdin.read() if not sys.stdin.is_empty else ""}"""
 
-                screenshot = BytesIO(await browser.screenshot())
+                if Browser.BROWSER.is_closed():
+                    await message.delete()
+                    break
+
+                screenshot = BytesIO(await Browser.BROWSER.screenshot())
                 screenshot.name = "ss.jpg"
 
                 if Browser.LAST_MESSAGE:
@@ -210,17 +218,17 @@ Selected Element:</b>
 
                     if command.startswith("1") or command.lower().startswith("press "):
                         for key in command.split()[1:]:
-                            await browser.keyboard.press(key)
+                            await Browser.BROWSER.keyboard.press(key)
 
                         continue
 
                     elif command.startswith("2") or command.startswith("goto "):
-                        await browser.goto(command.split()[-1], wait_until="domcontentloaded")
+                        await Browser.BROWSER.goto(command.split()[-1], wait_until="domcontentloaded")
                         continue
                     
                     elif command.startswith("3") or command.startswith("find "):
                         element = " ".join(command.split()[1:])
-                        selected_obj = await Browser.find_item(browser=browser, element=element)
+                        selected_obj = await Browser.find_item(browser=Browser.BROWSER, element=element)
 
                         if not selected_obj:
                             await Browser.LAST_MESSAGE.edit(f"{Browser.LAST_MESSAGE.text}\n<i>No elements found</i>")
@@ -240,9 +248,9 @@ Selected Element:</b>
                             continue
 
                         await Browser.select_action(selected_obj=selected_obj, action=int(action) if action else "")
-                    
+
                     elif command == "5" or command == "reload":
-                        await browser.reload(wait_until="domcontentloaded")
+                        await Browser.BROWSER.reload(wait_until="domcontentloaded")
 
                     elif command == "6" or command == "refresh":
                         continue
@@ -273,6 +281,7 @@ Selected Element:</b>
         if Browser.HOST_TASK:
             Browser.HOST_TASK.cancel()
             Browser.HOST_TASK = None
+            sys.stdin.write("exit")
             await message.edit("<i>Browser server has got closed</i>")
             await asyncio.sleep(2)
             await message.delete()
@@ -281,6 +290,13 @@ Selected Element:</b>
 
     @run(command="(browser_web|bweb)")
     async def start_hosting(message: Message, client: Client):
+        if Browser.HOST_TASK:
+            await message.edit("<i>There is already a running server</i>")
+            return
+
+        if Browser.BROWSER:
+            sys.stdin.write("exit")
+
         port = 5000
         if message.args.isdigit():
             port = int(message.args)
@@ -308,54 +324,48 @@ Selected Element:</b>
         async for data in Browser.generate_frame():
             return data
 
-
     @HOST.route('/')
     async def index():
-        if not Browser.IS_BROWSER_ON:
-            return "You haven't started the browser"
-
         return await render_template(['index.html'])
 
     async def browser_loop():
-
         async with async_playwright() as playwright:
-            browser = await playwright.firefox.launch_persistent_context(
+            Browser.BROWSER = await playwright.firefox.launch_persistent_context(
                 user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
                 java_script_enabled=True,
                 headless=True,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
             )
 
-            browser = await browser.new_page()
-
-            await browser.goto("https://www.google.com")
-
-            Browser.IS_BROWSER_ON = True
+            Browser.BROWSER = Browser.BROWSER.pages[0]
+            await Browser.BROWSER.goto("https://www.google.com")
 
             while True:
-
                 try:
                     x, y, act = Browser.MOUSE.values()
-                    Browser.URL = browser.url
+                    Browser.URL = Browser.BROWSER.url
 
                     if act == 0:
-                        await browser.mouse.move(x=x,y=y)
+                        await Browser.BROWSER.mouse.move(x=x,y=y)
                     if act == 1:
-                        await browser.mouse.click(x=x, y=y)
+                        await Browser.BROWSER.mouse.click(x=x, y=y)
                     elif act == 2:
-                        await browser.mouse.dblclick(x=x, y=y)
+                        await Browser.BROWSER.mouse.dblclick(x=x, y=y)
                     elif act == 3:
-                        await browser.mouse.wheel(delta_x=x, delta_y=y)
+                        await Browser.BROWSER.mouse.wheel(delta_x=x, delta_y=y)
                     elif act == 4:
-                        await browser.go_back(timeout=4000)
+                        await Browser.BROWSER.go_back(timeout=4000)
                     elif act == 5:
-                        await browser.go_forward(timeout=4000)
+                        await Browser.BROWSER.go_forward(timeout=4000)
                     elif act == 6:
-                        asyncio.create_task(browser.reload(timeout=4000))
+                        asyncio.create_task(Browser.BROWSER.reload(timeout=4000))
                     elif x < 0 and y < 0:
-                        asyncio.create_task(browser.goto(act, timeout=5))
+                        asyncio.create_task(Browser.BROWSER.goto(act, timeout=5))
                     elif isinstance(act, str):
-                        await browser.keyboard.press(act)
+                        await Browser.BROWSER.keyboard.press(act)
+
+                    if not sys.stdin.is_empty and sys.stdin.read() == "exit":
+                        break
 
                     await asyncio.sleep(0)
 
@@ -364,6 +374,6 @@ Selected Element:</b>
                     pass
 
                 try:
-                    Browser.IMAGE_DATA = await browser.screenshot(type="png", caret="initial", timeout=5000)
+                    Browser.IMAGE_DATA = await Browser.BROWSER.screenshot(type="jpeg", quality=40, caret="initial", timeout=5000)
                 except Exception as e:
                     pass
