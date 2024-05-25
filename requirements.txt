@@ -21,7 +21,6 @@ google-auth-httplib2
 google-auth-oauthlib
 emoji
 translate
-gemini-ng
 gemini-webapi
 httpcore[socks]
 socksio
