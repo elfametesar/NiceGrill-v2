@@ -152,21 +152,33 @@
             socket.send(JSON.stringify(position));
         });
 
+        videoStream.addEventListener("dragstart", function (event) {
+            socket.send(JSON.stringify({x: 0, y: 0, act: 7}));
+        });
+
+        videoStream.addEventListener("dragover", function (event) {
+            socket.send(JSON.stringify({x: 0, y: 0, act: 8}));
+        });
+
         window.onkeydown = (event) => {
             if (event.key == "Tab") {
                 return false
             }
         }
 
-        socket.addEventListener("message", function(event) {
-            data = JSON.parse(event.data)
-
-            url_text.value = data["url"]
-            
+        function updateFrame() {
             fetch("frame").then((response) => response.text()).then((data) => {
                 videoStream.src = "data:image/jpeg;base64," + data 
             })
+        };
+        
+        socket.addEventListener("message", function(event) {
+            data = JSON.parse(event.data)
+            
+            url_text.value = data["url"]
+            
         });
+        setInterval('updateFrame()', 100);
     </script>
 </body>
 </html>

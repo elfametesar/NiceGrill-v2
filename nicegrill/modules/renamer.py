@@ -42,8 +42,7 @@ class Renamer:
         await message.edit("<i>Renaming..</i>")
         
         await message.reply_to_text.reply(
-            file=file,
-            force_document=True
+            file=file
         )
 
         await message.delete()
@@ -84,7 +83,6 @@ class Renamer:
         await client.send_file(
             entity=await message.get_chat(),
             file=file,
-            force_document=True,
             support_streaming=True,
             reply_to=message.reply_to_text
         )

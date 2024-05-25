@@ -1,5 +1,4 @@
-from playwright.async_api import async_playwright
-from playwright.async_api import Page, Locator
+from playwright.async_api import async_playwright, Page, Locator
 from telethon import TelegramClient as Client
 from quart import Quart, render_template, websocket
 from hypercorn.asyncio import serve
@@ -168,7 +167,6 @@ Selected Element:</b>
                 java_script_enabled=True,
                 no_viewport=True,
                 viewport={"width": 1920, "height": 1080},
-                args=["--start-maximized"]
             )
 
             Browser.BROWSER = Browser.BROWSER.pages[0]
@@ -333,7 +331,6 @@ Selected Element:</b>
             Browser.BROWSER = await playwright.firefox.launch_persistent_context(
                 user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
                 java_script_enabled=True,
-                headless=True,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
             )
 
@@ -359,6 +356,10 @@ Selected Element:</b>
                         await Browser.BROWSER.go_forward(timeout=4000)
                     elif act == 6:
                         asyncio.create_task(Browser.BROWSER.reload(timeout=4000))
+                    elif act == 7:
+                        await Browser.BROWSER.mouse.down()
+                    elif act == 8:
+                        await Browser.BROWSER.mouse.up()
                     elif x < 0 and y < 0:
                         asyncio.create_task(Browser.BROWSER.goto(act, timeout=5))
                     elif isinstance(act, str):
@@ -370,10 +371,7 @@ Selected Element:</b>
                     await asyncio.sleep(0)
 
                     Browser.MOUSE["act"] = act = -1
+                    Browser.IMAGE_DATA = await Browser.BROWSER.screenshot(type="jpeg", quality=40, caret="initial", timeout=15000)
                 except Exception:
                     pass
 
-                try:
-                    Browser.IMAGE_DATA = await Browser.BROWSER.screenshot(type="jpeg", quality=40, caret="initial", timeout=5000)
-                except Exception as e:
-                    pass
