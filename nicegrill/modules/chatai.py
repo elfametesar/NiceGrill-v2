@@ -23,7 +23,7 @@ from uuid import uuid4
 from requests import get
 from telethon import TelegramClient as Client
 from nicegrill import Message, event_watcher, run, startup, prefix
-from config import OPENROUTER_COOKIE, CHATGPT_BEARER_KEY
+from config import GEMINI_1PSID, GEMINI_1PSIDTS, OPENROUTER_COOKIE, CHATGPT_BEARER_KEY
 from database import settingsdb as settings
 from gemini_webapi import GeminiClient
 from gemini_webapi.exceptions import AuthError
@@ -566,6 +566,8 @@ f"""⏺ **Me: **__{message.args}__
 
         try:
             gem_client = GeminiClient(
+                secure_1psid=GEMINI_1PSID,
+                secure_1psidts=GEMINI_1PSIDTS,
                 proxies={
                     "https://": ":".join(ChatAI.CLIENT.proxy).replace(":", "://", 1)
                 }
