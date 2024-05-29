@@ -8,6 +8,7 @@
 from os import popen
 import os
 from random import choice
+from uuid import uuid4
 from bs4 import BeautifulSoup
 from nicegrill import run, Message
 from nicegrill.utils import humanize
@@ -76,12 +77,12 @@ class DirectGen:
         file_id = ''
         reply = ''
         if link.find("view") != -1:
-            file_id = link.split('/')[-3]
+            file_id = link.split('/')[-2]
         elif link.find("open?id=") != -1:
             file_id = link.split("open?id=")[1].strip()
         elif link.find("uc?id=") != -1:
             file_id = link.split("uc?id=")[1].strip()
-        drive += f'{file_id}&export=download&authuser=0&confirm=t&uuid=80cc8705-2238-4fe1-a60a-c87a9f439c63&at=APZUnTX1g3CMlsmMAF6xHVGVycK8%3A1713014570389'
+        drive += f'{file_id}&export=download&authuser=0&confirm=t&uuid={uuid4()}&at=APZUnTUqR9KNAsVypgBzMZNNlmdj%3A1717004771038'
         reply = f"<a href='{drive}'>Direct Download Link</a>\n"
         return reply
 
