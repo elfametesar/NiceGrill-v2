@@ -570,7 +570,7 @@ f"""⏺ **Me: **__{message.args}__
                 secure_1psidts=GEMINI_1PSIDTS,
                 proxies={
                     "https://": ":".join(ChatAI.CLIENT.proxy).replace(":", "://", 1)
-                }
+                } if ChatAI.CLIENT.proxy else None
             )
 
             await gem_client.init(timeout=30, auto_close=False, close_delay=300, auto_refresh=True)

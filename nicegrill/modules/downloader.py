@@ -16,7 +16,7 @@ class Downloader:
 
     DOWNLOAD_QUEUE = {}
     FLOOD_CONTROL = 7
-    PROGRESS_BAR = "⚆" * 20
+    PROGRESS_BAR = "○" * 20
     DOWNLOAD_PATH = None
 
     async def telegram_progress_bar(message: Message, received_bytes, total_bytes, file_name, start_time):
@@ -32,7 +32,7 @@ class Downloader:
 <b>Downloaded:</b> <i>{await humanize(data=received_bytes)}</i>
 <b>Estimated:</b> <i>{await humanize(data=total_bytes // speed, time=True)}</i>
 <b>Status:</b> <i>{{}}</i>
-<i>{'⚈' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
+<i>{'●' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
 
         if percentage < 99:
             if Downloader.FLOOD_CONTROL > 12:
