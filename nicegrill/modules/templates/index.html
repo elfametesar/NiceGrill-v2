@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Remote Browser</title>
+    <style>
+        body
+        {
+            width:80%;
+            margin-left:auto;
+            margin-right:auto;
+        }
+        .safari-button{
+            min-width: 38px;
+            height: 38px;
+            border-radius: 7px;
+            border-width: 0px;
+            color: gray;
+            background-color: transparent;
+        }
+        .safari-button:hover{
+            width: 50px;
+            height: 38px;
+            border-radius: 7px;
+            border-width: 0px;
+            color: gray;
+            background-color: #ffffff15;
+        }
+        .nav-arrow {
+            width: 11px;
+            height: 11px;
+            border: 2px solid #9c9c9cbd;
+            border-left: 0;
+            border-top: 0;
+            margin-top: -6px;
+
+            transform: rotate(135deg);
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="static/index.css">
+</head>
+
+<body style="overflow: hidden; user-select: none; background-color: rgb(61, 61, 61);">
+    <div style="height: 50px; background-color: rgb(35, 35, 35); border-top-left-radius: 12px; border-top-right-radius: 12px; margin-bottom: -4px; width: 1280px; align-items:center; display:block; text-align: center;">
+        <div style="height: 50px; align-items:center; display:flex; text-align: center; padding: 5px;">
+            <div style="display: flex;">
+                <div style="margin-left: 20px; margin-right: 5px; width: 10px; height: 10px; border-radius: 15px; background-color: red;"></div>
+                <div style="margin-right: 5px; width: 10px; height: 10px; border-radius: 15px; background-color: rgb(253 188 46);"></div>
+                <div style="margin-right: 5px; width: 10px; height: 10px; border-radius: 15px; background-color: rgb(144 238 144);"></div>
+            </div>
+            <button tabindex="-1" class="safari-button" id="goBack" onclick="go_back()" style="margin-left: 4px; margin-top: -1px;">
+                <div class="nav-arrow" style="margin-left: 11px; margin-top: 2px;"></div>
+            </button>
+            <button tabindex="-1" class="safari-button" id="goForward" onclick="go_forward()" style="margin-left: 0px; margin-right: 2px; margin-top: -1px;">
+                <div class="nav-arrow" style="transform:rotate(316deg); margin-left: 5px; margin-top: 2px;"></div>
+            </button>
+            <div style="margin-left: 10px;margin-top: -3px;width: 100%;min-width: 971px;visibility:visible;display: flex;position: relative;margin-bottom: 5px;" onmouseenter="document.getElementById('Refresh').style.visibility='visible'" onmouseleave="document.getElementById('Refresh').style.visibility='hidden'">
+                <input tabindex="-1" id="url_text" style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin-top: 1px; color: rgb(209, 209, 209); background-color: transparent; border: 0px; position: absolute; width: 100%; height: 30px; z-index: 1; padding-left: 19px; padding-bottom: 2px; user-select: none; pointer-events: none; padding-right: 30px; font-size: small;" value="" disabled="">
+                <input tabindex="-1" id="url_box" class="form-input basic round shadow-inset" value="" style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;color: rgb(209, 209, 209);border-radius: 9px;background-color: #5e6367;height: 30px;z-index: 0;position: absolute;width: 100%;padding-right: 30px;padding-left: 17px;font-size: small;font-weight: 430;">
+                <button tabindex="-1" class="safari-button" id="Refresh" onclick="refresh()" style="padding-bottom: 0px; z-index: 1; width: 30px; height: 25px; font-size: x-large; margin-left: 937px; margin-top: -2px; background-color: transparent; border-width: 0px; color: rgb(198, 198, 198); visibility: hidden;">⟳</button>
+            </div>
+            <img src="static/image.png" style="width: 100%; height: 100%; background-color: white; margin-right: 9px;" ondragstart="return false;"/>
+        </div>
+        <img id="videoStream" tabindex="-1" style="width: 1280px; outline: none; user-select: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;" ondragstart="return false"/>
+    </div>
+    <script>
+        const videoStream = document.getElementById('videoStream');
+        const socket = new WebSocket('ws://' + window.location.host + "/ws");
+        const url_box = document.getElementById("url_box")
+        const url_text = document.getElementById("url_text")
+
+        keypressed = "";
+        recv_data = "";
+        position = {x:0, y:0, act: -1};
+        
+        function go_back(event) {
+            socket.send(JSON.stringify({x:0, y:0, act: 4}));
+        };
+        
+        function go_forward(event) {
+            socket.send(JSON.stringify({x:0, y:0, act: 5}));
+        };
+        
+        function refresh(event) {
+            socket.send(JSON.stringify({x:0, y:0, act: 6}));
+        };
+
+        url_box.addEventListener("click", function(event) {
+            url_box.value = url_text.value
+            url_text.style.visibility = "hidden"
+            document.getElementById("Refresh").style.visibility = "hidden"
+        });
+
+        url_box.addEventListener("keydown", function(event) {
+            if (event.key == "Enter") {
+                socket.send(JSON.stringify({x:-1, y:-1, act: url_box.value}))
+                url_box.value = ""
+                url_text.style.visibility = "visible"
+            } else if (event.key == "Escape") {
+                url_box.value = ""
+                url_text.style.visibility = "visible"
+                url_box.blur()
+            }
+        });
+
+        let timer
+        videoStream.addEventListener('click', event => {
+            const rect = videoStream.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            if (event.detail === 1) {
+                timer = setTimeout(() => {
+                    socket.send(JSON.stringify({x: x, y: y, act: 1}));
+                }, 200)
+            }
+        })
+        videoStream.addEventListener('dblclick', event => {
+            const rect = videoStream.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            clearTimeout(timer)
+            socket.send(JSON.stringify({x: x, y: y, act: 2}));
+        });
+
+        videoStream.addEventListener("keydown", function(event) {
+            let y = position["y"];
+            if (y > 680) {
+                return event.key
+            }
+
+            if (event.key == "Control" || event.key == "Meta" || event.key == "Alt" || event.key == "Shift") {
+                keypressed = event.key + "+";
+            }
+            socket.send(JSON.stringify({x: 0, y: 0, act: keypressed + event.key}));
+        });
+
+        videoStream.addEventListener("keyup", function(event) {
+            if (event.key == "Control" || event.key == "Meta" || event.key == "Alt" || event.key == "Shift") {
+                keypressed = "";
+            };
+        });
+
+        videoStream.addEventListener("wheel", function(event) {
+            socket.send(JSON.stringify({x: event.deltaX*2, y: event.deltaY *2, act: 3}));
+        });
+
+        videoStream.addEventListener('mousemove', function (event) {
+            const rect = videoStream.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            position = { x: x, y: y, act: 0 };
+            socket.send(JSON.stringify(position));
+        });
+
+        videoStream.addEventListener("dragstart", function (event) {
+            socket.send(JSON.stringify({x: 0, y: 0, act: 7}));
+        });
+
+        videoStream.addEventListener("dragover", function (event) {
+            socket.send(JSON.stringify({x: 0, y: 0, act: 8}));
+        });
+
+        window.onkeydown = (event) => {
+            if (event.key == "Tab") {
+                return false
+            }
+        }
+
+        function updateFrame() {
+            fetch("frame").then((response) => response.text()).then((data) => {
+                videoStream.src = "data:image/jpeg;base64," + data 
+            })
+        };
+        
+        socket.addEventListener("message", function(event) {
+            data = JSON.parse(event.data)
+            
+            url_text.value = data["url"]
+            
+        });
+        setInterval('updateFrame()', 100);
+    </script>
+</body>
+</html>
