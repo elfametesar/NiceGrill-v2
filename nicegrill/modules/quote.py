@@ -369,7 +369,7 @@ class Quote:
         return content_image
 
     async def draw_document(message: Message):
-        name, size = message.file.name, message.file.size
+        name, size = message.file.name or "unnamed", message.file.size
 
         if getattr(message.document, "thumbnail", None):
             thumb_buffer = await message.download(thumb=-1)
@@ -412,7 +412,6 @@ class Quote:
         )
 
         name_image = await Quote.draw_text(text=name, font=Quote.FONT_TITLE)
-
         size_image = await Quote.draw_text(text=size, font=Quote.FONT_REGULAR)
 
         document_image = Image.new(
@@ -494,7 +493,7 @@ class Quote:
 
             message.is_media_type = (message.photo or message.video or message.sticker) and not message.page
             is_framed = not message.is_media_type and (
-                message.document or message.raw_text
+                message.document or message.raw_text or message.voice_note
             )
 
             is_titled = is_framed
@@ -632,7 +631,7 @@ class Quote:
         entity_type = ""
         index = 0
 
-        for char in text:
+        for char in text or "":
 
             entity_type = entity_book.get(index) or entity_type
 
