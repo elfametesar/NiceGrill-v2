@@ -733,7 +733,7 @@ class Quote:
         ):
             i += 1
 
-            message_object._sender = await message_object.get_sender()
+            await message_object()
             if message_object.sender_id not in Quote.USER_COLORS:
                 Quote.USER_COLORS.update(
                     {message_object.sender_id: random.choice(Quote.TITLE_COLOR_PALETTE)}
