@@ -59,6 +59,11 @@ class Compiler:
         Usage:
         .py <code>    # Evaluates the given Python code
         """
+
+        if not message.raw_args:
+            await message.edit("<i>Give me some code to work with</i>")
+            return
+
         try:
             reply = message.reply_to_text
             chat = message.chat

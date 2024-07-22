@@ -1,3 +1,4 @@
+import re
 from typing import Coroutine
 from nicegrill import on
 
@@ -10,7 +11,7 @@ class ProcessManager:
 
     _process_list = {}
 
-    @on(prefix=".", pattern="input")
+    @on(pattern="input")
     async def input_data(client, message):
         """
         Sends input data to a running process.
@@ -55,7 +56,7 @@ class ProcessManager:
         except Exception:
             return False
 
-    @on(prefix=".", pattern="kill")
+    @on(pattern="kill")
     async def kill_process(client, message):
         """
         Kills a running process that was initiated by a command.
@@ -154,3 +155,14 @@ async def get_user(user, client):
 
     except Exception:
         return False
+
+def parse_kwargs(command: str, defaults: dict = {}):
+    for match in re.finditer(pattern="(\w+)=(\w+)", string=command, flags=re.I):
+        key = match.group(1)
+        value = eval(match.group(2))
+
+        defaults[key] = value
+        command = command.replace(match.group(1) + "=", "") \
+                          .replace(match.group(2), "")
+
+    return command.strip(), defaults
