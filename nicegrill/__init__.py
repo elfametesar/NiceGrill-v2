@@ -27,6 +27,9 @@ def update_help_data(function, command: str):
     try:
         class_name = function.__qualname__.split(".")[-2]
     except:
+        if not command:
+            return
+
         class_name = "No Name"
 
     if class_name not in HELP_BOOK:

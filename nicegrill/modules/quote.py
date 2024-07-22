@@ -493,7 +493,7 @@ class Quote:
 
             message.is_media_type = (message.photo or message.video or message.gif or message.sticker) and not message.page
             is_framed = not message.is_media_type and (
-                message.document or message.raw_text or message.voice_note
+                message.document or message.raw_text or message.voice_note or message.audio
             )
 
             is_titled = is_framed
