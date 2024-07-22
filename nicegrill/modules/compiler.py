@@ -161,7 +161,9 @@ class Compiler:
             if not result.strip():
                 if time.time() - mod_time > 14:
                     break
-                continue
+
+                if process.returncode is None:
+                    continue
             else:
                 mod_time = time.time()
 
@@ -184,6 +186,7 @@ class Compiler:
                 ProcessManager.remove_process(message.id)
 
             if process.returncode != None:
+
                 process = await Compiler.spawn_process()
                 old_buffer = iter._buffer
                 iter = process.stdout.__aiter__()
@@ -196,6 +199,9 @@ class Compiler:
                     message_id=message.id,
                     process=process
                 )
+
+        if ProcessManager.find_process(message.id):
+            ProcessManager.remove_process(message.id)
 
         if message.cmd:
             await message.edit(
