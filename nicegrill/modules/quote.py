@@ -491,7 +491,7 @@ class Quote:
         for message in message_list:
             image_list = []
 
-            message.is_media_type = (message.photo or message.video or message.sticker) and not message.page
+            message.is_media_type = (message.photo or message.video or message.gif or message.sticker) and not message.page
             is_framed = not message.is_media_type and (
                 message.document or message.raw_text or message.voice_note
             )
@@ -574,7 +574,7 @@ class Quote:
             if last_user != message.sender_id:
                 profile_image = await Quote.get_profile_photo(
                     client=message.client,
-                    user_info=message.sender or await message.get_sender(),
+                    user_info=message.sender,
                 )
 
                 last_user = message.sender_id
