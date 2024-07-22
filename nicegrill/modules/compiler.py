@@ -125,13 +125,14 @@ class Compiler:
             await message.edit("<i>Give me a terminal command</i>")
             return
 
-        await message.edit(
-            Compiler.RESULT_TEMPLATE.format(
-                title="Evaluated expression",
-                command=command,
-                result=""
+        if message.cmd:
+            await message.edit(
+                Compiler.RESULT_TEMPLATE.format(
+                    title="Evaluated expression",
+                    command=command,
+                    result=""
+                )
             )
-        )
 
         process = await Compiler.spawn_process()
         process.stdin.write((command + "\n").encode())
@@ -159,7 +160,7 @@ class Compiler:
             output = output[:4098].strip()
 
             if not result.strip():
-                if time.time() - mod_time > 14:
+                if time.time() - mod_time > 30:
                     break
 
                 if process.returncode is None:
