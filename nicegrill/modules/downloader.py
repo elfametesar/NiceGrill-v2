@@ -50,8 +50,8 @@ class Downloader:
 <b>File Name:</b> <i>{{}}</i>
 <b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
 <b>Speed:</b> <i>{await humanize(data=speed)}/s</i>
-<b>Time Passed:</b> <i>{await humanize(data=received_bytes // speed, time=True)}</i>
-<b>Downloaded:</b> <i>{await humanize(data=received_bytes)}</i>
+<b>Time Passed:</b> <i>{await humanize(data=received_bytes or 1 // speed, time=True)}</i>
+<b>Downloaded:</b> <i>{await humanize(data=received_bytes or 1)}</i>
 <b>Estimated:</b> <i>{await humanize(data=total_bytes // speed, time=True)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'●' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""

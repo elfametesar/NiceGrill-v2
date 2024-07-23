@@ -39,7 +39,10 @@ class Renamer:
         file.name = message.raw_args
 
         await message.edit("<i>Renaming..</i>")
-        await message.reply_to_text.reply(files=file)
+        await message.reply_to_text.reply(
+            files=file,
+            supports_streaming=True
+        )
         await message.delete()
 
 

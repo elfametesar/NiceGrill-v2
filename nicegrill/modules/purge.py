@@ -58,6 +58,7 @@ class Purge:
         )
 
         await asyncio.sleep(3)
+        print(success_message)
         await success_message.delete()
 
     @on(pattern="del")
