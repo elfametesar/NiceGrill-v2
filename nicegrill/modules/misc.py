@@ -73,11 +73,7 @@ class Misc:
         elif tail:
             contents = "\n".join(contents.split("\n")[-int(line_count):])
 
-        if len(contents) > 4000:
-            await message.edit("<i>File is too big</i>")
-            return
-
-        await message.edit(contents)
+        await message.edit_stream(contents)
 
     @on(pattern="logs")
     async def get_logs(client: Client, message: Message):

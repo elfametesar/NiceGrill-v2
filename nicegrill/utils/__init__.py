@@ -157,7 +157,7 @@ async def get_user(user, client):
         return False
 
 def parse_kwargs(command: str, defaults: dict = {}):
-    for match in re.finditer(pattern="(\w+)=(\w+)", string=command, flags=re.I):
+    for match in re.finditer(pattern="(\w+)=([\",\w]+)", string=command, flags=re.I):
         key = match.group(1)
         value = eval(match.group(2))
 

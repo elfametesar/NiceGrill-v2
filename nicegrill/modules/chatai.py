@@ -64,7 +64,10 @@ class ChatAI:
 
         user_key = ChatAI.CLIENT.get('https://image-generation.perchance.org/api/verifyUser').json()
         if not (user_key := user_key.get("userKey")):
-            await message.edit("<i>Cannot fetch user key, you need to go to https://perchance.org/ai-text-to-image-generator and click on generate manually</i>")
+            await message.edit(
+                "<i>Cannot fetch user key, you need to go to https://perchance.org/ai-text-to-image-generator and click on generate manually</i>",
+                link_preview=False
+            )
             return
 
         params = {
@@ -98,7 +101,9 @@ class ChatAI:
                     ).content
                 )
             except Exception as e:
-                await message.edit(f"<i>Could not generate images</i>\n<b>Reason:</b> <i>{e}</i>")
+                await message.edit(
+                    f"<i>Could not generate images</i>\n<b>Reason:</b> <i>{e}</i>"
+                )
                 return
 
             data.name = "generated_image.png"

@@ -87,22 +87,22 @@ class Compiler:
                 result = task.result()
 
             if message.cmd:
-                await message.edit(
+                await message.edit_stream(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
-                        command=message.raw_args.strip(),
+                        command=message.raw_args,
                         result=html.escape(str(result))
                     )
                 )
             else:
-                await message.edit(str(result))
+                await message.edit_stream(str(result))
 
         except Exception as e:
             if message.cmd:
                 await message.edit(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluation failed",
-                        command=message.raw_args.strip(),
+                        command=message.raw_args,
                         result=html.escape(
                             " ".join(format_exception(e))
                         )
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {{
 
 <code>{program_error}</code>"""
 
-        await message.edit(result)
+        await message.edit_stream(result)
 
     @on(pattern="(shell|shellnot)")
     async def set_shell_mode(client: Client, message: Message):
