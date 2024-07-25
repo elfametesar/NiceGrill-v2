@@ -58,8 +58,11 @@ class Purge:
         )
 
         await asyncio.sleep(3)
-        print(success_message)
-        await success_message.delete()
+
+        try:
+            await success_message.delete()
+        except Exception:
+            pass
 
     @on(pattern="del")
     async def delete(client: Client, message: Message):
