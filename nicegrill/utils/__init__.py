@@ -128,7 +128,7 @@ async def get_bin_url(url: str):
 
         return response
 
-async def humanize(data, time=False):
+def humanize(data, time=False):
     hit_limit = 1024 if not time else 60
     magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb") if not time \
         else ("seconds", "minutes", "hours", "days", "months", "years")

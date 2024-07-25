@@ -42,17 +42,17 @@ class Downloader:
         message: Message,
         start_time: int
     ):
-        percentage = round((received_bytes / total_bytes) * 2, 2)
+        percentage = round((received_bytes / total_bytes) * 20, 2)
 
         speed = ((received_bytes) // max((datetime.now() - start_time).seconds, 1))
 
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
-<b>Size:</b> <i>{await humanize(data=total_bytes)}</i>
-<b>Speed:</b> <i>{await humanize(data=speed)}/s</i>
-<b>Time Passed:</b> <i>{await humanize(data=received_bytes or 1 // speed, time=True)}</i>
-<b>Downloaded:</b> <i>{await humanize(data=received_bytes or 1)}</i>
-<b>Estimated:</b> <i>{await humanize(data=total_bytes // speed, time=True)}</i>
+<b>Size:</b> <i>{humanize(data=total_bytes)}</i>
+<b>Speed:</b> <i>{humanize(data=speed)}/s</i>
+<b>Time Passed:</b> <i>{humanize(data=(datetime.now() - start_time).seconds, time=True)}</i>
+<b>Downloaded:</b> <i>{humanize(data=received_bytes or 1)}</i>
+<b>Estimated:</b> <i>{humanize(data=total_bytes // speed, time=True)}</i>
 <b>Status:</b> <i>{{}}</i>
 <i>{'●' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
 
@@ -69,10 +69,10 @@ class Downloader:
                 await message.edit(
                     f"""
 <b>File Name: </b> <i>{DownloadAction.destination}</i>
-<b>Size: </b> <i>{await humanize(DownloadAction.file_size)}</i>
+<b>Size: </b> <i>{humanize(DownloadAction.file_size)}</i>
 <b>Speed: </b> <i>{DownloadAction.speed}</i>
 <b>Time Passed: </b> <i>{DownloadAction.elapsed_time}</i>
-<b>Downloaded: </b> <i>{await humanize(DownloadAction.downloaded)}</i>
+<b>Downloaded: </b> <i>{humanize(DownloadAction.downloaded)}</i>
 <b>Estimated: </b> <i>{DownloadAction.estimate}</i>
 <b>Status: </b> <i>{DownloadAction.status}</i>
 <i>{'⚈' * int(custom_percentage)}{Downloader.PROGRESS_BAR[int(custom_percentage):]}</i>

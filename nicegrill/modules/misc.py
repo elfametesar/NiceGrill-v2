@@ -73,7 +73,7 @@ class Misc:
         elif tail:
             contents = "\n".join(contents.split("\n")[-int(line_count):])
 
-        await message.edit_stream(contents)
+        await message.edit_stream(contents, link_preview=False)
 
     @on(pattern="logs")
     async def get_logs(client: Client, message: Message):
