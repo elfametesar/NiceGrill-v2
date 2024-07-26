@@ -36,8 +36,7 @@ class Snippets:
                         message_ids=message.reply_to_text.id
                     )
                 except Exception as e:
-                    print(e)
-                    await message.edit("<i>Storage database could not be retrieved. Try again</i>")
+                    await message.edit(f"<i>{e}</i>")
                     return
 
                 snip_text = "media_id=" + str(fwd_message.messages[0].id)
