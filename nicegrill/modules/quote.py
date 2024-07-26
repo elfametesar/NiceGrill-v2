@@ -50,6 +50,7 @@ class FakeMessage:
         self.entities = entities
         self.reply_to_text = False
         self.media = None
+        self.gif = None
         self.photo = None
         self.video = None
         self.sticker = None
