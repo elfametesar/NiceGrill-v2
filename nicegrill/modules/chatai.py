@@ -334,12 +334,6 @@ __{response.text}__""",
             'user-agent': str(UserAgent.chrome)
         }
 
-        params = (
-            ('offset', '0'),
-            ('limit', '28'),
-            ('order', 'updated'),
-        )
-
         response = ChatAI.CLIENT.get(
             'https://chatgpt.com/backend-api/conversations',
             headers=headers,
@@ -398,7 +392,7 @@ __{response.text}__""",
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-origin',
-            'user-agent': str(UserAgent.chrome)
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
         }
 
         file_id = None
@@ -465,8 +459,9 @@ __{response.text}__""",
 
             headers["openai-sentinel-chat-requirements-token"] = response.json().get("token")
 
-            seed = response.json().get("proofofwork").get("seed")
-            difficulty = response.json().get("proofofwork").get("difficulty")
+            seed = response.json().get("proofofwork", {}).get("seed")
+            difficulty = response.json().get("proofofwork", {}).get("difficulty")
+            headers['openai-sentinel-turnstile-token'] = response.json().get("turnstile", {}).get("dx")
         except Exception as e:
             await message.edit(f"<i>Token cannot be fetched</i>\n<b>Reason: </b><i>{e}</i>")
             return
@@ -474,7 +469,7 @@ __{response.text}__""",
         headers["openai-sentinel-proof-token"] = ChatAI.generate_proof_token(seed, difficulty)
 
         json_data = {
-            'action': 'next',
+            'action': 'variant',
             'messages': [
                 {
                     'id': str(uuid4()),
@@ -498,8 +493,8 @@ __{response.text}__""",
                             'content_type': 'image_asset_pointer',
                             'asset_pointer': f'file-service://{file_id}',
                             'size_bytes': message.reply_to_text.file.size,
-                            'width': message.reply_to_text.photo.sizes[-1].w,
-                            'height': message.reply_to_text.photo.sizes[-1].h
+                            'width': message.reply_to_text.photo.sizes[-1].width,
+                            'height': message.reply_to_text.photo.sizes[-1].height
                         }, message.raw_args],
                     },
                     'metadata': {
@@ -509,15 +504,15 @@ __{response.text}__""",
                                 'size': message.reply_to_text.file.size,
                                 'name': message.reply_to_text.file.name or "photo.jpg",
                                 'mime_type': 'image/jpeg',
-                                'width': message.reply_to_text.photo.sizes[-1].w,
-                                'height': message.reply_to_text.photo.sizes[-1].h,
+                                'width': message.reply_to_text.photo.sizes[-1].width,
+                                'height': message.reply_to_text.photo.sizes[-1].height,
                             },
                         ],
                     },
                 }
             ],
             'conversation_id': ChatAI.GPT_CONVERSATION_ID,
-            'model': 'auto',
+            'model': "gpt-4o-mini",
             'history_and_training_disabled': False,
             'force_paragen': False,
             'force_paragen_model_slug': '',
@@ -539,10 +534,10 @@ __{response.text}__""",
             return
 
         if response.status_code != 200:
-            ChatAI.LOG.error(response.text)
+            ChatAI.LOG.error(response.text) 
             await message.edit(f"<i>Connection to ChatGPT backend api received {response.status_code}. Check logs for details...</i>")
             return
-        
+
         response = [line[6:] for line in response.text.splitlines() if line.startswith("data: {\"message")][-1]
         if not response:
             ChatAI.LOG.error(f"Received and processed data from ChatGPT:\n\n {response}")
@@ -550,7 +545,6 @@ __{response.text}__""",
             return
 
         response = "".join(json.loads(response).get("message").get("content").get("parts"))
-
         await message.edit(
 f"""⏺ **Me: **__{message.raw_args}__
 
@@ -678,7 +672,7 @@ Query: {message.raw_args}""",
     @on(pattern="getproxy")
     async def get_gemini_proxy(client: Client, message: Message):
         if ChatAI.CLIENT.proxy:
-            await message.edit(f"<i>{ChatAI.CLIENT.proxy[0]} = {ChatAI.CLIENT.proxy[1]}:{ChatAI.CLIENT.proxy[2]}</i>")
+            await message.edit(f"<i>{ChatAI.CLIENT.proxy[0]} {ChatAI.CLIENT.proxy[1]} {ChatAI.CLIENT.proxy[2]}</i>")
         else:
             await message.edit(f"<i>There is no proxy set for AI</i>")
 
@@ -709,7 +703,7 @@ Query: {message.raw_args}""",
         await message.edit(f"<i>Conversation mode with AI is now enabled and set to {message.raw_args.title()}</i>")
         ChatAI.MODE = message.raw_args.lower()
 
-@on(prefix="", pattern="")
+@on(prefix="", pattern=".*")
 async def listen_for_message(client: Client, message: Message):
     if not ChatAI.MODE:
         return

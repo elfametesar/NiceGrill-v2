@@ -407,7 +407,7 @@ class Quote:
 
             y_pos = 7
 
-        size = await humanize(data=size)
+        size = humanize(data=size)
         name = await Quote.shorten_text(
             text=name, font=Quote.FONT_TITLE, offset=thumb_image.width + 10
         )

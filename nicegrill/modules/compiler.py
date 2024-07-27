@@ -146,6 +146,7 @@ class Compiler:
         start = time.time() - 1.5
         iter = process.stdout.__aiter__()
         mod_time = time.time()
+        length_limit = 4096
 
         while True:
             await asyncio.sleep(0)
@@ -174,16 +175,23 @@ class Compiler:
                 start = time.time()
 
             if message.cmd:
+                length_limit = 4096 - len(
+                    Compiler.RESULT_TEMPLATE.format(
+                        title="Evaluated expression",
+                        command=command,
+                        result=html.escape(output[-length_limit:])
+                    )
+                )
                 await message.edit(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=command,
-                        result=output
+                        result=html.escape(output[-length_limit:])
                     )
                 )
 
             else:
-                await message.edit(output)
+                await message.edit(output[-4096:])
                 ProcessManager.remove_process(message.id)
 
             if process.returncode != None:
@@ -205,15 +213,23 @@ class Compiler:
             ProcessManager.remove_process(message.id)
 
         if message.cmd:
+            length_limit = 4096 - len(
+                Compiler.RESULT_TEMPLATE.format(
+                    title="Input",
+                    command=command,
+                    result=html.escape(output) + "\n\nProcess exited"
+                )
+            )
+
             await message.edit(
                 Compiler.RESULT_TEMPLATE.format(
                     title="Input",
                     command=command,
-                    result=output + "\n\nProcess exited"
+                    result=html.escape(output[-length_limit:]) + "\n\nProcess exited"
                 )
             )
         else:
-            await message.edit(output)
+            await message.edit(output[-4096:])
     
     def find_shell():
         shells = ['zsh', 'bash', 'sh']

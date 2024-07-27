@@ -11,7 +11,7 @@ class ProcessManager:
 
     _process_list = {}
 
-    @on(pattern="input")
+    @on(prefix="", pattern="[^\.]*", condition=lambda client, message: message.reply_to_text and message.reply_to_text.id in ProcessManager._process_list)
     async def input_data(client, message):
         """
         Sends input data to a running process.
@@ -19,22 +19,14 @@ class ProcessManager:
         Usage:
         .input <data>       # Sends the given data as input to the process associated with the replied-to message
         """
-        if not message.reply_to_text:
-            await message.delete()
-            return
-
         process = ProcessManager._process_list.get(message.reply_to_text.id)
-        if not message.raw_args:
-            await message.delete()
-            return
-
         if process:
             stdin = getattr(process, "stdin", sys.stdin) or sys.stdin
 
             try:
-                stdin.write(message.raw_args)
+                stdin.write(message.raw_text)
             except AssertionError:
-                stdin.write((message.raw_args + "\n").encode())
+                stdin.write((message.raw_text + "\n").encode())
 
         await message.delete()
 
