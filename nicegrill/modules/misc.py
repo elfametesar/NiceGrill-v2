@@ -64,6 +64,9 @@ class Misc:
 
         try:
             contents = file.getvalue().decode()
+        except UnicodeDecodeError:
+            await message.edit(f"<i>Better not read this file, it's cursed (non text)</i>")
+            return
         except Exception as e:
             await message.edit(f"<i>File cannot be read: {str(e)}</i>")
             return
@@ -174,6 +177,7 @@ class Misc:
                     f"{ls}\n\n<b>Type</b> <i>.update now</i> <b>to update</b>")
             else:
                 await message.edit("<i>Well, no updates yet</i>")
+
             return
 
         await message.edit("<i>Updating</i>")

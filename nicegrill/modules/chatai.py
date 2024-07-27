@@ -705,17 +705,17 @@ Query: {message.raw_args}""",
         await message.edit(f"<i>Conversation mode with AI is now enabled and set to {message.raw_args.title()}</i>")
         ChatAI.MODE = message.raw_args.lower()
 
-@on(prefix="", pattern=".*")
-async def listen_for_message(client: Client, message: Message):
-    if not ChatAI.MODE:
-        return
+    @on(prefix="", pattern=".*")
+    async def listen_for_message(client: Client, message: Message):
+        if not ChatAI.MODE:
+            return
 
-    message.raw_args = message.raw_text
-    if ChatAI.MODE == "chatgpt":
-        await ChatAI.converse_with_chatgpt(message, client)
+        message.raw_args = message.raw_text
+        if ChatAI.MODE == "chatgpt":
+            await ChatAI.converse_with_chatgpt(message, client)
 
-    elif ChatAI.MODE == "gemini":
-        await ChatAI.converse_with_gemini_via_cookies(message, client)
+        elif ChatAI.MODE == "gemini":
+            await ChatAI.converse_with_gemini_via_cookies(message, client)
 
 @startup
 def load_from_database():
