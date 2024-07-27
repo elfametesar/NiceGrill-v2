@@ -86,7 +86,7 @@ class Snippets:
             await client.delete_messages(
                 entity=Snippets.STORAGE_CHANNEL,
                 message_ids=[
-                    Snippets.SAVED_SNIPPETS[message.raw_args][9:]
+                    int(Snippets.SAVED_SNIPPETS[message.raw_args][9:])
                 ]
             )
 
