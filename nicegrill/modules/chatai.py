@@ -14,7 +14,8 @@
 
 from config import (
     GEMINI_1PSID, GEMINI_1PSIDTS,
-    OPENROUTER_COOKIE, CHATGPT_BEARER_KEY
+    OPENROUTER_COOKIE, CHATGPT_BEARER_KEY,
+    CHATGPT_TOKEN
 )
 from gemini_webapi.exceptions import AuthError
 from nicegrill import Message, on, startup
@@ -450,7 +451,8 @@ __{response.text}__""",
             response = ChatAI.CLIENT.post(
                 url='https://chatgpt.com/backend-api/sentinel/chat-requirements',
                 cookies=cookies,
-                headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'}
+                headers={**headers, 'authorization': f'Bearer {CHATGPT_BEARER_KEY}'},
+                json={'p': CHATGPT_TOKEN}
             )
 
             if response.status_code != 200:
