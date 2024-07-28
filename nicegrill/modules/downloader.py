@@ -42,7 +42,8 @@ class Downloader:
         message: Message,
         start_time: int
     ):
-        percentage = round((received_bytes / total_bytes) * 20, 2)
+        percentage = round(((received_bytes or 1) / total_bytes) * 20, 2)
+
 
         speed = ((received_bytes) // max((datetime.now() - start_time).seconds, 1))
 
@@ -75,7 +76,7 @@ class Downloader:
 <b>Downloaded: </b> <i>{humanize(DownloadAction.downloaded)}</i>
 <b>Estimated: </b> <i>{DownloadAction.estimate}</i>
 <b>Status: </b> <i>{DownloadAction.status}</i>
-<i>{'⚈' * int(custom_percentage)}{Downloader.PROGRESS_BAR[int(custom_percentage):]}</i>
+<i>{'●' * int(custom_percentage)}{Downloader.PROGRESS_BAR[int(custom_percentage):]}</i>
 """
                 )
             except Exception:
