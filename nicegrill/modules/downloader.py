@@ -230,7 +230,7 @@ class Downloader:
             if message.reply_to_text:
                 urls.extend(message.reply_to_text.get_entities_text(TextEntityTypeUrl))
                 urls.extend(
-                    [link.url for link, _ in message.reply_to_text.get_entities(TextEntityTypeTextUrl)]
+                    [link.url for link in message.reply_to_text.get_entities(TextEntityTypeTextUrl)]
                 )
 
             if not urls:
