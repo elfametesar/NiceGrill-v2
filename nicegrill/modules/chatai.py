@@ -557,7 +557,7 @@ f"""⏺ **Me: **__{message.raw_args}__
         )
 
     @on(pattern="gem")
-    async def converse_with_gemini_via_cookies(client: Client, message: Message):
+    async def converse_with_gemini(client: Client, message: Message):
         file = None
 
         try:
@@ -586,8 +586,7 @@ f"""⏺ **Me: **__{message.raw_args}__
         if message.reply_to_text:
             if message.reply_to_text.photo:
                 await message.edit("<i>Downloading media for GeminiAI</i>")
-                file: BytesIO = await message.reply_to_text.download_media(BytesIO())
-                file.seek(0)
+                file: BytesIO = await message.reply_to_text.download()
                 file = file.getvalue()
 
             elif message.reply_to_text.raw_text:
@@ -603,15 +602,10 @@ f"""⏺ **Me: **__{message.raw_args}__
 
         chat = gem_client.start_chat(metadata=ChatAI.GEMINI_METADATA)
 
-        try:
-            response = await chat.send_message(
-                prompt=f"""{ChatAI.AI_BEHAVIOR}
-Query: {message.raw_args}""",
-                image=file
-            )
-        except Exception as e:
-            await message.edit(f"<b>GeminiAI: </b><i>{e}</i>")
-            return
+        response = await chat.send_message(
+            prompt=f"""{ChatAI.AI_BEHAVIOR}
+Query: {message.raw_args}"""
+        )
 
         ChatAI.GEMINI_METADATA = chat.metadata
         settings.set_ai_metadata(",".join(chat.metadata)) 
