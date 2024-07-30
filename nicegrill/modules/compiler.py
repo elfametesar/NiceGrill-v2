@@ -81,11 +81,7 @@ class Compiler:
                 process=task
             )
 
-            while not task.done():
-                await asyncio.sleep(0)
-            else:
-                result = task.result()
-
+            result = await task
             if message.cmd:
                 await message.edit_stream(
                     Compiler.RESULT_TEMPLATE.format(
@@ -102,7 +98,7 @@ class Compiler:
                 await message.edit(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluation failed",
-                        command=message.raw_args,
+                        command=html.escape(message.raw_args),
                         result=html.escape(
                             " ".join(format_exception(e))
                         )
