@@ -129,6 +129,7 @@ class Snippets:
             if "media_id=" in snippet:
 
                 try:
+                    print(snippet[9:])
                     await client.forward_to(
                         from_chat=Snippets.STORAGE_CHANNEL,
                         to_chat=message.chat,

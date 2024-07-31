@@ -49,20 +49,25 @@ class NiceGrill:
     async def restart_handler(self):
         if restart_info := settings.get_restart_details():
             try:
-                await self.client.load_chats(limit=200)
                 await self.client.edit_message(
                     entity=restart_info["Chat"],
                     text="<i>Restarted</i>",
                     message=restart_info["Message"]
                 )
             except Exception as e:
+                print(e)
                 pass
 
     async def initialize_bot(self):
         await self.client.login()
         self.client.parse_mode = 'HTML'
+        await self.client.load_chats(limit=200)
 
-        if not settings.get_storage_channel():
+        self.import_modules()
+        await self.restart_handler()
+        print(f"\nLogged in as {self.client.me.first_name}")
+
+        if not (channel_id := settings.get_storage_channel()):
             created_private_channel = await self.client(
                 CreateNewSupergroupChat(
                     title="NiceGrill Storage Database",
@@ -76,11 +81,8 @@ class NiceGrill:
 
             channel_id = created_private_channel.updates[1].channel_id
             settings.set_storage_channel(channel_id)
-
-        self.import_modules()
-        await self.restart_handler()
-
-        print(f"\nLogged in as {self.client.me.first_name}")
+        else:
+            await self.client.search_messages(entity=channel_id, limit=200)
 
         sys.stdout = async_stdstream(to_terminal=True)
         sys.stderr = async_stdstream()
