@@ -185,7 +185,7 @@ class Media:
             await message.edit(f"<i>Video cannot be fetched</i>\n<b>Error: </b><i>{e}</i>")
             return
 
-        if not response.ok:
+        if not response.status_code != 200:
             await message.edit(f"<i>There is no downloadable media found in this link</i>\n<b>Reason: </b><i>{response.reason}</i>")
             return
 
