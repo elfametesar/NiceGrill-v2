@@ -112,29 +112,33 @@ class Language:
 
 {}"""
 
-        if message.reply_to_text:
-            target_lang = message.raw_args
-            await message.edit(
-                message=result.format(
-                    message.reply_to_text.raw_text,
-                    await message.reply_to_text.translate(
-                        to_language_code=target_lang
+        try:
+            if message.reply_to_text:
+                target_lang = message.raw_args
+                await message.edit(
+                    message=result.format(
+                        message.reply_to_text.raw_text,
+                        (await message.reply_to_text.translate(
+                            to_language_code=target_lang
+                        )).text
                     )
                 )
-            )
-        elif not message.raw_args.count(" "):
-            await message.edit("<i>What am I even translating? Give me the target language and the text to translate</i>")
-        else:
-            target_lang = message.raw_args.split(maxsplit=2)[0]
-            message.raw_text = message.raw_args
-            await message.edit(
-                message=result.format(
-                    message.raw_text,
-                    await message.translate(
-                        to_language_code=target_lang
+            elif not message.raw_args.count(" "):
+                await message.edit("<i>What am I even translating? Give me the target language and the text to translate</i>")
+            else:
+                target_lang = message.raw_args.split(maxsplit=2)[0]
+                message.raw_text = message.raw_args
+
+                await message.edit(
+                    message=result.format(
+                        message.raw_text,
+                        (await message.translate(
+                            to_language_code=target_lang
+                        )).text
                     )
                 )
-            )
+        except Exception as e:
+            await message.edit(f"<i>{html.escape(str(e))}</i>")
 
     @on(pattern="stt")
     async def speech_to_Text(client: Client, message: Message):
