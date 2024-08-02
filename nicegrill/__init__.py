@@ -45,11 +45,11 @@ def update_help_data(function, command: str):
 
 
 def wrapper(func, name):
-    async def inner_content(client: Client, message: Message):
+    async def inner_content(client: Client, message: Message, **kwargs):
         try:
             if message.chat_id not in bad_chat_list or (message.chat_id in bad_chat_list and message.cmd in ["blacklist", "whitelist"]):
                 await asyncio.ensure_future(
-                    coro_or_future=func(client, message)
+                    coro_or_future=func(client, message, **kwargs)
                 )
 
         except Exception as e:

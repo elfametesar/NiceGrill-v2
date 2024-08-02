@@ -93,10 +93,10 @@ class Media:
         
         await message.edit(f"<i>Searching for the keyword <u>{message.raw_args}</u> in YouTube</i>")
 
-        results = (await asyncio.to_thread(YoutubeSearch,
+        results = YoutubeSearch(
             search_terms=message.raw_args,
             max_results=Media.SEARCH_LIMIT
-        )).to_dict()
+        ).to_dict()
 
         result_page = ""
         for result in results:
@@ -127,11 +127,10 @@ class Media:
         }
 
         yt_client = YoutubeDL(opts)
-        result = await Media.youtube_search(
-            message=message,
-            client=client,
-            only_url=True
-        )
+        result = YoutubeSearch(
+            search_terms=message.raw_args,
+            max_results=Media.SEARCH_LIMIT
+        ).to_dict()
         
         if result:
             song_url = "https://youtube.com" + result[0].get("url_suffix")
