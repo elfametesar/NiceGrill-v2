@@ -69,7 +69,10 @@ class Compiler:
             title="Evaluating expression",
             command=message.raw_args,
             result=""
-        ))
+        ) + f"""
+
+<b>Printed result</b>"""
+        )
 
         try:
             reply = message.reply_to_text
@@ -94,7 +97,7 @@ class Compiler:
 
 <b>Printed result</b>
 
-<code>{await std.read(block=False)}</code>"""
+<code>{html.escape(await std.read(block=False))}</code>"""
 
             if message.cmd:
                 await message.edit_stream(
