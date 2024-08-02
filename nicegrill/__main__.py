@@ -85,9 +85,9 @@ class NiceGrill:
             await self.client.search_messages(entity=channel_id, limit=200)
 
         sys.stdout = async_stdstream(to_terminal=True)
-        sys.stderr = async_stdstream()
-        sys.stdin = async_stdstream()
+        sys.stderr = sys.stdout
+        sys.stdin = sys.stdout
 
-        __builtins__["input"] = sys.stdin.input
+        __builtins__["input"] = sys.stdout.input
 
         await self.client.run()

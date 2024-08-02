@@ -14,6 +14,7 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from nicegrill.utils import ProcessManager
+from elfrien.utils import async_stdstream
 from elfrien.types.patched import Message
 from traceback import format_exception
 from elfrien.client import Client
@@ -63,32 +64,45 @@ class Compiler:
         if not message.raw_args:
             await message.edit("<i>Give me some code to work with</i>")
             return
+        
+        await message.edit(Compiler.RESULT_TEMPLATE.format(
+            title="Evaluating expression",
+            command=message.raw_args,
+            result=""
+        ))
 
         try:
             reply = message.reply_to_text
             chat = message.chat
 
-            task = asyncio.create_task(
-                meval(
-                    code=message.raw_args,
-                    globs=globals(),
-                    **locals()
+            with async_stdstream(replace_stderror=True) as std:
+                task = asyncio.create_task(
+                    meval(
+                        code=message.raw_args,
+                        globs=globals(),
+                        **locals()
+                    )
                 )
-            )
 
-            ProcessManager.add_process(
-                message_id=message.id,
-                process=task
-            )
+                ProcessManager.add_process(
+                    message_id=message.id,
+                    process=task
+                )
 
-            result = await task
+                result = await task or ""
+                printed_result = f"""
+
+<b>Printed result</b>
+
+<code>{await std.read(block=False)}</code>"""
+
             if message.cmd:
                 await message.edit_stream(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=message.raw_args,
                         result=html.escape(str(result))
-                    )
+                    ) + printed_result
                 )
             else:
                 await message.edit_stream(str(result))
