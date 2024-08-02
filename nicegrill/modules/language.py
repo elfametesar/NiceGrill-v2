@@ -14,11 +14,13 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from elfrien.types.patched import Message
+from config import DEEPGRAM_API_KEY
 from elfrien.client import Client
 from nicegrill import on
 from io import BytesIO
 from gtts import gTTS
 
+import httpx
 import html
 
 class Language:
@@ -133,3 +135,48 @@ class Language:
                     )
                 )
             )
+
+    @on(pattern="stt")
+    async def speech_to_Text(client: Client, message: Message):
+        if not message.reply_to_text or (
+            message.reply_to_text and 
+            getattr(message.reply_to_text.media, "mime_type", None) not in [
+                "audio/aac",
+                "audio/mp4",
+                "audio/mpeg",
+                "audio/ogg",
+                "audio/opus",
+                "audio/wav",
+                "audio/webm",
+                "audio/x-wav",
+                "audio/x-ms-wma",
+                "audio/x-matroska"
+            ]
+        ):
+            await message.edit("<i>You need to reply to a voice message to convert it to text</i>")
+            return
+        
+        if not DEEPGRAM_API_KEY:
+            await message.edit("<i>Please set your Deepgram API key</i>")
+            return
+        
+        await message.edit("<i>Converting your speech to text</i>")
+
+        headers = {
+            'Authorization': f'Token {DEEPGRAM_API_KEY}',
+            'Content-Type': 'audio/wav'
+        }
+
+        audio_data = await message.reply_to_text.download()
+
+        response = httpx.post('https://api.deepgram.com/v1/listen', headers=headers, data=audio_data.getvalue())
+
+        if response.status_code != 200:
+            await message.edit(f"<i>Error: {response.json().get('err_msg', 'unknown')}</i>")
+        else:
+            result = response.json().get("results", {})
+            result = result.get("channels", [{}])
+            result = result[0].get("alternatives", [{}])
+            result = result[0].get("transcript", "No speech detected in the audio")
+            
+            await message.edit(f"<b>Recognized speech:</b> <i>{result}</i>")
