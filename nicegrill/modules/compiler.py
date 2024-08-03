@@ -144,7 +144,7 @@ class Compiler:
         ProcessManager.add_process(message_id=message.id, process=process)
 
         output = ""
-        start = time.time() - 1.5
+        start = 0
         iter = process.stdout.__aiter__()
         mod_time = time.time()
         length_limit = 4096
@@ -164,16 +164,14 @@ class Compiler:
             if not result.strip():
                 if time.time() - mod_time > 30:
                     break
-
-                if process.returncode is None:
-                    continue
             else:
                 mod_time = time.time()
 
-            if time.time() - start <= 1.5:
+            if start and time.time() - start <= 1.5:
                 continue
             else:
-                start = time.time()
+                if result.strip():
+                    start = time.time()
 
             if message.cmd:
                 length_limit = 4096 - len(
