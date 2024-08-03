@@ -13,9 +13,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from elfrien.types.patched import (
-    Message, TextEntityTypeUrl, TextEntityTypeTextUrl
-)
+from elfrien.types.patched import Message, TextEntityTypeUrl, TextEntityTypeTextUrl
 from nicegrill.utils import humanize
 from elfrien.client import Client
 from nicegrill import on, startup
@@ -27,6 +25,7 @@ import asyncio
 import glob
 import html
 import os
+
 
 class Downloader:
 
@@ -40,12 +39,11 @@ class Downloader:
         received_bytes: int,
         total_bytes: int,
         message: Message,
-        start_time: int
+        start_time: int,
     ):
         percentage = round(((received_bytes or 1) / total_bytes) * 20, 2)
 
-
-        speed = ((received_bytes) // max((datetime.now() - start_time).seconds, 1))
+        speed = (received_bytes) // max((datetime.now() - start_time).seconds, 1)
 
         message.text = f"""
 <b>File Name:</b> <i>{{}}</i>
@@ -57,13 +55,13 @@ class Downloader:
 <b>Status:</b> <i>{{}}</i>
 <i>{'●' * int(percentage)}{Downloader.PROGRESS_BAR[int(percentage):]}</i>"""
 
-        await message.edit(
-            message.text.format(file_name, "Downloading")
-        )
+        await message.edit(message.text.format(file_name, "Downloading"))
 
     async def regular_progress_bar(DownloadAction: Funload, message: Message):
         while True:
-            custom_percentage = round((DownloadAction.downloaded / (DownloadAction.file_size or 1)) * 20, 2)
+            custom_percentage = round(
+                (DownloadAction.downloaded / (DownloadAction.file_size or 1)) * 20, 2
+            )
             custom_percentage = min(custom_percentage, 20)
 
             try:
@@ -126,7 +124,7 @@ class Downloader:
                 files=files,
                 message="<i>Here's your uploaded file(s))</i>",
                 supports_streaming=True,
-                force_type="Document"
+                force_type="Document",
             )
         except Exception as e:
             await message.respond(f"<i>{e}</i>")
@@ -142,12 +140,9 @@ class Downloader:
 
         return await message.reply_to_text.download(
             progress_callback=Downloader.telegram_progress_bar,
-            progress_args={
-                "message": message,
-                "start_time": start_time
-            },
+            progress_args={"message": message, "start_time": start_time},
             path=Downloader.DOWNLOAD_PATH + (message.reply_to_text.file.name or ""),
-            wait_time=2
+            wait_time=2,
         )
 
     async def regular_download_file(client: Client, message: Message, urls):
@@ -161,15 +156,14 @@ class Downloader:
                     destination=Downloader.DOWNLOAD_PATH,
                     url=url,
                     progress_bar=True,
-                    block=False
+                    block=False,
                 )
                 await DownloadAction.start()
 
                 Downloader.DOWNLOAD_QUEUE[message.id] = DownloadAction
 
                 await Downloader.regular_progress_bar(
-                    DownloadAction=DownloadAction,
-                    message=message
+                    DownloadAction=DownloadAction, message=message
                 )
 
                 if message.id in Downloader.DOWNLOAD_QUEUE:
@@ -194,10 +188,7 @@ class Downloader:
             file_name = message.reply_to_text.file.name or "Unknown"
 
             task = asyncio.create_task(
-                Downloader.telegram_download_file(
-                    message=message,
-                    client=client
-                )
+                Downloader.telegram_download_file(message=message, client=client)
             )
 
             task.stop = task.cancel
@@ -206,10 +197,7 @@ class Downloader:
             try:
                 file_name = await task
             except asyncio.CancelledError:
-                await message.edit(
-                    message.text
-                    .format(file_name, "Stopped")
-                )
+                await message.edit(message.text.format(file_name, "Stopped"))
                 return
 
             if message.id in Downloader.DOWNLOAD_QUEUE:
@@ -217,9 +205,7 @@ class Downloader:
 
             if message.cmd:
                 await message.edit(
-                    message.text
-                    .replace("⚆", "⚈")
-                    .format(file_name, "Finished")
+                    message.text.replace("⚆", "⚈").format(file_name, "Finished")
                 )
 
             return file_name
@@ -231,7 +217,12 @@ class Downloader:
             if message.reply_to_text:
                 urls.extend(message.reply_to_text.get_entities_text(TextEntityTypeUrl))
                 urls.extend(
-                    [link.url for link in message.reply_to_text.get_entities(TextEntityTypeTextUrl)]
+                    [
+                        link.url
+                        for link in message.reply_to_text.get_entities(
+                            TextEntityTypeTextUrl
+                        )
+                    ]
                 )
 
             if not urls:
@@ -241,9 +232,10 @@ class Downloader:
             return await Downloader.regular_download_file(client, message, urls)
 
         elif not message.raw_args or not message.reply_to_text:
-            await message.edit("<i>You need to either input/reply to a URL or a message that contains media</i>")
+            await message.edit(
+                "<i>You need to either input/reply to a URL or a message that contains media</i>"
+            )
             return
-
 
     @on(pattern="clear")
     async def clear_downloads(client: Client, message: Message):
@@ -272,12 +264,16 @@ class Downloader:
 
         if os.path.exists(download_path):
             if not os.access(message.raw_args, os.W_OK):
-                await message.edit("<i>This path is not suitable for your downloads</i>")
+                await message.edit(
+                    "<i>This path is not suitable for your downloads</i>"
+                )
                 return
 
         else:
             try:
-                await message.edit("<i>This path doesn't exist in your filesystem, creating it for you</i>")
+                await message.edit(
+                    "<i>This path doesn't exist in your filesystem, creating it for you</i>"
+                )
                 await asyncio.sleep(1.5)
                 os.makedirs(message.raw_args)
             except Exception as e:
@@ -287,7 +283,9 @@ class Downloader:
         settings.set_download_path(download_path)
         Downloader.DOWNLOAD_PATH = download_path
 
-        await message.edit(f"<i>New directory for your downloads is set to {message.raw_args}</i>")
+        await message.edit(
+            f"<i>New directory for your downloads is set to {message.raw_args}</i>"
+        )
 
     @on(pattern="(stop|pause|resume|retry)")
     async def control_download(client: Client, message: Message):
@@ -301,14 +299,18 @@ class Downloader:
         .retry              # Retries the failed download
         """
         if not message.reply_to_text:
-            await message.edit("<i>You need to reply to a message running a download action first</i>")
+            await message.edit(
+                "<i>You need to reply to a message running a download action first</i>"
+            )
             return
 
         if message.reply_to_text.id not in Downloader.DOWNLOAD_QUEUE:
             await message.edit("<i>No download action on this message</i>")
             return
 
-        task: asyncio.Task | Funload = Downloader.DOWNLOAD_QUEUE[message.reply_to_text.id]
+        task: asyncio.Task | Funload = Downloader.DOWNLOAD_QUEUE[
+            message.reply_to_text.id
+        ]
 
         try:
             if message.cmd == "stop":
@@ -328,9 +330,12 @@ class Downloader:
         except Exception as e:
             print(e)
             if isinstance(task, asyncio.Task):
-                await message.edit(f"<i>Telegram downloads do not support {message.cmd}</i>")
+                await message.edit(
+                    f"<i>Telegram downloads do not support {message.cmd}</i>"
+                )
             else:
                 await message.edit(f"<i>Error: {e}</i>")
+
 
 @startup
 def load_from_database():

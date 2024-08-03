@@ -7,11 +7,17 @@ import httpx
 import time
 import sys
 
+
 class ProcessManager:
 
     _process_list = {}
 
-    @on(prefix="", pattern="[^\.]*", condition=lambda client, message: message.reply_to_text and message.reply_to_text.id in ProcessManager._process_list)
+    @on(
+        prefix="",
+        pattern="[^\.]*",
+        condition=lambda client, message: message.reply_to_text
+        and message.reply_to_text.id in ProcessManager._process_list,
+    )
     async def input_data(client, message):
         """
         Sends input data to a running process.
@@ -30,12 +36,16 @@ class ProcessManager:
 
         await message.delete()
 
-    def add_process(message_id: int, process: asyncio.Task | asyncio.subprocess.Process):
+    def add_process(
+        message_id: int, process: asyncio.Task | asyncio.subprocess.Process
+    ):
 
         ProcessManager._process_list[message_id] = process
 
         if isinstance(process, asyncio.Task):
-            process.add_done_callback(lambda task: ProcessManager._process_list.pop(message_id, None))
+            process.add_done_callback(
+                lambda task: ProcessManager._process_list.pop(message_id, None)
+            )
 
     def remove_process(process_id: int):
         process = ProcessManager._process_list.pop(process_id, False)
@@ -72,16 +82,13 @@ class ProcessManager:
             await message.edit("<i>Successfully killed</i>")
         else:
             await message.edit("<i>No process found in message</i>")
-    
+
     def find_process(process_id: int):
         return ProcessManager._process_list.get(process_id)
 
 
 async def timeout(
-    timeout: int,
-    func: Coroutine,
-    keepalive: bool = False,
-    *args, **kwargs
+    timeout: int, func: Coroutine, keepalive: bool = False, *args, **kwargs
 ):
     task = asyncio.create_task(func(*args, **kwargs))
     start = time.time()
@@ -102,28 +109,26 @@ async def timeout(
 async def up_to_bin(data: str):
     async with httpx.AsyncClient(follow_redirects=True) as client:
         response = await client.post(
-            url="https://0x0.st",
-            files={
-                "file": (
-                    "log", data
-                )
-            }
+            url="https://0x0.st", files={"file": ("log", data)}
         )
 
         return response
+
 
 async def get_bin_url(url: str):
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        response = await client.get(
-            url=url
-        )
+        response = await client.get(url=url)
 
         return response
 
+
 def humanize(data, time=False):
     hit_limit = 1024 if not time else 60
-    magnitudes = ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb") if not time \
+    magnitudes = (
+        ("bytes", "Kb", "Mb", "Gb", "Tb", "Pb")
+        if not time
         else ("seconds", "minutes", "hours", "days", "months", "years")
+    )
 
     m = 0
     while data > hit_limit and m < len(magnitudes):
@@ -148,13 +153,13 @@ async def get_user(user, client):
     except Exception:
         return False
 
+
 def parse_kwargs(command: str, defaults: dict = {}):
-    for match in re.finditer(pattern="(\w+)=([\",\w]+)", string=command, flags=re.I):
+    for match in re.finditer(pattern='(\w+)=([",\w]+)', string=command, flags=re.I):
         key = match.group(1)
         value = eval(match.group(2))
 
         defaults[key] = value
-        command = command.replace(match.group(1) + "=", "") \
-                          .replace(match.group(2), "")
+        command = command.replace(match.group(1) + "=", "").replace(match.group(2), "")
 
     return command.strip(), defaults

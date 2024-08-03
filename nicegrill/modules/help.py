@@ -19,6 +19,7 @@ from elfrien.client import Client
 
 import html
 
+
 class Help:
 
     @on(pattern="help")
@@ -26,14 +27,14 @@ class Help:
         if message.raw_args:
             await Help.help_display_command(client, message)
             return
-        
+
         await message.edit(HELP_BOOK[:-2] + "</i>")
 
     async def help_display_command(client: Client, message: Message):
         if message.args in HELP_BOOK_DATA:
             if help_info := HELP_BOOK_DATA[message.args]:
                 await message.edit(
-f"""{HELP_MENU_CAPTION}
+                    f"""{HELP_MENU_CAPTION}
 
 <b>Class/Command:</b>
 <i>{message.raw_args}</i>

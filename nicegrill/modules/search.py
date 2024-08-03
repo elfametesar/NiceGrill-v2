@@ -30,7 +30,7 @@ class TelegramSearch:
         """
         Searches for messages in a Telegram chat based on various parameters.
 
-        This function allows you to search for messages within a chat, filtering by user, date, query, and other parameters. 
+        This function allows you to search for messages within a chat, filtering by user, date, query, and other parameters.
         It supports limiting the number of results and using regular expressions for searching.
 
         Search Parameters:
@@ -50,7 +50,9 @@ class TelegramSearch:
         """
         kwargs = {
             "entity": message.chat_id,
-            "from_user": None if not message.reply_to_text else message.reply_to_text.sender
+            "from_user": (
+                None if not message.reply_to_text else message.reply_to_text.sender
+            ),
         }
         regex = None
         query = ""
@@ -76,9 +78,13 @@ class TelegramSearch:
                     pass
             elif param.startswith("from_date="):
                 try:
-                    kwargs["offset_date"] = datetime.fromisoformat(param.strip("from_date="))
+                    kwargs["offset_date"] = datetime.fromisoformat(
+                        param.strip("from_date=")
+                    )
                 except Exception:
-                    await message.edit("<i>Date format should be YearMonthDay, example: 20221105</i>")
+                    await message.edit(
+                        "<i>Date format should be YearMonthDay, example: 20221105</i>"
+                    )
                     await asyncio.sleep(2)
             elif param.startswith("year="):
                 year = param.strip("year=")
@@ -95,7 +101,9 @@ class TelegramSearch:
 
         search_result = ""
 
-        await message.edit(f"<i>Searching for messages with </i><b>{query or regex or 'anything'}</b>")
+        await message.edit(
+            f"<i>Searching for messages with </i><b>{query or regex or 'anything'}</b>"
+        )
 
         hit_counter = 0
         async for mesg in client.iter_messages(
@@ -123,28 +131,37 @@ class TelegramSearch:
             end = offset + len(query)
             await mesg()
 
-            found_query = mesg.raw_text[offset: end] if offset > 0 else None
+            found_query = mesg.raw_text[offset:end] if offset > 0 else None
             local_mesg_time = message.date
             utc_offset = local_mesg_time.strftime("%z").strip("0").replace("+0", "+")
-            
+
             if not hasattr(mesg.chat, "first_name"):
-                chat_permalink = f"<a href=https://t.me/c/{mesg.chat_id}>{mesg.chat.title}</a>"
-                message_permalink = f"<a href=https://t.me/c/{mesg.chat.id}/{mesg.id}>Message</a>"
+                chat_permalink = (
+                    f"<a href=https://t.me/c/{mesg.chat_id}>{mesg.chat.title}</a>"
+                )
+                message_permalink = (
+                    f"<a href=https://t.me/c/{mesg.chat.id}/{mesg.id}>Message</a>"
+                )
             else:
                 chat_permalink = f"<a href=tg://user?id={mesg.sender_id}>{mesg.sender.first_name}</a>"
                 if mesg.sender.username:
                     message_permalink = f"<a href=https://t.me/{mesg.sender.username}/{mesg.id}>Message</a>"
                 else:
-                    message_permalink = "User chats with no username set cannot be hyperlinked"
+                    message_permalink = (
+                        "User chats with no username set cannot be hyperlinked"
+                    )
 
-            search_result = f"""• <b>From: </b><a href='tg://user?id={mesg.sender_id}'>{mesg.sender.name or "Deleted Account"}</a>
+            search_result = (
+                f"""• <b>From: </b><a href='tg://user?id={mesg.sender_id}'>{mesg.sender.name or "Deleted Account"}</a>
 • <b>Where: </b>{chat_permalink}
 • <b>When: </b><i>{local_mesg_time.strftime("%F %T")} UTC{0 if utc_offset == "+" or not utc_offset else utc_offset}</i>
 • <b>Message link: </b><i>{message_permalink}</i>
 • <b>Message:</b>
 {mesg.raw_text.replace(found_query, f"<b>{found_query}</b>") if found_query else mesg.raw_text}
 
-""" + search_result
+"""
+                + search_result
+            )
 
             if hit_counter == limit:
                 break
@@ -153,13 +170,14 @@ class TelegramSearch:
 
         if len(search_result or "") < 4096:
             await message.edit(
-                search_result or f"<i>No messages found with the query </i><b>{query or regex}</b>",
-                link_preview=False
+                search_result
+                or f"<i>No messages found with the query </i><b>{query or regex}</b>",
+                link_preview=False,
             )
         else:
             await message.edit(
-                search_result[-4000:] +
-                "\n\n" + 
-                (await up_to_bin(search_result)).read().decode(),
-                link_preview=False
+                search_result[-4000:]
+                + "\n\n"
+                + (await up_to_bin(search_result)).read().decode(),
+                link_preview=False,
             )

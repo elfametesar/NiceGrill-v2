@@ -18,15 +18,16 @@ from elfrien.client import Client
 from udpy import UrbanClient
 from nicegrill import on
 
+
 class Urban:
 
     @on(pattern="(ud|urban)")
     async def urban_search(client: Client, message: Message):
         """Searches through urban dictionary"""
         word = message.args
-        
+
         if message.reply_to_text:
-            word = message.reply_to_text.message
+            word = message.reply_to_text.raw_text
 
         await message.edit(f"<i>Searching for a definition for <u>{word}</u></i>")
 
@@ -41,7 +42,7 @@ class Urban:
         result = result[0]
 
         await message.edit(
-f"""<b>◍ Word:</b>
+            f"""<b>◍ Word:</b>
 <i>{word}</i>
 
 <b>◍ Meaning:</b>
@@ -50,4 +51,3 @@ f"""<b>◍ Word:</b>
 <b>◍ Example:</b>
 <i>{result.example}</i>"""
         )
-

@@ -37,7 +37,7 @@ class FileBin:
         content = message.args
 
         if message.reply_to_text:
-            
+
             if message.reply_to_text.document:
                 document: BytesIO = await message.reply_to_text.download()
                 if document.readable():
@@ -55,9 +55,8 @@ class FileBin:
         await message.edit(
             f"<i>Your text pasted successfully.\n"
             f"Here's the link: {content.read().decode()}</i>",
-            link_preview=False
+            link_preview=False,
         )
-
 
     @on(pattern="getpaste")
     async def read_from_url(client: Client, message: Message):
@@ -87,9 +86,7 @@ class FileBin:
         if not arg.isdigit() or len(links) < int(arg) - 1:
             arg = -1
 
-        response = await get_bin_url(
-            url=links[int(arg)]
-        )
+        response = await get_bin_url(url=links[int(arg)])
 
         if response.status_code == 200:
             await message.edit(response.read().decode())

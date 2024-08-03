@@ -22,16 +22,20 @@ RealUserEvent = lambda client, message: (
     getattr(message.sender, "type", False) != "bot" and not message.is_self
 )
 BotEvent = lambda client, message: getattr(message.chat, "bot", False)
-ChatJoinEvent = lambda client, message: isinstance(message.service, MessageChatAddMembers)
+ChatJoinEvent = lambda client, message: isinstance(
+    message.service, MessageChatAddMembers
+)
+
 
 def AndEvent(*args):
     def call_events(client, message: Message):
-        return all(lambda_expr(client,message) for lambda_expr in args)
+        return all(lambda_expr(client, message) for lambda_expr in args)
 
     return call_events
 
+
 def OrEvent(*args):
     def call_events(client, message: Message):
-        return any(lambda_expr(client,message) for lambda_expr in args)
+        return any(lambda_expr(client, message) for lambda_expr in args)
 
     return call_events

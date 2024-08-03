@@ -17,16 +17,15 @@ from database.mongo import Mongo
 
 Mongo = Mongo["NiceGrill"]["Blacklist"]
 
+
 def blacklist_chat(chat_id: int):
     whitelist_chat(chat_id)
-    return Mongo.insert_one(
-        {"Blacklisted": chat_id}
-    )
+    return Mongo.insert_one({"Blacklisted": chat_id})
+
 
 def get_all_blacklisted():
     return [pair.get("Blacklisted") for pair in Mongo.find() if pair.get("Blacklisted")]
 
+
 def whitelist_chat(chat_id: int):
-    return Mongo.delete_one(
-        {"Blacklisted": chat_id}
-    )
+    return Mongo.delete_one({"Blacklisted": chat_id})

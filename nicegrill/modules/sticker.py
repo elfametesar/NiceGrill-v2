@@ -14,13 +14,20 @@
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
 from elfrien.types.functions import (
-    AddStickerToSet, CreateNewStickerSet, DeleteStickerSet,
-    RemoveStickerFromSet, GetOwnedStickerSets
+    AddStickerToSet,
+    CreateNewStickerSet,
+    DeleteStickerSet,
+    RemoveStickerFromSet,
+    GetOwnedStickerSets,
 )
 from elfrien.types.tl import (
-    StickerTypeRegular, InputSticker, StickerTypeCustomEmoji,
-    InputFileId, StickerFormatTgs, StickerFormatWebm,
-    StickerFormatWebp
+    StickerTypeRegular,
+    InputSticker,
+    StickerTypeCustomEmoji,
+    InputFileId,
+    StickerFormatTgs,
+    StickerFormatWebm,
+    StickerFormatWebp,
 )
 from elfrien.types.patched import Message
 from database import settings
@@ -32,6 +39,7 @@ from PIL import Image
 import random
 import emoji
 import math
+
 
 class Stickers:
 
@@ -51,13 +59,23 @@ class Stickers:
 
     @on(pattern="kang")
     async def steal_da_sticker(client: Client, message: Message):
-        if not message.reply_to_text or not any([message.reply_to_text.sticker, message.reply_to_text.photo, message.reply_to_text.animated_emoji]):
-            await message.edit("<i>You need to reply to a sticker, photo or a custom emojir</i>")
+        if not message.reply_to_text or not any(
+            [
+                message.reply_to_text.sticker,
+                message.reply_to_text.photo,
+                message.reply_to_text.animated_emoji,
+            ]
+        ):
+            await message.edit(
+                "<i>You need to reply to a sticker, photo or a custom emojir</i>"
+            )
             return
 
         await message.edit(f"<i>{random.choice(Stickers.KANGING_STR)}</i>")
 
-        sticker_emoji = "".join(char for char in message.raw_args if emoji.is_emoji(char))
+        sticker_emoji = "".join(
+            char for char in message.raw_args if emoji.is_emoji(char)
+        )
 
         sticker_pack = Stickers.STICKER_PACK
         for param in message.raw_args.split():
@@ -79,9 +97,7 @@ class Stickers:
             sticker_file.name = message.reply_to_text.file.name or "sticker.jpg"
 
             result = await Stickers.convert_to_sticker(
-                photo=sticker_file,
-                sticker_emoji=sticker_emoji,
-                client=client
+                photo=sticker_file, sticker_emoji=sticker_emoji, client=client
             )
         else:
             result = InputSticker(
@@ -89,22 +105,22 @@ class Stickers:
                 emojis=sticker_emoji or "🤌",
                 format=sticker_format,
                 sticker=InputFileId(
-                    id=message.reply_to_text.media.file.id if not hasattr(message.reply_to_text.media.file, "file") else message.reply_to_text.media.file.file.id
-                )
+                    id=(
+                        message.reply_to_text.media.file.id
+                        if not hasattr(message.reply_to_text.media.file, "file")
+                        else message.reply_to_text.media.file.file.id
+                    )
+                ),
             )
 
         try:
             await client(
-                AddStickerToSet(
-                    sticker=result,
-                    name=sticker_pack,
-                    user_id=client.me.id
-                )
+                AddStickerToSet(sticker=result, name=sticker_pack, user_id=client.me.id)
             )
 
             await message.edit(
                 f"<i>Successfully kanged. You can access your sticker</i> <a href='https://t.me/addstickers/{sticker_pack}'><i>here</i></a>",
-                link_preview=False
+                link_preview=False,
             )
         except Exception as e:
             await message.edit(f"<i>{e}</i>")
@@ -133,15 +149,15 @@ class Stickers:
         photo.seek(0)
 
         photo = await client.upload_file(photo, file_type="Sticker")
-        await client.send_message(entity="me", files=photo, force_type="Sticker", fake_send=True)
+        await client.send_message(
+            entity="me", files=photo, force_type="Sticker", fake_send=True
+        )
 
         return InputSticker(
             keywords=[],
-            emojis=sticker_emoji or '🤌',
+            emojis=sticker_emoji or "🤌",
             format=StickerFormatWebp(),
-            sticker=InputFileId(
-                photo.id
-            )
+            sticker=InputFileId(photo.id),
         )
 
     @on(pattern="packs")
@@ -157,23 +173,29 @@ class Stickers:
             f"""<b>Sticker Packs</b>
 
 {sticker_packs}""",
-            link_preview=False
+            link_preview=False,
         )
 
     @on(pattern="setpack")
     async def set_sticker_pack(client: Client, message: Message):
         if not message.raw_args:
-            await message.edit("<i>You need to input a sticker pack name, refer to .packs</i>")
+            await message.edit(
+                "<i>You need to input a sticker pack name, refer to .packs</i>"
+            )
             return
 
         Stickers.STICKER_PACK = message.raw_args
         settings.set_sticker_pack(message.raw_args)
 
-        await message.edit(f"<i>Default sticker pack is now set to {message.raw_args}</i>")
+        await message.edit(
+            f"<i>Default sticker pack is now set to {message.raw_args}</i>"
+        )
 
     @on(pattern="curpack")
     async def get_current_pack(client: Client, message: Message):
-        await message.edit(f"<i>Current sticker pack is set to {Stickers.STICKER_PACK}</i>")
+        await message.edit(
+            f"<i>Current sticker pack is set to {Stickers.STICKER_PACK}</i>"
+        )
 
     @on(pattern="delpack")
     async def delete_sticker_pack(client: Client, message: Message):
@@ -182,11 +204,7 @@ class Stickers:
             return
 
         try:
-            await client(
-                DeleteStickerSet(
-                    name=message.raw_args
-                )
-            )
+            await client(DeleteStickerSet(name=message.raw_args))
             await message.edit("<i>Successfully removed</i>")
         except Exception as e:
             await message.edit(f"<i>{e}</i>")
@@ -200,9 +218,7 @@ class Stickers:
         try:
             await client(
                 RemoveStickerFromSet(
-                    sticker=InputFileId(
-                        id=message.reply_to_text.sticker.file.id
-                    )
+                    sticker=InputFileId(id=message.reply_to_text.sticker.file.id)
                 )
             )
             await message.edit("<i>Successfully removed</i>")
@@ -214,11 +230,21 @@ class Stickers:
         args = message.raw_args.split(", ", maxsplit=2)
 
         if len(args) < 2:
-            await message.edit("<i>You need to input a sticker name and short name separated by a comma (,)</i>")
+            await message.edit(
+                "<i>You need to input a sticker name and short name separated by a comma (,)</i>"
+            )
             return
 
-        if not message.reply_to_text or not any([message.reply_to_text.sticker, message.reply_to_text.photo, message.reply_to_text.animated_emoji]):
-            await message.edit("<i>You need to reply to a sticker, photo or a custom emojir</i>")
+        if not message.reply_to_text or not any(
+            [
+                message.reply_to_text.sticker,
+                message.reply_to_text.photo,
+                message.reply_to_text.animated_emoji,
+            ]
+        ):
+            await message.edit(
+                "<i>You need to reply to a sticker, photo or a custom emojir</i>"
+            )
             return
 
         sticker_name, sticker_id = args
@@ -228,7 +254,7 @@ class Stickers:
             sticker_type = StickerTypeCustomEmoji()
         else:
             sticker_type = StickerTypeRegular()
-        
+
         sticker_format = StickerFormatWebp()
         if message.reply_to_text.sticker:
             if message.reply_to_text.sticker.format == "tgs":
@@ -250,8 +276,12 @@ class Stickers:
                     emojis="🤌",
                     format=sticker_format,
                     sticker=InputFileId(
-                        id=message.reply_to_text.media.file.id if not hasattr(message.reply_to_text.media.file, "file") else message.reply_to_text.media.file.file.id
-                    )
+                        id=(
+                            message.reply_to_text.media.file.id
+                            if not hasattr(message.reply_to_text.media.file, "file")
+                            else message.reply_to_text.media.file.file.id
+                        )
+                    ),
                 )
             ]
 
@@ -264,13 +294,13 @@ class Stickers:
                     title=sticker_name,
                     name=sticker_id,
                     stickers=sticker,
-                    sticker_type=sticker_type
+                    sticker_type=sticker_type,
                 )
             )
 
             await message.edit(
                 f'<i>"{sticker_name}" sticker pack has been created. You can access it</i> <a href="https://t.me/addstickers/{sticker_id}">here</a>',
-                link_preview=False
+                link_preview=False,
             )
         except Exception as e:
             await message.edit(f"<i>{e}</i>")

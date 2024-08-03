@@ -29,6 +29,7 @@ import time
 import html
 import os
 
+
 class Compiler:
 
     LAST_MSG_TIME = 0
@@ -49,7 +50,7 @@ class Compiler:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             stdin=asyncio.subprocess.PIPE,
-            executable=Compiler.TERMINAL_EXECUTABLE
+            executable=Compiler.TERMINAL_EXECUTABLE,
         )
 
     @on(pattern="(py|python)")
@@ -64,12 +65,12 @@ class Compiler:
         if not message.raw_args:
             await message.edit("<i>Give me some code to work with</i>")
             return
-        
-        await message.edit(Compiler.RESULT_TEMPLATE.format(
-            title="Evaluating expression",
-            command=message.raw_args,
-            result=""
-        ) + f"""
+
+        await message.edit(
+            Compiler.RESULT_TEMPLATE.format(
+                title="Evaluating expression", command=message.raw_args, result=""
+            )
+            + f"""
 
 <b>Printed result</b>"""
         )
@@ -80,17 +81,10 @@ class Compiler:
 
             with async_stdstream(replace_stderror=True) as std:
                 task = asyncio.create_task(
-                    meval(
-                        code=message.raw_args,
-                        globs=globals(),
-                        **locals()
-                    )
+                    meval(code=message.raw_args, globs=globals(), **locals())
                 )
 
-                ProcessManager.add_process(
-                    message_id=message.id,
-                    process=task
-                )
+                ProcessManager.add_process(message_id=message.id, process=task)
 
                 result = await task or ""
                 printed_result = f"""
@@ -104,8 +98,9 @@ class Compiler:
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=message.raw_args,
-                        result=html.escape(str(result))
-                    ) + printed_result
+                        result=html.escape(str(result)),
+                    )
+                    + printed_result
                 )
             else:
                 await message.edit_stream(str(result))
@@ -116,9 +111,7 @@ class Compiler:
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluation failed",
                         command=html.escape(message.raw_args),
-                        result=html.escape(
-                            " ".join(format_exception(e))
-                        )
+                        result=html.escape(" ".join(format_exception(e))),
                     )
                 )
             else:
@@ -141,19 +134,14 @@ class Compiler:
         if message.cmd:
             await message.edit(
                 Compiler.RESULT_TEMPLATE.format(
-                    title="Evaluated expression",
-                    command=command,
-                    result=""
+                    title="Evaluated expression", command=command, result=""
                 )
             )
 
         process = await Compiler.spawn_process()
         process.stdin.write((command + "\n").encode())
 
-        ProcessManager.add_process(
-            message_id=message.id,
-            process=process
-        )
+        ProcessManager.add_process(message_id=message.id, process=process)
 
         output = ""
         start = time.time() - 1.5
@@ -192,14 +180,14 @@ class Compiler:
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=command,
-                        result=html.escape(output[-length_limit:])
+                        result=html.escape(output[-length_limit:]),
                     )
                 )
                 await message.edit(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=command,
-                        result=html.escape(output[-length_limit:])
+                        result=html.escape(output[-length_limit:]),
                     )
                 )
 
@@ -217,10 +205,7 @@ class Compiler:
                 if not ProcessManager.find_process(message.id):
                     break
 
-                ProcessManager.add_process(
-                    message_id=message.id,
-                    process=process
-                )
+                ProcessManager.add_process(message_id=message.id, process=process)
 
         if ProcessManager.find_process(message.id):
             ProcessManager.remove_process(message.id)
@@ -230,7 +215,7 @@ class Compiler:
                 Compiler.RESULT_TEMPLATE.format(
                     title="Input",
                     command=command,
-                    result=html.escape(output) + "\n\nProcess exited"
+                    result=html.escape(output) + "\n\nProcess exited",
                 )
             )
 
@@ -238,25 +223,25 @@ class Compiler:
                 Compiler.RESULT_TEMPLATE.format(
                     title="Input",
                     command=command,
-                    result=html.escape(output[-length_limit:]) + "\n\nProcess exited"
+                    result=html.escape(output[-length_limit:]) + "\n\nProcess exited",
                 )
             )
         else:
             await message.edit(output[-4096:])
-    
+
     def find_shell():
-        shells = ['zsh', 'bash', 'sh']
+        shells = ["zsh", "bash", "sh"]
         for shell in shells:
             path = shutil.which(shell)
             if path:
                 return path
 
-        return os.environ.get('SHELL', '/bin/sh')
+        return os.environ.get("SHELL", "/bin/sh")
 
     @on(pattern="(cpp|cppm)")
     async def compile_cpp(client: Client, message: Message):
         """
-        Compiles C++ code using the Wandbox API. 
+        Compiles C++ code using the Wandbox API.
         If the command is 'cppm', it wraps the code in a main function.
 
         Usage:
@@ -273,9 +258,7 @@ using namespace std;
 int main(int argc, char *argv[]) {{
     {}
 }}"""
-            code = code.format(
-                "\n    ".join(message.raw_args.splitlines())
-            )
+            code = code.format("\n    ".join(message.raw_args.splitlines()))
 
         await message.edit("<i>Compiling</i>")
 
@@ -285,8 +268,8 @@ int main(int argc, char *argv[]) {{
                 "code": code,
                 "options": "warning,gnu++1y",
                 "compiler": "gcc-head",
-                "compiler-option-raw": "-Dx=hogefuga\n-O3"
-            }
+                "compiler-option-raw": "-Dx=hogefuga\n-O3",
+            },
         )
 
         compiler_error = response.json().get("compiler_error")
@@ -294,9 +277,7 @@ int main(int argc, char *argv[]) {{
         program_error = response.json().get("program_error")
 
         result = Compiler.RESULT_TEMPLATE.format(
-            title="Compiled code",
-            command=message.raw_args,
-            result=program_output
+            title="Compiled code", command=message.raw_args, result=program_output
         )
 
         result += f"""
@@ -313,7 +294,7 @@ int main(int argc, char *argv[]) {{
     @on(pattern="(shell|shellnot)")
     async def set_shell_mode(client: Client, message: Message):
         """
-        Toggles the shell mode between 'terminal' and 'python'. 
+        Toggles the shell mode between 'terminal' and 'python'.
         If the command is 'shellnot', it turns off the shell mode.
 
         Usage:
@@ -350,12 +331,13 @@ int main(int argc, char *argv[]) {{
 
         Compiler.LAST_MSG_TIME = time.time()
 
-        message.cmd = ''
+        message.cmd = ""
         message.raw_args = message.raw_text
         if Compiler.SHELL_MODE == "python":
             await Compiler.python_interpreter(client, message)
         else:
             await Compiler.terminal(client, message)
+
 
 @startup
 def startup():

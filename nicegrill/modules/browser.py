@@ -30,8 +30,8 @@ import html
 import sys
 import os
 
-class Browser:
 
+class Browser:
     """A class to handle browser automation and interaction through a web server interface."""
 
     HOST = Quart(__name__)
@@ -42,8 +42,21 @@ class Browser:
     IMAGE_DATA = b""
     BROWSER: Page = None
 
-    TEXT_ELEMENTS = ["input[type='text']", "div[role='textbox']", "textbox", "textarea", "rich-textarea"]
-    BUTTON_ELEMENTS = ["button", "input[role='button']", "a", "ui-button", "div[role='button']", "div[jsaction='.*']"]
+    TEXT_ELEMENTS = [
+        "input[type='text']",
+        "div[role='textbox']",
+        "textbox",
+        "textarea",
+        "rich-textarea",
+    ]
+    BUTTON_ELEMENTS = [
+        "button",
+        "input[role='button']",
+        "a",
+        "ui-button",
+        "div[role='button']",
+        "div[jsaction='.*']",
+    ]
     CHECKBOX_ELEMENTS = ["input[type='checkbox']"]
     RADIO_ELEMENTS = ["input[type='radio']"]
 
@@ -51,7 +64,8 @@ class Browser:
 
     async def select_action(selected_obj: Locator, action):
         if not action:
-            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(f"""<b>Actions
+            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+                f"""<b>Actions
 
 Selected Element:</b>
 <blockquote>{html.escape(str(selected_obj)[:200])}</blockquote>
@@ -69,7 +83,8 @@ Selected Element:</b>
 9 - Select Option
 10 - Highlight
 </i>
-<b>Select an action: </b>""")
+<b>Select an action: </b>"""
+            )
 
             action = int(await input())
 
@@ -82,7 +97,9 @@ Selected Element:</b>
         elif action == 4:
             await selected_obj.check(timeout=2000)
         elif action == 5:
-            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(f"{Browser.LAST_MESSAGE.text}\n\n<b>Text</b>: ")
+            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+                f"{Browser.LAST_MESSAGE.text}\n\n<b>Text</b>: "
+            )
 
             text = ""
             for line in (await input()).splitlines():
@@ -99,18 +116,19 @@ Selected Element:</b>
         elif action == 9:
             menu = ""
             options = {}
-            for line_no, line in enumerate((await selected_obj.text_content()).splitlines()):
+            for line_no, line in enumerate(
+                (await selected_obj.text_content()).splitlines()
+            ):
                 menu += f"{line_no}: {line}\n"
                 options.update({str(line_no): line})
 
-            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(f"\n<i>{menu}</i>\n<b>Select an item:</b> ")
+            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+                f"\n<i>{menu}</i>\n<b>Select an item:</b> "
+            )
 
             index = await input()
 
-            await selected_obj.select_option(
-                timeout=2000,
-                value=options.get(index)
-            )
+            await selected_obj.select_option(timeout=2000, value=options.get(index))
         elif action == 10:
             await selected_obj.highlight()
 
@@ -119,7 +137,7 @@ Selected Element:</b>
 
         filter_text = ""
         if (index := element.find("filter=")) != -1:
-            filter_text = element[index + 7:]
+            filter_text = element[index + 7 :]
             element = element.replace("filter=" + filter_text, "")
 
         if "text" in element:
@@ -135,28 +153,35 @@ Selected Element:</b>
 
         for frame in browser.frames:
             for item in element:
-                obj_list.extend(await frame.locator(item).filter(has_text=filter_text).all())
+                obj_list.extend(
+                    await frame.locator(item).filter(has_text=filter_text).all()
+                )
 
         obj_list = list(enumerate(obj_list))
         menu = ""
 
         for index, obj in obj_list:
             if await obj.is_visible():
-                label = await obj.text_content() or \
-                            (await obj.inner_text(timeout=1000)).strip() or \
-                            await obj.get_attribute('id') or \
-                            await obj.get_attribute('url') or \
-                            await obj.get_attribute('aria-label') or \
-                            await obj.get_attribute('placeholder') or \
-                            await obj.get_attribute("class") or str(obj)
+                label = (
+                    await obj.text_content()
+                    or (await obj.inner_text(timeout=1000)).strip()
+                    or await obj.get_attribute("id")
+                    or await obj.get_attribute("url")
+                    or await obj.get_attribute("aria-label")
+                    or await obj.get_attribute("placeholder")
+                    or await obj.get_attribute("class")
+                    or str(obj)
+                )
 
-                label = label.replace('\n', ' ').strip()[:100]
+                label = label.replace("\n", " ").strip()[:100]
                 menu += f"{index}: {label}\n"
 
         if not menu.strip():
             return None
 
-        Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(f"<i>{menu}</i>\n<b>Select an element: </b>")
+        Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+            f"<i>{menu}</i>\n<b>Select an element: </b>"
+        )
 
         return obj_list[int(await input())][1]
 
@@ -164,7 +189,9 @@ Selected Element:</b>
     async def launch_firefox(client: Client, message: Message):
         """Launch the Firefox browser and navigate to a specified URL."""
         if Browser.HOST_TASK:
-            await message.edit("<i>There is a running browser server, you can't use this function</i>")
+            await message.edit(
+                "<i>There is a running browser server, you can't use this function</i>"
+            )
             return
 
         await message.edit("<i>Launching browser...</i>")
@@ -178,7 +205,10 @@ Selected Element:</b>
 
             Browser.BROWSER = Browser.BROWSER.pages[0]
 
-            await Browser.BROWSER.goto(message.raw_args or "https://www.google.com", wait_until="domcontentloaded")
+            await Browser.BROWSER.goto(
+                message.raw_args or "https://www.google.com",
+                wait_until="domcontentloaded",
+            )
             await message.delete()
             await sys.stdin.clear()
 
@@ -211,15 +241,15 @@ Selected Element:</b>
 
                 if Browser.LAST_MESSAGE:
                     Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
-                        message=menu,
-                        file=screenshot
+                        message=menu, file=screenshot
                     )
                 else:
-                    Browser.LAST_MESSAGE = await message.respond(files=screenshot, message=menu)
+                    Browser.LAST_MESSAGE = await message.respond(
+                        files=screenshot, message=menu
+                    )
 
                 ProcessManager.add_process(
-                    message_id=Browser.LAST_MESSAGE.id,
-                    process=sys
+                    message_id=Browser.LAST_MESSAGE.id, process=sys
                 )
 
                 try:
@@ -233,19 +263,27 @@ Selected Element:</b>
                         continue
 
                     elif command.startswith("2") or command.startswith("goto "):
-                        await Browser.BROWSER.goto(command.split()[-1], wait_until="domcontentloaded")
+                        await Browser.BROWSER.goto(
+                            command.split()[-1], wait_until="domcontentloaded"
+                        )
                         continue
-                    
+
                     elif command.startswith("3") or command.startswith("find "):
                         element = " ".join(command.split()[1:])
-                        selected_obj = await Browser.find_item(browser=Browser.BROWSER, element=element)
+                        selected_obj = await Browser.find_item(
+                            browser=Browser.BROWSER, element=element
+                        )
 
                         if not selected_obj:
-                            await Browser.LAST_MESSAGE.edit(f"{Browser.LAST_MESSAGE.text}\n<i>No elements found</i>")
+                            await Browser.LAST_MESSAGE.edit(
+                                f"{Browser.LAST_MESSAGE.text}\n<i>No elements found</i>"
+                            )
                             await asyncio.sleep(2)
                             continue
 
-                        await Browser.select_action(selected_obj=selected_obj, action="")
+                        await Browser.select_action(
+                            selected_obj=selected_obj, action=""
+                        )
 
                     elif command.startswith("4") or command.startswith("actions"):
                         action = ""
@@ -253,11 +291,17 @@ Selected Element:</b>
                             action = command.split()[1]
 
                         if not selected_obj:
-                            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(Browser.LAST_MESSAGE.text + "\n\n<i>Select an object first!</i>")
+                            Browser.LAST_MESSAGE = await Browser.LAST_MESSAGE.edit(
+                                Browser.LAST_MESSAGE.text
+                                + "\n\n<i>Select an object first!</i>"
+                            )
                             await asyncio.sleep(2)
                             continue
 
-                        await Browser.select_action(selected_obj=selected_obj, action=int(action) if action else "")
+                        await Browser.select_action(
+                            selected_obj=selected_obj,
+                            action=int(action) if action else "",
+                        )
 
                     elif command == "5" or command == "reload":
                         await Browser.BROWSER.reload(wait_until="domcontentloaded")
@@ -269,7 +313,7 @@ Selected Element:</b>
                         await Browser.LAST_MESSAGE.delete()
                         Browser.LAST_MESSAGE = None
                         return
-                
+
                 except ValueError:
                     sys.stdin.write(f"\n<b>Error:</b> <i>Invalid selection</i>")
                     await asyncio.sleep(2)
@@ -282,9 +326,8 @@ Selected Element:</b>
     async def websocket():
         while True:
             await asyncio.sleep(0)
-            await websocket.send_json({'url': Browser.URL})
+            await websocket.send_json({"url": Browser.URL})
             Browser.MOUSE = await websocket.receive_json()
-
 
     @on(pattern="stopweb")
     async def stop_web_server(client: Client, message: Message):
@@ -324,37 +367,41 @@ Selected Element:</b>
 
         try:
             asyncio.create_task(Browser.browser_loop())
-            
+
             config = Config()
             config.bind = [f"127.0.0.1:{port}"]
             Browser.HOST_TASK = asyncio.create_task(serve(Browser.HOST, config=config))
 
-            await message.edit(f"<i>Browser server started. You can access it through http://127.0.0.1:{port}</i>")
+            await message.edit(
+                f"<i>Browser server started. You can access it through http://127.0.0.1:{port}</i>"
+            )
 
         except Exception as e:
-            await message.edit(f"<i>Failed to start the server</i>\n<b>Reason:</b> <i>{e}</i>")
+            await message.edit(
+                f"<i>Failed to start the server</i>\n<b>Reason:</b> <i>{e}</i>"
+            )
 
     async def generate_frame():
         while True:
-            frame_data = b64encode(Browser.IMAGE_DATA).decode('utf-8')
+            frame_data = b64encode(Browser.IMAGE_DATA).decode("utf-8")
             await asyncio.sleep(0)
             yield frame_data
 
-    @HOST.get('/frame')
+    @HOST.get("/frame")
     async def frame():
         async for data in Browser.generate_frame():
             return data
 
-    @HOST.route('/')
+    @HOST.route("/")
     async def index():
-        return await render_template(['index.html'])
+        return await render_template(["index.html"])
 
     async def browser_loop():
         async with async_playwright() as playwright:
             Browser.BROWSER = await playwright.firefox.launch_persistent_context(
                 user_data_dir=f"{os.getenv('HOME')}/.mozilla/firefox",
                 java_script_enabled=True,
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
             )
 
             Browser.BROWSER = Browser.BROWSER.pages[0]
@@ -366,7 +413,7 @@ Selected Element:</b>
                     Browser.URL = Browser.BROWSER.url
 
                     if act == 0:
-                        await Browser.BROWSER.mouse.move(x=x,y=y)
+                        await Browser.BROWSER.mouse.move(x=x, y=y)
                     if act == 1:
                         await Browser.BROWSER.mouse.click(x=x, y=y)
                     elif act == 2:
@@ -395,6 +442,8 @@ Selected Element:</b>
                     await asyncio.sleep(0)
 
                     Browser.MOUSE["act"] = act = -1
-                    Browser.IMAGE_DATA = await Browser.BROWSER.screenshot(type="jpeg", quality=40, caret="initial", timeout=15000)
+                    Browser.IMAGE_DATA = await Browser.BROWSER.screenshot(
+                        type="jpeg", quality=40, caret="initial", timeout=15000
+                    )
                 except Exception:
                     pass

@@ -21,6 +21,7 @@ from database import alive
 
 import platform
 
+
 class Alive:
 
     NAME = None
@@ -32,14 +33,17 @@ class Alive:
         await message.edit("<i>Ping...</i>")
         message_time = message.date
         current_time = datetime.now(tz=timezone.utc)
-        await message.edit("<i>Pong... {}ms</i>"
-                           .format(round((current_time - message_time).microseconds / 1000, 2)))
+        await message.edit(
+            "<i>Pong... {}ms</i>".format(
+                round((current_time - message_time).microseconds / 1000, 2)
+            )
+        )
 
     @on(pattern="alive")
     async def alive(client: Client, message: Message):
         """Show off to people with my bot using this command"""
         if not Alive.NAME:
-            
+
             Alive.NAME = "NiceGrill Bot"
 
         if not Alive.MESSAGE:
@@ -70,7 +74,6 @@ class Alive:
         Alive.MESSAGE = message.raw_args
         await message.edit("<i>Message succesfully set</i>")
 
-
     @on(pattern="setname")
     async def set_alive_name(client: Client, message: Message):
         """Sets your alive name"""
@@ -85,6 +88,7 @@ class Alive:
 
         Alive.NAME = message.raw_args
         await message.edit("<i>Name succesfully set</i>")
+
 
 @startup
 def load_from_database():

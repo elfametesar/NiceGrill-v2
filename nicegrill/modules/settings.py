@@ -19,6 +19,7 @@ from elfrien.client import Client
 from database import settings
 from nicegrill import on
 
+
 class Settings:
 
     @on(pattern="prefix", prefix=".")
@@ -35,7 +36,7 @@ class Settings:
     @on(pattern="getprefix", prefix=".")
     async def get_prefix(client: Client, message: Message):
         await message.edit(f"<i>{settings.get_prefix() or '.'}</i>")
-    
+
     @on(pattern="setdb")
     async def set_new_chat(client: Client, message: Message):
         if not message.args or not message.args.isnumeric():
@@ -44,7 +45,9 @@ class Settings:
 
         try:
             await client.get_entity(int(message.args))
-            await message.edit(f"<i>Storage database is successfully set to </i>{message.args}")
+            await message.edit(
+                f"<i>Storage database is successfully set to </i>{message.args}"
+            )
         except Exception:
             await message.edit("<i>Chat ID is not valid</i>")
 
@@ -57,7 +60,7 @@ class Settings:
                 is_channel=True,
                 for_import=False,
                 message_auto_delete_time=None,
-                is_forum=None
+                is_forum=None,
             )
         )
 

@@ -21,34 +21,33 @@ Mongo = Mongo["NiceGrill"]["Snippets"]
 
 def save_snip(snippet_name: str, snippet_value):
     delete_data(f"SavedSnippet.{snippet_name}")
-    return Mongo.insert_one(
-        {
-            "SavedSnippet": {
-                snippet_name: snippet_value
-            }
-        }
-    )
+    return Mongo.insert_one({"SavedSnippet": {snippet_name: snippet_value}})
+
 
 def allow_others(option: bool):
     delete_data("Others")
-    return Mongo.insert_one(
-        {"Others": option}
-    )
+    return Mongo.insert_one({"Others": option})
+
 
 def is_others_allowed():
     if snippet_name_data := Mongo.find_one({"Others": {"$exists": True}}):
         return snippet_name_data["Others"]
 
+
 def get_snip(snippet_name: str):
     if snippet_name_data := Mongo.find_one({snippet_name: {"$exists": True}}):
         return snippet_name_data[snippet_name]
 
+
 def get_all_snips():
     saved_snippets = {}
-    [saved_snippets.update(pair.get("SavedSnippet")) for pair in Mongo.find() if pair.get("SavedSnippet")]
+    [
+        saved_snippets.update(pair.get("SavedSnippet"))
+        for pair in Mongo.find()
+        if pair.get("SavedSnippet")
+    ]
     return saved_snippets
 
+
 def delete_data(data_key: any):
-    Mongo.delete_one(
-        {data_key: {"$exists": True}}
-    )
+    Mongo.delete_one({data_key: {"$exists": True}})

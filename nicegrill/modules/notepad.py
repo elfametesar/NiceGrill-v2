@@ -21,6 +21,7 @@ from nicegrill import on
 import asyncio
 import os
 
+
 class Notepad:
 
     FILE_DESCRIPTORS = {}
@@ -68,8 +69,7 @@ class Notepad:
         for file_descriptor, message_ids in Notepad.FILE_DESCRIPTORS.items():
             if message.reply_to_text.id in message_ids:
                 messages = await client.get_messages(
-                    entity=await message.get_chat(),
-                    ids=message_ids
+                    entity=await message.get_chat(), ids=message_ids
                 )
                 break
 

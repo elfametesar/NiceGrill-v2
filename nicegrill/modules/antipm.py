@@ -19,6 +19,7 @@ from nicegrill import on, startup
 from elfrien.client import Client
 from database import antipm
 
+
 class AntiPM:
 
     PM_BLOCKER = False
@@ -28,15 +29,18 @@ class AntiPM:
     APPROVED_USERS = []
 
     WARNS = {}
-    WARNING_MESSAGE = "" \
-                      "<b>I have not allowed you to PM, please ask or say whatever" \
-                      " it is in a group chat.\n\n" \
-                      "I'm letting you off the hook for this time but be warned that " \
-                      "you will be blocked if you continue sending messages.</b>"
+    WARNING_MESSAGE = (
+        ""
+        "<b>I have not allowed you to PM, please ask or say whatever"
+        " it is in a group chat.\n\n"
+        "I'm letting you off the hook for this time but be warned that "
+        "you will be blocked if you continue sending messages.</b>"
+    )
 
-    BLOCK_MESSAGE = \
-        "<b>I have warned you, however, you did not stop " \
+    BLOCK_MESSAGE = (
+        "<b>I have warned you, however, you did not stop "
         "spamming my chat. Therefore, you have been blocked, good luck!</b>"
+    )
 
     @on(pattern="antipm")
     async def antipm_switch(client: Client, message: Message):
@@ -49,7 +53,7 @@ class AntiPM:
     @on(pattern="bless")
     async def approve_user(client: Client, message: Message):
         """Allows that person to PM you, you can either reply to user,
-type their username or use this in their chat"""
+        type their username or use this in their chat"""
         if not (user := await AntiPM.get_user(client, message)):
             await message.edit("<i>You need to input a valid user id</i>")
             return
@@ -68,13 +72,13 @@ type their username or use this in their chat"""
             antipm.approve_user(user.id)
 
             await message.edit(
-                f"<i>Blessed <a href=tg://user?id={user.id}><i>{user.name}</a>, they can PM you now</i>")
-
+                f"<i>Blessed <a href=tg://user?id={user.id}><i>{user.name}</a>, they can PM you now</i>"
+            )
 
     @on(pattern="curse")
     async def disapprove_user(client: Client, message: Message):
         """Prevents that person to PM you, you can either reply to user,
-type their username or use this in their chat"""
+        type their username or use this in their chat"""
         if not (user := await AntiPM.get_user(client, message)):
             await message.edit("<i>You need to input a valid user id</i>")
             return
@@ -93,8 +97,8 @@ type their username or use this in their chat"""
             antipm.disapprove_user(user.id)
 
             await message.edit(
-                f"<i>Cursed <a href=tg://user?id={user.id}><i>{user.name}</a>, they cannot PM you anymore</i>")
-
+                f"<i>Cursed <a href=tg://user?id={user.id}><i>{user.name}</a>, they cannot PM you anymore</i>"
+            )
 
     @on(pattern="block")
     async def block_user(client: Client, message: Message):
@@ -120,7 +124,6 @@ type their username or use this in their chat"""
             f"<a href=tg://user?id={user.id}><i>{user.name}</a> has been blocked</i>"
         )
 
-
     @on(pattern="unblock")
     async def unblock_user(client: Client, message: Message):
         """Simply blocks the person..duh!!"""
@@ -140,7 +143,6 @@ type their username or use this in their chat"""
         await message.edit(
             f"<a href=tg://user?id={user.id}><i>{user.name}</a> has been unblocked</i>"
         )
-
 
     async def get_user(client: Client, message: Message):
         user = message.args
@@ -172,8 +174,8 @@ type their username or use this in their chat"""
     @on(pattern="notif")
     async def notifications_for_pms(client: Client, message: Message):
         """Ah this one again...It turns on/off tag notification
-sounds from unwanted PMs. It auto-sends a
-a message in your name until that user gets blocked or approved"""
+        sounds from unwanted PMs. It auto-sends a
+        a message in your name until that user gets blocked or approved"""
         antipm.set_notifications(not AntiPM.NOTIFICATIONS)
         AntiPM.NOTIFICATIONS = not AntiPM.NOTIFICATIONS
 
@@ -182,11 +184,10 @@ a message in your name until that user gets blocked or approved"""
         else:
             await message.edit("<i>Notifications from cursed PMs muted</i>")
 
-
     @on(pattern="setlimit")
     async def set_warning_limit(client: Client, message: Message):
         """This one sets a max. message limit for unwanted
-PMs and when they go beyond it, bamm!"""
+        PMs and when they go beyond it, bamm!"""
         if not message.args.isdigit():
             await message.edit("<i>Limit value has to be a number</i>")
             return
@@ -195,21 +196,27 @@ PMs and when they go beyond it, bamm!"""
             antipm.set_warning_limit(AntiPM.WARNING_LIMIT)
             await message.edit("<i>Max. PM message limit successfully updated</i>")
 
-
     @on(pattern="sblock")
     async def super_block(client: Client, message: Message):
         """If unwanted users spams your chat, the chat
-will be deleted when the idiot passes the message limit"""
+        will be deleted when the idiot passes the message limit"""
         antipm.set_superblock(not AntiPM.SUPER_BLOCK)
         AntiPM.SUPER_BLOCK = not AntiPM.SUPER_BLOCK
 
         if AntiPM.SUPER_BLOCK:
             await message.edit("<i>Chats from cursed parties will be removed</i>")
         else:
-            await message.edit("<i>Chats from cursed parties will not be removed anymore</i>")
+            await message.edit(
+                "<i>Chats from cursed parties will not be removed anymore</i>"
+            )
 
-
-    @on(prefix="", pattern=".*", condition=AndEvent(UserChatEvent, RealUserEvent), incoming=True, outgoing=False)
+    @on(
+        prefix="",
+        pattern=".*",
+        condition=AndEvent(UserChatEvent, RealUserEvent),
+        incoming=True,
+        outgoing=False,
+    )
     async def check_personal_messages(client: Client, message: Message):
         if AntiPM.PM_BLOCKER:
             if message.chat.id in AntiPM.APPROVED_USERS:
@@ -224,7 +231,7 @@ will be deleted when the idiot passes the message limit"""
                     entity=message.chat,
                     from_user=client.me,
                     query="have not allowed you to PM, please ask or say whatever it is in a group chat",
-                    limit=1
+                    limit=1,
                 ):
                     await message.delete()
             else:
@@ -239,6 +246,7 @@ will be deleted when the idiot passes the message limit"""
 
             if AntiPM.SUPER_BLOCK:
                 await client.delete_chat(entity=message.chat)
+
 
 @startup
 def load_from_database():

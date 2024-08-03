@@ -23,6 +23,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class Weather:
 
     CITY = None
@@ -30,7 +31,7 @@ class Weather:
     @on(pattern="weather", incoming=True)
     async def weather(client: Client, message: Message):
         """Shows the weather of specified city"""
-        city = message.raw_args.strip()
+        city = message.raw_args
 
         if not message.is_self:
             message.edit = message.reply
@@ -45,14 +46,15 @@ class Weather:
 
         try:
             await message.edit(
-                    f"<b>City:</b> <i>{weather['weather']['city']}</i>\n"
-                    f"<b>Temperature:</b> <i>{round(weather['weather']['temp'])}°C</i>\n"
-                    f"<b>Pressure:</b> <i>{weather['weather']['pressure']} hPa</i>\n"
-                    f"<b>Humidity:</b> <i>{weather['weather']['humidity']}%</i>\n"
-                    f"<b>Latency:</b> <i>{weather['weather']['lat']}</i>\n"
-                    f"<b>Status:</b> <i>{weather['main']}</i>\n"
-                    f"<b>Description:</b> <i>{weather['description'].capitalize()}</i>\n"
-                    f"<b>Wind Speed:</b> <i>{weather['wind']['speed']} m/s</i>\n")
+                f"<b>City:</b> <i>{weather['weather']['city']}</i>\n"
+                f"<b>Temperature:</b> <i>{round(weather['weather']['temp'])}°C</i>\n"
+                f"<b>Pressure:</b> <i>{weather['weather']['pressure']} hPa</i>\n"
+                f"<b>Humidity:</b> <i>{weather['weather']['humidity']}%</i>\n"
+                f"<b>Latency:</b> <i>{weather['weather']['lat']}</i>\n"
+                f"<b>Status:</b> <i>{weather['main']}</i>\n"
+                f"<b>Description:</b> <i>{weather['description'].capitalize()}</i>\n"
+                f"<b>Wind Speed:</b> <i>{weather['wind']['speed']} m/s</i>\n"
+            )
         except Exception as e:
             if "status" in weather:
                 await message.edit(f"<i>{weather['status'].capitalize()}</i>")
@@ -67,8 +69,9 @@ class Weather:
         
         {e}"""
                 )
-                await message.edit("<i>Bot api might be dead, sent the error into logger</i>")
-
+                await message.edit(
+                    "<i>Bot api might be dead, sent the error into logger</i>"
+                )
 
     @on(pattern="setcity")
     async def set_city(client: Client, message: Message):
@@ -83,7 +86,7 @@ class Weather:
 
         await message.edit("<i>Successfully saved</i>")
 
+
 @startup
 def load_from_database():
     Weather.CITY = weather.get_city_name()
-

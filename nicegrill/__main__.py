@@ -14,24 +14,18 @@ stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.ERROR)
 
 logging.basicConfig(
-    handlers=[logging.FileHandler("error.txt", mode='w+'), stream_handler],
+    handlers=[logging.FileHandler("error.txt", mode="w+"), stream_handler],
     level=logging.ERROR,
-    format='%(asctime)s\n\n%(message)s'
+    format="%(asctime)s\n\n%(message)s",
 )
 
 log = logging.getLogger(__name__)
 
+
 class NiceGrill:
 
-    def __init__(
-        self,
-        api_id: int = API_ID,
-        api_hash: str = API_HASH
-    ):
-        self.client = Client(
-            api_id=api_id,
-            api_hash=api_hash
-        )
+    def __init__(self, api_id: int = API_ID, api_hash: str = API_HASH):
+        self.client = Client(api_id=api_id, api_hash=api_hash)
 
     def import_modules(self):
         module_list = glob.glob("nicegrill/modules/*.py")
@@ -42,9 +36,13 @@ class NiceGrill:
 
             try:
                 importlib.import_module(module)
-                print(f"Module is loaded: {module.replace('nicegrill.modules.', '').title()}")
+                print(
+                    f"Module is loaded: {module.replace('nicegrill.modules.', '').title()}"
+                )
             except Exception as e:
-                print(f"Module {module.replace('nicegrill.modules.', '').title()} not loaded: {e}")
+                print(
+                    f"Module {module.replace('nicegrill.modules.', '').title()} not loaded: {e}"
+                )
 
     async def restart_handler(self):
         if restart_info := settings.get_restart_details():
@@ -52,7 +50,7 @@ class NiceGrill:
                 await self.client.edit_message(
                     entity=restart_info["Chat"],
                     text="<i>Restarted</i>",
-                    message=restart_info["Message"]
+                    message=restart_info["Message"],
                 )
             except Exception as e:
                 print(e)
@@ -60,7 +58,7 @@ class NiceGrill:
 
     async def initialize_bot(self):
         await self.client.login()
-        self.client.parse_mode = 'HTML'
+        self.client.parse_mode = "HTML"
         await self.client.load_chats(limit=200)
 
         self.import_modules()
@@ -75,7 +73,7 @@ class NiceGrill:
                     is_channel=True,
                     for_import=False,
                     is_forum=False,
-                    message_auto_delete_time=0
+                    message_auto_delete_time=0,
                 )
             )
 

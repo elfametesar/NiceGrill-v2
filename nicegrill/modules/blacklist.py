@@ -18,6 +18,7 @@ from nicegrill import on, bad_chat_list
 from elfrien.client import Client
 from database import blacklist
 
+
 class Blacklist:
 
     @on(pattern="blacklist")
@@ -27,10 +28,12 @@ class Blacklist:
             await Blacklist.list_blacklist_chats(message, client)
             return
 
-        chat = message.chat_id if not message.raw_args else message.raw_args if not message.raw_args.isdigit() else message.args
-        chat = await client.get_entity(
-            entity=chat
+        chat = (
+            message.chat_id
+            if not message.raw_args
+            else message.raw_args if not message.raw_args.isdigit() else message.args
         )
+        chat = await client.get_entity(entity=chat)
 
         if chat and chat.id in bad_chat_list:
             await message.edit("<i>This chat is already blacklisted</i>")
@@ -43,7 +46,6 @@ class Blacklist:
         bad_chat_list.append(chat.id)
 
         await message.edit("<i>This chat is now blacklisted</i>")
-
 
     async def list_blacklist_chats(client: Client, message: Message):
         chats = "<b>⬤ Blacklisted chats:</b>\n\n"
@@ -64,14 +66,15 @@ class Blacklist:
 
         await message.edit(chats)
 
-
     @on(pattern="whitelist")
     async def whitelist_chat(client: Client, message: Message):
-        
-        chat = message.chat_id if not message.raw_args else message.raw_args if not message.raw_args.isdigit() else message.args
-        chat = await client.get_entity(
-            entity=chat
+
+        chat = (
+            message.chat_id
+            if not message.raw_args
+            else message.raw_args if not message.raw_args.isdigit() else message.args
         )
+        chat = await client.get_entity(entity=chat)
 
         if not chat:
             await message.edit("<i>Chat is not valid<i>")

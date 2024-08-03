@@ -20,11 +20,14 @@ from nicegrill import on
 import httpx
 import os
 
+
 class Renamer:
 
     @on(pattern="(rn|rename)")
     async def rename_from_telegram(client: Client, message: Message):
-        if not message.reply_to_text or (message.reply_to_text and not message.reply_to_text.file):
+        if not message.reply_to_text or (
+            message.reply_to_text and not message.reply_to_text.file
+        ):
             await message.edit("<i>Reply to a message with file</i>")
             return
 
@@ -39,12 +42,8 @@ class Renamer:
         file.name = message.raw_args
 
         await message.edit("<i>Renaming..</i>")
-        await message.reply_to_text.reply(
-            files=file,
-            supports_streaming=True
-        )
+        await message.reply_to_text.reply(files=file, supports_streaming=True)
         await message.delete()
-
 
     @on(pattern="rndl")
     async def rename_from_url(client: Client, message: Message):
@@ -53,7 +52,7 @@ class Renamer:
         if len(arguments) < 2:
             await message.edit("<i>First comes the URL, then the name</i>")
             return
-        
+
         url, new_name = arguments
 
         await message.edit("<i>Downloading..</i>")
@@ -78,9 +77,6 @@ class Renamer:
         file.name = new_name
 
         os.remove("tempfile")
-        await message.reply_to_text.reply(
-            files=file,
-            supports_streaming=True
-        )
+        await message.reply_to_text.reply(files=file, supports_streaming=True)
 
         await message.delete()

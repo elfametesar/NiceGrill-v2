@@ -19,12 +19,14 @@ from nicegrill import on
 
 import asyncio
 
+
 class Purge:
 
     @on(pattern="(purge|purgeme)")
     async def purge_messages(client: Client, message: Message):
         """Perfect tool(like you 🥰) for a spring cleaning\n
-        Purges the chat with a given message delete_count or until the replied message"""
+        Purges the chat with a given message delete_count or until the replied message
+        """
 
         delete_count = int(message.raw_args) + 1 if message.raw_args.isdigit() else None
 
@@ -34,27 +36,34 @@ class Purge:
             await message.edit("<i>Enter a number and reply to a message</i>")
             return
         elif not delete_count and message.reply_to_text:
-            delete_count = message.reply_to_text.id 
+            delete_count = message.reply_to_text.id
 
         await message.edit("<i>Collecting messages for batch deletion</i>")
 
         messages = await client.search_messages(
             entity=message.chat,
-            from_user='me' if message.cmd == "purgeme" else None,
+            from_user="me" if message.cmd == "purgeme" else None,
             limit=delete_count,
-            until_message=delete_count
+            until_message=delete_count,
         )
 
         await message.edit("<i>Purging</i>")
         await client.delete_messages(
             entity=message.chat,
-            message_ids=[message.id for message in messages if any([message.can_be_deleted_for_all_users, message.can_be_deleted_only_for_self])]
+            message_ids=[
+                message.id
+                for message in messages
+                if any(
+                    [
+                        message.can_be_deleted_for_all_users,
+                        message.can_be_deleted_only_for_self,
+                    ]
+                )
+            ],
         )
 
-        success_message = (
-            await message.respond(
-                "<i>Purge has been successful. This message will disappear in 3 seconds.</i>"
-            )
+        success_message = await message.respond(
+            "<i>Purge has been successful. This message will disappear in 3 seconds.</i>"
         )
 
         await asyncio.sleep(3)

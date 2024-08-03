@@ -30,16 +30,10 @@ import emoji
 
 string.printable += "ğşüİıçö"
 
+
 class FakeMessage:
 
-    def __init__(
-        self,
-        message_id,
-        message: str,
-        sender,
-        client,
-        entities=[]
-    ) -> None:
+    def __init__(self, message_id, message: str, sender, client, entities=[]) -> None:
         self.id = message_id
         self.sender = sender
         self.sender_id = sender.id
@@ -67,7 +61,7 @@ class Quote:
     FONT_ITALIC = ImageFont.truetype(font="fonts/Roboto-Italic.ttf", size=13)
     FONT_BOLD_ITALIC = ImageFont.truetype(font="fonts/Roboto-Bold.ttf", size=13)
     FONT_MONO = ImageFont.truetype(font="fonts/Roboto-Mono.ttf", size=12)
-    FONT_EMOJI = ImageFont.truetype(font="fonts/Apple Color Emoji.ttc",size=20)
+    FONT_EMOJI = ImageFont.truetype(font="fonts/Apple Color Emoji.ttc", size=20)
     FONT_FALLBACK = ImageFont.truetype(font="fonts/Unicode.ttf", size=13)
 
     LINE_HEIGHT = 18
@@ -192,7 +186,9 @@ class Quote:
         photo_buffer = None
 
         try:
-            photo_buffer = await client.download_profile_photo(user=user_info, file_or_index=0, as_photo=True)
+            photo_buffer = await client.download_profile_photo(
+                user=user_info, file_or_index=0, as_photo=True
+            )
         except Exception:
             pass
 
@@ -257,7 +253,7 @@ class Quote:
     async def draw_reply_bar(message: Message):
         thumb_file = None
         x_pos = 10
-        
+
         text = message.raw_text.replace("\n", "    ")
 
         if message.photo:
@@ -285,7 +281,12 @@ class Quote:
 
             if thumb_file.width > 36:
                 thumb_file = thumb_file.crop(
-                    box=(int(thumb_file.width / 5 * 2), 0, int(thumb_file.width / 5 * 3), thumb_file.height)
+                    box=(
+                        int(thumb_file.width / 5 * 2),
+                        0,
+                        int(thumb_file.width / 5 * 3),
+                        thumb_file.height,
+                    )
                 )
 
             thumb_file = thumb_file.resize((36, 36), Image.Resampling.NEAREST)
@@ -332,23 +333,28 @@ class Quote:
 
         return new_image
 
-    async def draw_media_type(thumb_buffer: BytesIO, text_image: ImageType, is_sticker: bool=False):
+    async def draw_media_type(
+        thumb_buffer: BytesIO, text_image: ImageType, is_sticker: bool = False
+    ):
         media_image = Image.open(thumb_buffer)
-        
+
         if media_image.width < Quote.MAXIMUM_BOX_WIDTH and not is_sticker:
-            
+
             new_media_image = media_image.filter(ImageFilter.BoxBlur(20))
             new_media_image = new_media_image.resize(
                 (
                     Quote.MAXIMUM_BOX_WIDTH,
-                    media_image.height * int(Quote.MAXIMUM_BOX_WIDTH / media_image.width)
+                    media_image.height
+                    * int(Quote.MAXIMUM_BOX_WIDTH / media_image.width),
                 )
             )
 
-            new_media_image = new_media_image.crop((0, 0, new_media_image.width, media_image.height))
+            new_media_image = new_media_image.crop(
+                (0, 0, new_media_image.width, media_image.height)
+            )
             new_media_image.paste(
                 im=media_image,
-                box=(int(Quote.MAXIMUM_BOX_WIDTH / 2 - media_image.width/2), 0)
+                box=(int(Quote.MAXIMUM_BOX_WIDTH / 2 - media_image.width / 2), 0),
             )
 
             media_image = new_media_image
@@ -356,7 +362,7 @@ class Quote:
         media_image = await Quote.merge_images(
             *[image for image in [media_image, text_image] if image],
             vertical=False,
-            spacing=5
+            spacing=5,
         )
 
         media_mask = Image.new(mode="L", size=media_image.size, color=0)
@@ -380,7 +386,12 @@ class Quote:
 
             if thumb_image.width > 45:
                 thumb_image = thumb_image.crop(
-                    box=(int(thumb_image.width / 5 * 2), 0, int(thumb_image.width / 5 * 3), thumb_image.height)
+                    box=(
+                        int(thumb_image.width / 5 * 2),
+                        0,
+                        int(thumb_image.width / 5 * 3),
+                        thumb_image.height,
+                    )
                 )
 
             thumb_image = thumb_image.resize((45, 45))
@@ -466,14 +477,17 @@ class Quote:
             thumb_buffer.seek(0)
 
             return await Quote.draw_media_type(
-                thumb_buffer=thumb_buffer, text_image=text_image,
-                is_sticker=message.sticker
+                thumb_buffer=thumb_buffer,
+                text_image=text_image,
+                is_sticker=message.sticker,
             )
         else:
             if message.page:
                 media_image = await Quote.draw_link_preview(message.page)
                 ordered_images = [text_image, media_image]
-            elif hasattr(message.media, "webpage") and isinstance(message.page, objects.WebPageEmpty):
+            elif hasattr(message.media, "webpage") and isinstance(
+                message.page, objects.WebPageEmpty
+            ):
                 return text_image
             else:
                 media_image = await Quote.draw_document(message)
@@ -492,9 +506,14 @@ class Quote:
         for message in message_list:
             image_list = []
 
-            message.is_media_type = (message.photo or message.video or message.gif or message.sticker) and not message.page
+            message.is_media_type = (
+                message.photo or message.video or message.gif or message.sticker
+            ) and not message.page
             is_framed = not message.is_media_type and (
-                message.document or message.raw_text or message.voice_note or message.audio
+                message.document
+                or message.raw_text
+                or message.voice_note
+                or message.audio
             )
 
             is_titled = is_framed
@@ -514,9 +533,7 @@ class Quote:
                 image_list.append(title_image)
 
             if message.reply_to_text:
-                reply_image = await Quote.draw_reply_bar(
-                    message=message.reply_to_text
-                )
+                reply_image = await Quote.draw_reply_bar(message=message.reply_to_text)
 
             if message.raw_text:
                 text_image = await Quote.draw_text(
@@ -651,11 +668,15 @@ class Quote:
                 kwargs = {"fill": color}
 
             previous_font = font
-            font = Quote.FONT_EMOJI \
-                if emoji.is_emoji(char) \
-                else Quote.FONT_FALLBACK \
-                if char not in string.printable and char != "\n" \
-                else previous_font
+            font = (
+                Quote.FONT_EMOJI
+                if emoji.is_emoji(char)
+                else (
+                    Quote.FONT_FALLBACK
+                    if char not in string.printable and char != "\n"
+                    else previous_font
+                )
+            )
 
             if char == "\n" or x + font.getlength(char) > Quote.MAXIMUM_BOX_WIDTH:
                 x = x_offset
@@ -687,7 +708,9 @@ class Quote:
 
                 width = font.getlength(char)
                 height = font.getbbox("m")[3] + 2
-                kwargs["fill"] = ((166, 216, 245, 255)) if entity_type == "url" else "white"
+                kwargs["fill"] = (
+                    ((166, 216, 245, 255)) if entity_type == "url" else "white"
+                )
 
                 text_drawer.line(
                     xy=(x + width, y + height, x, y + height),
@@ -819,6 +842,7 @@ class Quote:
             await message.edit(f"<i>Message box color has been set to {color}</i>")
         except Exception as e:
             await message.edit(f"<i>{e}</i>")
+
 
 @startup
 def load_from_database():

@@ -20,64 +20,60 @@ Mongo = Mongo["NiceGrill"]["AntiPM"]
 
 def set_antipm(switch: bool):
     delete_data("AntiPM")
-    return Mongo.insert_one(
-        {"AntiPM": switch}
-    )
+    return Mongo.insert_one({"AntiPM": switch})
+
 
 def approve_user(user_id: int):
     disapprove_user(user_id)
-    return Mongo.insert_one(
-        {"Approved": user_id}
-    )
+    return Mongo.insert_one({"Approved": user_id})
+
 
 def get_all_approved():
     return [pair.get("Approved") for pair in Mongo.find() if pair.get("Approved")]
 
+
 def set_warning_limit(warning_count: int):
     delete_data("Warning Count")
-    return Mongo.insert_one(
-        {"Warning Count": warning_count}
-    )
+    return Mongo.insert_one({"Warning Count": warning_count})
+
 
 def set_notifications(switch: bool):
     delete_data("Notifications")
-    return Mongo.insert_one(
-        {"Notifications": switch}
-    )
+    return Mongo.insert_one({"Notifications": switch})
+
 
 def set_superblock(switch: bool):
     delete_data("Superblocking")
-    return Mongo.insert_one(
-        {"Superblocking": switch}
-    )
+    return Mongo.insert_one({"Superblocking": switch})
+
 
 def is_antipm():
     if antipm_data := Mongo.find_one({"AntiPM": {"$exists": True}}):
         return antipm_data["AntiPM"]
 
+
 def get_warning_limit():
     if warning_count_data := Mongo.find_one({"Warning Count": {"$exists": True}}):
         return warning_count_data["Warning Count"]
-    
+
+
 def is_superblock():
     if superblock_data := Mongo.find_one({"Superblocking": {"$exists": True}}):
         return superblock_data["Superblocking"]
+
 
 def is_notifications():
     if notifications_data := Mongo.find_one({"Notifications": {"$exists": True}}):
         return notifications_data["Notifications"]
 
+
 def is_approved(user_id: int):
-    return Mongo.find_one(
-        {"Approved": user_id}
-    )
+    return Mongo.find_one({"Approved": user_id})
+
 
 def delete_data(data_key: any):
-    return Mongo.delete_one(
-        {data_key: {"$exists": True}}
-    )
+    return Mongo.delete_one({data_key: {"$exists": True}})
+
 
 def disapprove_user(user_id: int):
-    return Mongo.delete_one(
-        {"Approved": user_id}
-    )
+    return Mongo.delete_one({"Approved": user_id})

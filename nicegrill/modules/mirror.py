@@ -33,6 +33,7 @@ import asyncio
 import os.path
 import html
 
+
 class Mirror:
 
     PIXEL_API = "https://pixeldrain.com/api/file/"
@@ -43,25 +44,30 @@ class Mirror:
     async def authenticate(message: Message):
 
         creds = None
-        scopes = ['https://www.googleapis.com/auth/drive']
+        scopes = ["https://www.googleapis.com/auth/drive"]
 
-        if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', scopes)
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", scopes)
 
         if creds and not creds.valid:
             creds.refresh(Request())
 
         elif not creds:
             if not os.path.isfile("client_secret.json"):
-                raise FileNotFoundError("You need client_secret.json to run this, obtain it from Google Cloud")
+                raise FileNotFoundError(
+                    "You need client_secret.json to run this, obtain it from Google Cloud"
+                )
 
             flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secret.json', scopes, redirect_uri="http://localhost/authorize/")
+                "client_secret.json", scopes, redirect_uri="http://localhost/authorize/"
+            )
 
             auth_url, _ = flow.authorization_url()
 
             if not message.is_private:
-                await message.edit("<b>Bot response: </b><i>Check your private chat</i>")
+                await message.edit(
+                    "<b>Bot response: </b><i>Check your private chat</i>"
+                )
 
             message = await message.client.send_message(
                 message=f"<i>You need to do Google Auth before you can continue. "
@@ -69,17 +75,12 @@ class Mirror:
                 f"Complete the auth process and reply to this message with </i><code>.input your_auth_code</code>. <i>"
                 f"You can find the authentication code in the final URL after completing the process."
                 f"It comes after 'code='. Here is the authentication link: </i>\n\n{html.escape(auth_url)}",
-                entity='me'
+                entity="me",
             )
 
-            fetch_code = asyncio.create_task(
-                asyncio.to_thread(input)
-            )
+            fetch_code = asyncio.create_task(asyncio.to_thread(input))
 
-            ProcessManager.add_process(
-                message_id=message.id,
-                process=fetch_code
-            )
+            ProcessManager.add_process(message_id=message.id, process=fetch_code)
 
             code = urllib.parse.unquote(await fetch_code)
 
@@ -88,30 +89,34 @@ class Mirror:
 
             ProcessManager.remove_process(message.id)
 
-            with open('token.json', 'w') as token:
+            with open("token.json", "w") as token:
                 token.write(creds.to_json())
 
-        return build('drive', 'v3', credentials=creds)
+        return build("drive", "v3", credentials=creds)
 
     async def get_file(client: Client, message: Message):
 
         url_or_file = message.args
 
         if not url_or_file and not message.reply_to_text:
-            await message.edit("<i>You haven't provided a URL or a file name to mirror</i>")
+            await message.edit(
+                "<i>You haven't provided a URL or a file name to mirror</i>"
+            )
             return
 
         if not os.path.exists(url_or_file):
             await message.edit("<i>Downloading...</i>")
 
-            message.cmd = ''
+            message.cmd = ""
             url_or_file = await Downloader.download_file(client=client, message=message)
 
             if not url_or_file:
                 await message.edit("<i>Mirroring has been cancelled</i>")
                 return
 
-            await message.edit("<i>File has been downloaded, uploading to mirror host now..</i>")
+            await message.edit(
+                "<i>File has been downloaded, uploading to mirror host now..</i>"
+            )
             await asyncio.sleep(1)
 
         return url_or_file
@@ -135,40 +140,26 @@ class Mirror:
         try:
             service = await Mirror.authenticate(message=message)
 
-            metadata = {
-                "name": os.path.basename(url_or_file)
-            }
+            metadata = {"name": os.path.basename(url_or_file)}
 
-            permissions = {
-                'value': 'default',
-                'type': 'anyone',
-                'role': 'reader'
-            }
+            permissions = {"value": "default", "type": "anyone", "role": "reader"}
 
             media = MediaFileUpload(
-                filename=url_or_file,
-                resumable=True,
-                chunksize=4000000
+                filename=url_or_file, resumable=True, chunksize=4000000
             )
 
-            file = service.files().create(
-                body=metadata,
-                media_body=media,
-                fields='id'
-            )
-            
+            file = service.files().create(body=metadata, media_body=media, fields="id")
+
             file = await asyncio.to_thread(file.execute)
 
             service.permissions().create(
-                body=permissions,
-                fileId=file.get('id'),
-                fields="id"
+                body=permissions, fileId=file.get("id"), fields="id"
             ).execute()
 
             await message.edit(
                 "<i>File has been uploaded to your Google Drive.\n"
-                f"You can access it via: </i>\n" +
-                Mirror.GDRIVE_URL.format(file.get('id'))
+                f"You can access it via: </i>\n"
+                + Mirror.GDRIVE_URL.format(file.get("id"))
             )
 
         except Exception as e:
@@ -184,10 +175,7 @@ class Mirror:
                 "file": file_data,
             },
             follow_redirects=True,
-            auth=BasicAuth(
-                username="",
-                password=PIXELDRAIN_API_KEY
-            )
+            auth=BasicAuth(username="", password=PIXELDRAIN_API_KEY),
         )
 
     @on(pattern="gofile")
@@ -206,23 +194,25 @@ class Mirror:
         await message.edit("<i>Uploading</i>")
 
         files = {
-            'file': (url_or_file, open(url_or_file, 'rb'), mimetypes.guess_type(url_or_file))
+            "file": (
+                url_or_file,
+                open(url_or_file, "rb"),
+                mimetypes.guess_type(url_or_file),
+            )
         }
 
-        response = post(
-            url=Mirror.GOFILE_API,
-            files=files
-        )
+        response = post(url=Mirror.GOFILE_API, files=files)
 
         if response.ok:
             await message.edit(
                 "<i>Your file has been uploaded to the mirror host\n"
                 f"You can access it through: </i>{response.json().get('data').get('downloadPage')}",
-                link_preview=False
+                link_preview=False,
             )
         else:
             await message.edit(
-                f"<i>Something went wrong uploading your file to host: \n{response.reason}</i>")
+                f"<i>Something went wrong uploading your file to host: \n{response.reason}</i>"
+            )
 
     @on(pattern="pixel")
     async def mirror_to_pixeldrain(client: Client, message: Message):
@@ -241,9 +231,7 @@ class Mirror:
 
         with open(url_or_file, "rb+") as fd:
             try:
-                response = await Mirror.upload_to_pixeldrain(
-                    file_data=fd.read()
-                )
+                response = await Mirror.upload_to_pixeldrain(file_data=fd.read())
             except Exception as e:
                 await message.edit(f"<i>Error: {html.escape(str(e))}</i>")
                 return
@@ -252,11 +240,12 @@ class Mirror:
             await message.edit(
                 "<i>Your file has been uploaded to the mirror host\n"
                 f"You can access it through: </i>{Mirror.PIXEL_API}{response.json().get('id')}",
-                link_preview=False
+                link_preview=False,
             )
         else:
             await message.edit(
-                f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>")
+                f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>"
+            )
 
     @on(pattern="fileio")
     async def mirror_to_fileio(client: Client, message: Message):
@@ -275,18 +264,16 @@ class Mirror:
 
         with open(url_or_file, "rb+") as fd:
             response = await asyncio.to_thread(
-                post,
-                url=Mirror.FILEIO_API,
-                files={"file": fd},
-                allow_redirects=True
+                post, url=Mirror.FILEIO_API, files={"file": fd}, allow_redirects=True
             )
 
             if response:
                 await message.edit(
                     "<i>Your file has been uploaded to the mirror host\n"
                     f"You can access it through: </i>{response.json().get('link')}",
-                    link_preview=False
+                    link_preview=False,
                 )
             else:
                 await message.edit(
-                    f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>")
+                    f"<i>Something went wrong uploading your file to host: \n{response.reason_phrase}</i>"
+                )

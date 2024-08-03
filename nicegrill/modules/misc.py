@@ -25,6 +25,7 @@ import html
 import sys
 import os
 
+
 class Misc:
 
     @on(pattern="restart")
@@ -40,11 +41,11 @@ class Misc:
 
     @on(pattern="read")
     async def read(client: Client, message: Message):
-        
+
         if not message.reply_to_text:
             await message.edit("<i>You need to reply to a document</i>")
             return
-        
+
         await message.edit("<i>Putting on the reading glasses</i>")
         msg = message.raw_args.split()
 
@@ -65,16 +66,18 @@ class Misc:
         try:
             contents = file.getvalue().decode()
         except UnicodeDecodeError:
-            await message.edit(f"<i>Better not read this file, it's cursed (non text)</i>")
+            await message.edit(
+                f"<i>Better not read this file, it's cursed (non text)</i>"
+            )
             return
         except Exception as e:
             await message.edit(f"<i>File cannot be read: {str(e)}</i>")
             return
 
         if head:
-            contents = "\n".join(contents.split("\n")[:int(line_count)])
+            contents = "\n".join(contents.split("\n")[: int(line_count)])
         elif tail:
-            contents = "\n".join(contents.split("\n")[-int(line_count):])
+            contents = "\n".join(contents.split("\n")[-int(line_count) :])
 
         await message.edit_stream(contents, link_preview=False)
 
@@ -82,8 +85,7 @@ class Misc:
     async def get_logs(client: Client, message: Message):
         if os.stat(path="error.txt").st_size > 0:
             await message.respond(
-                files="error.txt",
-                message="<b>Here's logs in ERROR level.</b>"
+                files="error.txt", message="<b>Here's logs in ERROR level.</b>"
             )
 
         await message.delete()
@@ -99,15 +101,25 @@ class Misc:
             if style == "n":
                 await message.reply_to_text.edit(message.reply_to_text.raw_text)
             elif style == "c":
-                await message.reply_to_text.edit(f"<code>{message.reply_to_text.raw_text}</code>")
+                await message.reply_to_text.edit(
+                    f"<code>{message.reply_to_text.raw_text}</code>"
+                )
             elif style == "b":
-                await message.reply_to_text.edit(f"<b>{message.reply_to_text.raw_text}</b>")
+                await message.reply_to_text.edit(
+                    f"<b>{message.reply_to_text.raw_text}</b>"
+                )
             elif style == "i":
-                await message.reply_to_text.edit(f"<i>{message.reply_to_text.raw_text}</i>")
+                await message.reply_to_text.edit(
+                    f"<i>{message.reply_to_text.raw_text}</i>"
+                )
             elif style == "u":
-                await message.reply_to_text.edit(f"<u>{message.reply_to_text.raw_text}</u>")
+                await message.reply_to_text.edit(
+                    f"<u>{message.reply_to_text.raw_text}</u>"
+                )
             elif style == "s":
-                await message.reply_to_text.edit(f"<del>{message.reply_to_text.raw_text}</del>")
+                await message.reply_to_text.edit(
+                    f"<del>{message.reply_to_text.raw_text}</del>"
+                )
             else:
                 pass
         except:
@@ -116,18 +128,19 @@ class Misc:
 
     @on(pattern="dump")
     async def dump_sticker(client: Client, message: Message):
-        if not message.reply_to_text or message.reply_to_text and not message.reply_to_text.sticker:
+        if (
+            not message.reply_to_text
+            or message.reply_to_text
+            and not message.reply_to_text.sticker
+        ):
             await message.edit("<i>Reply to a sticker message</i>")
             return
-        
+
         sticker = await message.reply_to_text.download()
 
         await message.delete()
-        await message.respond(
-            files=sticker,
-            force_type="Photo"
-        )
-    
+        await message.respond(files=sticker, force_type="Photo")
+
     @on(prefix="", pattern=r"^s(\S|[0-9]|[^a-z]).*\1.*\1.*|/.*/(,|{|}|\w|;)")
     async def sed_pattern_reader(client: Client, message: Message):
         if not message.reply_to_text:
@@ -138,19 +151,19 @@ class Misc:
             cmd="sed '{}'".format(sed_args.replace("'", r"'\''")),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.PIPE
+            stdin=asyncio.subprocess.PIPE,
         )
 
         res, _ = await timeout(
             timeout=10,
             func=proc.communicate,
-            input=message.reply_to_text.raw_text.encode()
+            input=message.reply_to_text.raw_text.encode(),
         )
 
         if proc.returncode == 0:
             await message.reply_to_text.reply(
-                "<b>SED Bot:</b> " +
-                html.escape(res.decode()))
+                "<b>SED Bot:</b> " + html.escape(res.decode())
+            )
 
     @on(pattern="(update|update-now)")
     async def update(client: Client, message: Message):
@@ -167,14 +180,16 @@ class Misc:
 
             updates = os.popen(
                 "git log --pretty=format:'%s - %an (%cr)' --abbrev-commit"
-                f" --date=relative {current_branch}..origin/{current_branch}").readlines()
+                f" --date=relative {current_branch}..origin/{current_branch}"
+            ).readlines()
 
             if updates:
                 ls = "<b>Updates:</b>\n\n"
                 for i in updates:
                     ls += f"◍  <i>{i.capitalize()}</i>"
                 await message.edit(
-                    f"{ls}\n\n<b>Type</b> <i>.update now</i> <b>to update</b>")
+                    f"{ls}\n\n<b>Type</b> <i>.update now</i> <b>to update</b>"
+                )
             else:
                 await message.edit("<i>Well, no updates yet</i>")
 
