@@ -13,13 +13,51 @@
 #    You should have received a copy of the GNU General Public License
 #    along with NiceGrill.  If not, see <https://www.gnu.org/licenses/>.
 
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 from elfrien.types.patched import Message
 from elfrien.client import Client
 from nicegrill import on
 
+import asyncio
+
+
+TEMPLATE = """<b>Speedtest Results</b>
+
+<b>Ping:</b> <i>{ping:0} ms</i>
+<b>Download:</b> <i>{download:0} Mbps</i>
+<b>Upload:</b> <i>{upload:0} Mbps</i>"""
+
 
 class Speedtest:
+
+    async def get_speedtest_results(message: Message, browser: Page):
+        while True:
+            ping, download, upload = 0, 0, 0
+
+            ping = await (
+                await browser.wait_for_selector(
+                    "span[class='result-data-value ping-speed']"
+                )
+            ).text_content()
+
+            download = await (
+                await browser.wait_for_selector(
+                    "span[class='result-data-large number result-data-value download-speed']"
+                )
+            ).text_content()
+
+            upload = await (
+                await browser.wait_for_selector(
+                    "span[class='result-data-large number result-data-value upload-speed']"
+                )
+            ).text_content()
+
+            await message.edit(
+                TEMPLATE.format(ping=ping, download=download, upload=upload)
+            )
+
+            if download != "—" and upload != "—" and ping != "—":
+                return TEMPLATE.format(ping=ping, download=download, upload=upload)
 
     @on(pattern="speed")
     async def speedtest_by_ookla(client: Client, message: Message):
@@ -49,10 +87,19 @@ class Speedtest:
             ):
                 await button.click()
 
-            await browser.get_by_label(
-                "start speed test - connection type multi"
-            ).click()
+            try:
+                await browser.get_by_label(
+                    "start speed test - connection type multi"
+                ).click()
+            except Exception:
+                await message.edit(
+                    "<i>Failed to start the speedtest</i>"
+                )
+                return
 
+            caption = asyncio.create_task(
+                Speedtest.get_speedtest_results(message, browser)
+            )
             result = await browser.wait_for_selector(
                 'div[class="result-container-speed result-container-speed-active"]',
                 timeout=120000,
@@ -60,7 +107,9 @@ class Speedtest:
 
             screenshot = await result.screenshot(omit_background=True, type="png")
 
-            await message.delete()
-            await message.respond(files=screenshot, force_type="Photo")
+            await message.respond(
+                files=screenshot, force_type="Photo", message=await caption
+            )
 
             await browser.close()
+            await message.delete()

@@ -170,15 +170,14 @@ class Compiler:
             if start and time.time() - start <= 1.5:
                 continue
             else:
-                if result.strip():
-                    start = time.time()
+                start = time.time()
 
             if message.cmd:
                 length_limit = 4096 - len(
                     Compiler.RESULT_TEMPLATE.format(
                         title="Evaluated expression",
                         command=command,
-                        result=html.escape(output[-length_limit:]),
+                        result=html.escape(output),
                     )
                 )
                 await message.edit(
