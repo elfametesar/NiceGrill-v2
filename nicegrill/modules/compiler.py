@@ -66,14 +66,15 @@ class Compiler:
             await message.edit("<i>Give me some code to work with</i>")
             return
 
-        await message.edit(
-            Compiler.RESULT_TEMPLATE.format(
-                title="Evaluating expression", command=message.raw_args, result=""
-            )
-            + f"""
+        if message.cmd:
+            await message.edit(
+                Compiler.RESULT_TEMPLATE.format(
+                    title="Evaluating expression", command=message.raw_args, result=""
+                )
+                + f"""
 
 <b>Printed result</b>"""
-        )
+            )
 
         try:
             reply = message.reply_to_text
@@ -103,7 +104,7 @@ class Compiler:
                     + printed_result
                 )
             else:
-                await message.edit_stream(str(result))
+                await message.edit_stream(f"<code>{result}</code>")
 
         except Exception as e:
             if message.cmd:
@@ -115,7 +116,7 @@ class Compiler:
                     )
                 )
             else:
-                await message.edit(html.escape(str((e))))
+                await message.edit(f"<code>{html.escape(str((e)))}</code>")
 
     @on(pattern="(term|terminal)")
     async def terminal(client: Client, message: Message):
@@ -140,7 +141,6 @@ class Compiler:
 
         process = await Compiler.spawn_process()
         process.stdin.write((command + "\n").encode())
-
         ProcessManager.add_process(message_id=message.id, process=process)
 
         output = ""
@@ -160,6 +160,9 @@ class Compiler:
 
             output += "\n" + result
             output = output[:4098].strip()
+
+            if not output.strip():
+                continue
 
             if not result.strip():
                 if time.time() - mod_time > 30:
@@ -189,7 +192,7 @@ class Compiler:
                 )
 
             else:
-                await message.edit(output[-4096:])
+                await message.edit(f"<code>{output[-4096:]}</code>")
                 ProcessManager.remove_process(message.id)
 
             if process.returncode != None:
@@ -224,7 +227,7 @@ class Compiler:
                 )
             )
         else:
-            await message.edit(output[-4096:])
+            await message.edit(f"<code>{output[-4096:]}</code>")
 
     def find_shell():
         shells = ["zsh", "bash", "sh"]
